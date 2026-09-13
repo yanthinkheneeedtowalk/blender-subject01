@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Build a small single bedroom with an IKEA VITVAL-style loft bed."""
+"""Build a photoreal-leaning single bedroom with an IKEA VITVAL-style loft bed.
+
+Techniques adapted from Workshop Warrior,
+"How I Make Realistic Liminal Spaces in Blender"
+https://www.youtube.com/watch?v=lf51pJFHWCA
+
+- Start from a reference photo, then add one extra idea (tilted wardrobe mirror).
+- Procedural PBR: color-ramp variation + bump, not flat colors.
+- Shoot from inside the room like a real camera.
+- Cycles with extra glossy bounces.
+- Compositor: slight blur, sharpen, bloom glare, streak glare, film grain.
+"""
+
 from __future__ import annotations
 
 import math
@@ -14,29 +26,6 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[1]
 BLEND_PATH = ROOT / "single_room.blend"
 RENDER_DIR = ROOT / "renders"
-
-
-def rgb(r, g, b, a=1.0):
-    return (r, g, b, a)
-
-
-# Neutral palette from the reference image.
-WALL = rgb(0.93, 0.92, 0.88)
-CEILING = rgb(0.98, 0.97, 0.94)
-FLOOR = rgb(0.60, 0.42, 0.25)
-FLOOR_LIGHT = rgb(0.72, 0.55, 0.36)
-METAL = rgb(0.12, 0.13, 0.13)
-METAL_HIGHLIGHT = rgb(0.22, 0.23, 0.22)
-TEXTILE = rgb(0.58, 0.60, 0.58)
-MATTRESS = rgb(0.88, 0.87, 0.81)
-PILLOW = rgb(0.95, 0.94, 0.88)
-DESK = rgb(0.88, 0.87, 0.82)
-WOOD = rgb(0.36, 0.20, 0.10)
-GLASS = rgb(0.12, 0.27, 0.40)
-CURTAIN = rgb(0.25, 0.28, 0.34)
-CURTAIN_LIGHT = rgb(0.72, 0.72, 0.70)
-GREEN = rgb(0.14, 0.25, 0.15)
-BRASS = rgb(0.45, 0.30, 0.12)
 
 
 def parse_args():
@@ -59,8 +48,19 @@ def parse_args():
 def clear_scene():
     for obj in list(bpy.data.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
-    for datablocks in (bpy.data.meshes, bpy.data.materials, bpy.data.curves, bpy.data.cameras, bpy.data.lights, bpy.data.collections):
+    for datablocks in (
+        bpy.data.meshes,
+        bpy.data.materials,
+        bpy.data.curves,
+        bpy.data.cameras,
+        bpy.data.lights,
+        bpy.data.collections,
+        bpy.data.node_groups,
+        bpy.data.images,
+    ):
         for item in list(datablocks):
+            if getattr(item, "name", "") == "Render Result":
+                continue
             try:
                 datablocks.remove(item)
             except Exception:
@@ -68,30 +68,14 @@ def clear_scene():
 
 
 def collection(name):
-    c = bpy.data.collections.new(name)
-    bpy.context.scene.collection.children.link(c)
-    return c
+    coll = bpy.data.collections.new(name)
+    bpy.context.scene.collection.children.link(coll)
+    return coll
 
 
-def make_mat(name, color, roughness=0.55, metallic=0.0):
-    mat = bpy.data.materials.new(name)
-    mat.diffuse_color = color
-    mat.use_nodes = True
-    bsdf = mat.node_tree.nodes.get("Principled BSDF")
-    if bsdf:
-        bsdf.inputs["Base Color"].default_value = color
-        bsdf.inputs["Roughness"].default_value = roughness
-        bsdf.inputs["Metallic"].default_value = metallic
-    return mat
-
-
-def make_window_mat():
-    mat = make_mat("WindowGlass", GLASS, 0.12, 0.05)
-    bsdf = mat.node_tree.nodes.get("Principled BSDF")
-    if bsdf:
-        bsdf.inputs["Transmission Weight"].default_value = 0.18
-        bsdf.inputs["IOR"].default_value = 1.45
-    return mat
+def link(obj, coll):
+    coll.objects.link(obj)
+    return obj
 
 
 def add_box(name, center, dims, coll, mat=None, rotation=None):
@@ -115,8 +99,8 @@ def add_cylinder(name, center, radius, depth, coll, mat=None, vertices=24, rotat
     bpy.ops.mesh.primitive_cylinder_add(vertices=vertices, radius=radius, depth=depth, location=center)
     obj = bpy.context.object
     obj.name = name
-    for c in list(obj.users_collection):
-        c.objects.unlink(obj)
+    for coll_old in list(obj.users_collection):
+        coll_old.objects.unlink(obj)
     coll.objects.link(obj)
     if rotation:
         obj.rotation_euler = rotation
@@ -128,199 +112,424 @@ def add_cylinder(name, center, radius, depth, coll, mat=None, vertices=24, rotat
 def beam(name, p0, p1, thickness, coll, mat):
     p0, p1 = Vector(p0), Vector(p1)
     direction = p1 - p0
-    obj = add_box(name, tuple((p0 + p1) / 2), (thickness, thickness, direction.length), coll, mat)
+    obj = add_box(name, tuple((p0 + p1) / 2), (thickness, thickness, max(direction.length, 0.01)), coll, mat)
     obj.rotation_euler = Vector((0, 0, 1)).rotation_difference(direction.normalized()).to_euler()
     return obj
 
 
-def add_textured_floor(coll, mats):
-    add_box("Floor", (0, 0, -0.06), (7.2, 6.0, 0.12), coll, mats["floor"])
-    # Wide wood boards running toward the window.
-    for i, x in enumerate([-3.0, -2.25, -1.5, -0.75, 0, 0.75, 1.5, 2.25, 3.0]):
-        board = add_box(f"FloorBoard{i}", (x, 0, 0.015), (0.72, 5.92, 0.025), coll, mats["floor_light"])
-        board.rotation_euler[2] = math.radians(random.Random(i).uniform(-0.6, 0.6))
+def mix_rgb(nt, fac=0.5):
+    node = nt.nodes.new("ShaderNodeMixRGB")
+    node.inputs["Fac"].default_value = fac
+    return node
 
 
-def add_window(coll, mats):
-    # Back wall is y=2.8, window faces the camera.
-    add_box("WindowFrameTop", (0, 2.73, 3.25), (4.25, 0.12, 0.12), coll, mats["metal"])
-    add_box("WindowFrameBottom", (0, 2.73, 0.45), (4.25, 0.12, 0.12), coll, mats["metal"])
-    add_box("WindowFrameLeft", (-2.06, 2.73, 1.85), (0.12, 0.12, 2.85), coll, mats["metal"])
-    add_box("WindowFrameRight", (2.06, 2.73, 1.85), (0.12, 0.12, 2.85), coll, mats["metal"])
-    add_box("WindowMullionV", (0, 2.70, 1.85), (0.09, 0.08, 2.65), coll, mats["metal"])
-    add_box("WindowMullionH", (0, 2.70, 1.85), (4.05, 0.08, 0.09), coll, mats["metal"])
-    add_box("WindowGlass", (0, 2.77, 1.85), (4.0, 0.03, 2.65), coll, mats["glass"])
-    # Curtains: heavy panels at sides and a light center layer.
-    for i, x in enumerate([-2.58, -2.28, 2.28, 2.58]):
-        add_box(f"CurtainDark{i}", (x, 2.58, 2.0), (0.38, 0.08, 3.1), coll, mats["curtain"])
-    add_box("CurtainSheerL", (-1.55, 2.55, 2.0), (0.42, 0.06, 3.1), coll, mats["sheer"])
-    add_box("CurtainSheerR", (1.55, 2.55, 2.0), (0.42, 0.06, 3.1), coll, mats["sheer"])
-    add_box("CurtainRod", (0, 2.45, 3.30), (5.7, 0.08, 0.08), coll, mats["metal_high"])
-    # Exterior blue panel seen through the window.
-    add_box("WindowView", (0, 2.88, 1.85), (3.85, 0.03, 2.55), coll, mats["view"])
+def principled(name):
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+    return mat, bsdf, nt
+
+
+def set_bsdf(bsdf, **kwargs):
+    mapping = {
+        "color": "Base Color",
+        "roughness": "Roughness",
+        "metallic": "Metallic",
+        "specular": "Specular IOR Level",
+        "transmission": "Transmission Weight",
+        "ior": "IOR",
+        "alpha": "Alpha",
+        "emission": "Emission Color",
+        "emission_strength": "Emission Strength",
+    }
+    for key, value in kwargs.items():
+        bsdf.inputs[mapping[key]].default_value = value
+
+
+def mat_drywall():
+    """Megascans-style drywall: base color + noise variation + faint bump."""
+    mat, bsdf, nt = principled("Drywall")
+    tex = nt.nodes.new("ShaderNodeTexCoord")
+    mapping = nt.nodes.new("ShaderNodeMapping")
+    mapping.inputs["Scale"].default_value = (4.5, 4.5, 4.5)
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 18.0
+    noise.inputs["Detail"].default_value = 11.0
+    noise.inputs["Roughness"].default_value = 0.55
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.35
+    ramp.color_ramp.elements[0].color = (0.78, 0.76, 0.70, 1)
+    ramp.color_ramp.elements[1].position = 0.72
+    ramp.color_ramp.elements[1].color = (0.93, 0.91, 0.85, 1)
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.12
+    bump.inputs["Distance"].default_value = 0.004
+    nt.links.new(tex.outputs["Object"], mapping.inputs["Vector"])
+    nt.links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
+    nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    nt.links.new(noise.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    set_bsdf(bsdf, roughness=0.78)
+    return mat
+
+
+def mat_wood_floor():
+    mat, bsdf, nt = principled("WoodFloor")
+    tex = nt.nodes.new("ShaderNodeTexCoord")
+    mapping = nt.nodes.new("ShaderNodeMapping")
+    mapping.inputs["Scale"].default_value = (2.2, 18.0, 1.0)
+    wave = nt.nodes.new("ShaderNodeTexWave")
+    wave.wave_type = "BANDS"
+    wave.bands_direction = "X"
+    wave.inputs["Scale"].default_value = 1.4
+    wave.inputs["Distortion"].default_value = 3.5
+    wave.inputs["Detail"].default_value = 4.0
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 40.0
+    noise.inputs["Detail"].default_value = 8.0
+    mix = mix_rgb(nt, 0.35)
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.28
+    ramp.color_ramp.elements[0].color = (0.42, 0.28, 0.16, 1)
+    ramp.color_ramp.elements[1].position = 0.78
+    ramp.color_ramp.elements[1].color = (0.72, 0.55, 0.34, 1)
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.18
+    nt.links.new(tex.outputs["Object"], mapping.inputs["Vector"])
+    nt.links.new(mapping.outputs["Vector"], wave.inputs["Vector"])
+    nt.links.new(tex.outputs["Object"], noise.inputs["Vector"])
+    nt.links.new(wave.outputs["Fac"], mix.inputs["Color1"])
+    nt.links.new(noise.outputs["Fac"], mix.inputs["Color2"])
+    nt.links.new(mix.outputs["Color"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    nt.links.new(mix.outputs["Color"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    set_bsdf(bsdf, roughness=0.42)
+    return mat
+
+
+def mat_ceiling_tiles():
+    mat, bsdf, nt = principled("CeilingTiles")
+    tex = nt.nodes.new("ShaderNodeTexCoord")
+    mapping = nt.nodes.new("ShaderNodeMapping")
+    mapping.inputs["Scale"].default_value = (1.7, 1.7, 1.7)
+    brick = nt.nodes.new("ShaderNodeTexBrick")
+    brick.offset = 0.0
+    brick.inputs["Color1"].default_value = (0.86, 0.85, 0.80, 1)
+    brick.inputs["Color2"].default_value = (0.78, 0.77, 0.73, 1)
+    brick.inputs["Mortar"].default_value = (0.62, 0.61, 0.58, 1)
+    brick.inputs["Scale"].default_value = 4.0
+    brick.inputs["Mortar Size"].default_value = 0.012
+    brick.inputs["Brick Width"].default_value = 0.5
+    brick.inputs["Row Height"].default_value = 0.5
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.22
+    nt.links.new(tex.outputs["Object"], mapping.inputs["Vector"])
+    nt.links.new(mapping.outputs["Vector"], brick.inputs["Vector"])
+    nt.links.new(brick.outputs["Color"], bsdf.inputs["Base Color"])
+    nt.links.new(brick.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    set_bsdf(bsdf, roughness=0.82)
+    return mat
+
+
+def mat_metal(name, color, roughness=0.28, metallic=0.72):
+    mat, bsdf, _ = principled(name)
+    set_bsdf(bsdf, color=color + (1,), roughness=roughness, metallic=metallic, specular=0.55)
+    return mat
+
+
+def mat_cloth(name, color, roughness=0.9):
+    mat, bsdf, nt = principled(name)
+    tex = nt.nodes.new("ShaderNodeTexCoord")
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 90.0
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.08
+    nt.links.new(tex.outputs["Object"], noise.inputs["Vector"])
+    nt.links.new(noise.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    set_bsdf(bsdf, color=color + (1,), roughness=roughness)
+    return mat
+
+
+def mat_glass():
+    mat, bsdf, _ = principled("WindowGlass")
+    set_bsdf(bsdf, color=(0.82, 0.9, 0.95, 1), roughness=0.02, transmission=0.95, ior=1.45, specular=1.0)
+    return mat
+
+
+def mat_mirror():
+    mat, bsdf, _ = principled("WardrobeMirror")
+    set_bsdf(bsdf, color=(0.95, 0.96, 0.97, 1), roughness=0.02, metallic=1.0, specular=1.0)
+    return mat
+
+
+def mat_emission(name, color, strength):
+    mat, bsdf, _ = principled(name)
+    set_bsdf(bsdf, color=color + (1,), roughness=1.0, emission=color + (1,), emission_strength=strength)
+    return mat
+
+
+def mat_simple(name, color, roughness=0.5, metallic=0.0):
+    mat, bsdf, _ = principled(name)
+    set_bsdf(bsdf, color=color + (1,), roughness=roughness, metallic=metallic)
+    return mat
 
 
 def add_room(coll, mats):
-    add_textured_floor(coll, mats)
-    add_box("BackWall", (0, 2.95, 1.75), (7.0, 0.18, 3.5), coll, mats["wall"])
-    add_box("LeftWall", (-3.55, 0.0, 1.75), (0.18, 5.9, 3.5), coll, mats["wall"])
-    add_box("RightWall", (3.55, 0.0, 1.75), (0.18, 5.9, 3.5), coll, mats["wall"])
-    add_box("Ceiling", (0, 0, 3.55), (7.0, 5.9, 0.18), coll, mats["ceiling"])
-    add_window(coll, mats)
+    # Interior volume roughly 3.4 x 3.5 x 2.65 m, camera shoots from the open front.
+    add_box("Floor", (0, -0.2, -0.04), (3.6, 4.4, 0.08), coll, mats["floor"])
+    add_box("Ceiling", (0, -0.2, 2.68), (3.6, 4.4, 0.08), coll, mats["ceiling"])
+    add_box("LeftWall", (-1.78, -0.15, 1.32), (0.08, 4.1, 2.68), coll, mats["wall"])
+    add_box("RightWall", (1.78, -0.15, 1.32), (0.08, 4.1, 2.68), coll, mats["wall"])
+    # Back wall split around a tall window.
+    add_box("BackWallLeft", (-1.28, 1.74, 1.32), (0.95, 0.08, 2.68), coll, mats["wall"])
+    add_box("BackWallRight", (1.28, 1.74, 1.32), (0.95, 0.08, 2.68), coll, mats["wall"])
+    add_box("BackWallSill", (0.0, 1.74, 0.18), (1.62, 0.08, 0.36), coll, mats["wall"])
+    add_box("BackWallHeader", (0.0, 1.74, 2.52), (1.62, 0.08, 0.36), coll, mats["wall"])
+    add_box("BaseboardL", (-1.72, -0.15, 0.05), (0.04, 4.08, 0.08), coll, mats["trim"])
+    add_box("BaseboardR", (1.72, -0.15, 0.05), (0.04, 4.08, 0.08), coll, mats["trim"])
+    add_box("BaseboardB", (0.0, 1.68, 0.05), (3.4, 0.04, 0.08), coll, mats["trim"])
+    # Window frame and glass.
+    add_box("WindowFrame", (0.0, 1.70, 1.35), (1.68, 0.07, 2.18), coll, mats["metal"])
+    add_box("WindowMullionV", (0.0, 1.68, 1.35), (0.05, 0.05, 2.05), coll, mats["metal"])
+    add_box("WindowMullionH", (0.0, 1.68, 1.35), (1.52, 0.05, 0.05), coll, mats["metal"])
+    add_box("WindowGlass", (0.0, 1.69, 1.35), (1.52, 0.02, 2.05), coll, mats["glass"])
+    add_box("SkyPanel", (0.0, 1.92, 1.4), (1.7, 0.04, 2.2), coll, mats["sky"])
+    # Curtains.
+    for i, x in enumerate((-1.05, -0.88, 0.88, 1.05)):
+        add_box(f"CurtainDark{i}", (x, 1.58, 1.45), (0.18, 0.05, 2.35), coll, mats["curtain"])
+    add_box("CurtainSheerL", (-0.48, 1.56, 1.45), (0.28, 0.04, 2.32), coll, mats["sheer"])
+    add_box("CurtainSheerR", (0.48, 1.56, 1.45), (0.28, 0.04, 2.32), coll, mats["sheer"])
+    add_box("CurtainRod", (0.0, 1.50, 2.58), (2.35, 0.04, 0.04), coll, mats["metal_high"])
 
 
 def add_bed(coll, mats):
-    # VITVAL-like loft bed: charcoal steel square-tube frame with textile guard panels.
-    x0, x1 = -2.95, 1.15
-    y0, y1 = -0.95, 1.45
-    z_floor, z_bed = 0.08, 2.05
-    post_t = 0.12
-    for i, (x, y) in enumerate([(x0, y0), (x0, y1), (x1, y0), (x1, y1)]):
-        add_box(f"BedPost{i}", (x, y, (z_floor + z_bed) / 2), (post_t, post_t, z_bed - z_floor), coll, mats["metal"])
-        add_box(f"BedFoot{i}", (x, y, 0.075), (0.24, 0.24, 0.1), coll, mats["metal_high"])
-    # Long rails and mattress support.
-    add_box("BedRailFront", ((x0 + x1) / 2, y0, z_bed), (x1 - x0, 0.12, 0.16), coll, mats["metal"])
-    add_box("BedRailBack", ((x0 + x1) / 2, y1, z_bed), (x1 - x0, 0.12, 0.16), coll, mats["metal"])
-    add_box("BedRailLeft", (x0, (y0 + y1) / 2, z_bed), (0.12, y1 - y0, 0.16), coll, mats["metal"])
-    add_box("BedRailRight", (x1, (y0 + y1) / 2, z_bed), (0.12, y1 - y0, 0.16), coll, mats["metal"])
-    for i in range(8):
-        x = x0 + 0.22 + i * (x1 - x0 - 0.44) / 7
-        add_box(f"BedSlat{i}", (x, (y0 + y1) / 2, z_bed + 0.055), (0.055, y1 - y0 - 0.16, 0.06), coll, mats["metal_high"])
-    # Foam mattress, fitted sheet, blanket and pillow.
-    add_box("Mattress", ((x0 + x1) / 2, (y0 + y1) / 2, z_bed + 0.22), (x1 - x0 - 0.2, y1 - y0 - 0.18, 0.33), coll, mats["mattress"])
-    add_box("Blanket", (x0 + 1.25, y0 + 0.03, z_bed + 0.405), (1.55, y1 - y0 - 0.22, 0.06), coll, mats["textile"])
-    add_box("Pillow", (x0 + 0.55, (y0 + y1) / 2, z_bed + 0.43), (0.78, 1.0, 0.17), coll, mats["pillow"])
-    # Guard rails and the signature white VITVAL textile side panel.
-    rail_z0, rail_z1 = z_bed + 0.28, z_bed + 0.82
-    for y, label in [(y0, "Front"), (y1, "Back")]:
-        add_box(f"GuardTop{label}", ((x0 + x1) / 2, y, rail_z1), (x1 - x0, 0.09, 0.09), coll, mats["metal"])
-        add_box(f"GuardMid{label}", ((x0 + x1) / 2, y, rail_z0 + 0.12), (x1 - x0, 0.06, 0.06), coll, mats["metal_high"])
-        add_box(f"GuardTextile{label}", ((x0 + x1) / 2, y + (0.035 if y == y0 else -0.035), (rail_z0 + rail_z1) / 2), (x1 - x0 - 0.22, 0.035, rail_z1 - rail_z0 - 0.08), coll, mats["textile"])
-    # Head/foot end rails.
-    for x, label in [(x0, "Head"), (x1, "Foot")]:
-        add_box(f"EndTop{label}", (x, (y0 + y1) / 2, rail_z1), (0.09, y1 - y0, 0.09), coll, mats["metal"])
+    # IKEA VITVAL-ish: ~209 x 97 x 191 cm loft.
+    x0, x1 = -1.42, 0.67
+    y0, y1 = 0.05, 1.02
+    z_bed = 1.78
+    for i, (x, y) in enumerate(((x0, y0), (x0, y1), (x1, y0), (x1, y1))):
+        add_box(f"BedPost{i}", (x, y, z_bed / 2), (0.05, 0.05, z_bed), coll, mats["metal"])
+        add_box(f"BedFoot{i}", (x, y, 0.04), (0.10, 0.10, 0.06), coll, mats["metal_high"])
+    add_box("BedRailF", ((x0 + x1) / 2, y0, z_bed), (x1 - x0, 0.05, 0.07), coll, mats["metal"])
+    add_box("BedRailB", ((x0 + x1) / 2, y1, z_bed), (x1 - x0, 0.05, 0.07), coll, mats["metal"])
+    add_box("BedRailL", (x0, (y0 + y1) / 2, z_bed), (0.05, y1 - y0, 0.07), coll, mats["metal"])
+    add_box("BedRailR", (x1, (y0 + y1) / 2, z_bed), (0.05, y1 - y0, 0.07), coll, mats["metal"])
+    for i in range(9):
+        x = x0 + 0.12 + i * (x1 - x0 - 0.24) / 8
+        add_box(f"BedSlat{i}", (x, (y0 + y1) / 2, z_bed + 0.03), (0.04, y1 - y0 - 0.08, 0.03), coll, mats["metal_high"])
+    add_box("Mattress", ((x0 + x1) / 2, (y0 + y1) / 2, z_bed + 0.14), (x1 - x0 - 0.08, y1 - y0 - 0.08, 0.18), coll, mats["mattress"])
+    add_box("Duvet", ((x0 + x1) / 2 + 0.12, (y0 + y1) / 2, z_bed + 0.24), (1.55, 0.82, 0.04), coll, mats["sheet"])
+    add_box("Pillow", (x0 + 0.28, (y0 + y1) / 2, z_bed + 0.27), (0.42, 0.62, 0.10), coll, mats["sheet"])
+    rail_z = z_bed + 0.42
+    for y, label in ((y0, "F"), (y1, "B")):
+        add_box(f"GuardTop{label}", ((x0 + x1) / 2, y, rail_z), (x1 - x0, 0.035, 0.035), coll, mats["metal"])
+        add_box(
+            f"GuardCloth{label}",
+            ((x0 + x1) / 2, y + (0.02 if y == y0 else -0.02), z_bed + 0.22),
+            (x1 - x0 - 0.1, 0.018, 0.18),
+            coll,
+            mats["textile"],
+        )
+    add_box("GuardHead", (x0, (y0 + y1) / 2, rail_z), (0.035, y1 - y0, 0.035), coll, mats["metal"])
+    add_box("GuardFoot", (x1, (y0 + y1) / 2, rail_z), (0.035, y1 - y0, 0.035), coll, mats["metal"])
 
 
 def add_ladder(coll, mats):
-    # Slanted VITVAL-style ladder at the front-right corner.
-    p0a, p1a = (1.46, -1.05, 0.08), (0.98, -0.62, 2.0)
-    p0b, p1b = (2.04, -1.05, 0.08), (1.56, -0.62, 2.0)
-    beam("LadderRailL", p0a, p1a, 0.12, coll, mats["metal"])
-    beam("LadderRailR", p0b, p1b, 0.12, coll, mats["metal"])
-    for i in range(6):
-        t = (i + 0.5) / 6
-        a = Vector(p0a).lerp(Vector(p0b), 0) + (Vector(p1a) - Vector(p0a)) * t
+    p0a, p1a = (0.82, -0.72, 0.05), (0.62, 0.02, 1.76)
+    p0b, p1b = (1.12, -0.72, 0.05), (0.92, 0.02, 1.76)
+    beam("LadderRailL", p0a, p1a, 0.045, coll, mats["metal"])
+    beam("LadderRailR", p0b, p1b, 0.045, coll, mats["metal"])
+    for i in range(5):
+        t = (i + 0.55) / 5
+        a = Vector(p0a) + (Vector(p1a) - Vector(p0a)) * t
         b = Vector(p0b) + (Vector(p1b) - Vector(p0b)) * t
-        beam(f"LadderStep{i}", tuple(a), tuple(b), 0.09, coll, mats["metal_high"])
+        beam(f"LadderStep{i}", tuple(a), tuple(b), 0.035, coll, mats["metal_high"])
 
 
-def add_desk(coll, mats):
-    # White work desk beneath loft.
-    add_box("DeskTop", (-1.92, -0.32, 0.98), (1.55, 1.05, 0.12), coll, mats["desk"])
-    add_box("DeskSideL", (-2.62, -0.32, 0.50), (0.10, 0.92, 0.95), coll, mats["desk"])
-    add_box("DeskSideR", (-1.22, -0.32, 0.50), (0.10, 0.92, 0.95), coll, mats["desk"])
-    add_box("DeskBack", (-1.92, 0.08, 0.52), (1.45, 0.08, 0.88), coll, mats["desk"])
-    # Monitor/laptop and lamp.
-    add_box("Monitor", (-1.94, -0.83, 1.42), (0.78, 0.06, 0.48), coll, mats["metal"])
-    add_box("MonitorStand", (-1.94, -0.80, 1.18), (0.08, 0.08, 0.25), coll, mats["metal_high"])
-    add_box("Laptop", (-2.36, -0.78, 1.12), (0.46, 0.32, 0.04), coll, mats["metal"])
-    add_cylinder("DeskLampStem", (-1.32, -0.72, 1.34), 0.025, 0.38, coll, mats["metal"], 12, rotation=(0, math.radians(-18), 0))
-    add_cylinder("DeskLampShade", (-1.25, -0.72, 1.54), 0.11, 0.12, coll, mats["brass"], 20)
-    # Small drawer pulls.
-    for z in (0.42, 0.67):
-        add_box(f"DrawerPull{z}", (-2.62, -0.80, z), (0.22, 0.03, 0.03), coll, mats["metal"])
+def add_desk_and_chair(coll, mats):
+    add_box("DeskTop", (-0.95, 0.32, 0.74), (1.15, 0.55, 0.04), coll, mats["desk"])
+    add_box("DeskPedestal", (-1.38, 0.32, 0.37), (0.28, 0.52, 0.70), coll, mats["desk"])
+    add_box("Monitor", (-0.82, 0.52, 1.08), (0.52, 0.03, 0.32), coll, mats["metal"])
+    add_box("MonitorStand", (-0.82, 0.50, 0.84), (0.05, 0.05, 0.16), coll, mats["metal_high"])
+    add_cylinder("LampStem", (-0.48, 0.42, 0.95), 0.012, 0.28, coll, mats["metal"], 10, rotation=(0, math.radians(-18), 0))
+    add_cylinder("LampShade", (-0.42, 0.42, 1.10), 0.06, 0.07, coll, mats["brass"], 16)
+    add_box("ChairSeat", (-0.52, -0.02, 0.46), (0.42, 0.40, 0.04), coll, mats["wood"])
+    for x, y in ((-0.67, -0.15), (-0.37, -0.15), (-0.67, 0.12), (-0.37, 0.12)):
+        beam(f"ChairLeg{x}{y}", (x, y, 0.03), (x, y, 0.45), 0.03, coll, mats["wood"])
+    add_box("ChairBack", (-0.52, -0.20, 0.78), (0.42, 0.04, 0.62), coll, mats["wood"])
 
 
-def add_chair_and_decor(coll, mats):
-    # Simple wood chair in front of the desk.
-    add_box("ChairSeat", (-0.8, -1.02, 0.52), (0.72, 0.65, 0.10), coll, mats["wood"])
-    for x in (-1.08, -0.52):
-        for y in (-1.25, -0.80):
-            beam(f"ChairLeg{x}{y}", (x, y, 0.05), (x, y, 0.50), 0.06, coll, mats["wood"])
-    add_box("ChairBack", (-0.8, -1.30, 0.93), (0.72, 0.08, 0.75), coll, mats["wood"])
-    # Hanging egg-chair silhouette on the right, matching the reference mood.
-    add_cylinder("HangingChairHook", (2.35, 1.0, 3.08), 0.025, 0.55, coll, mats["metal"], 12)
-    add_cylinder("HangingChairRing", (2.35, 1.0, 2.20), 0.68, 0.06, coll, mats["metal_high"], 32, rotation=(math.radians(90), 0, 0))
-    add_box("HangingChairSeat", (2.35, 0.70, 1.55), (0.95, 0.72, 0.14), coll, mats["wood"])
+def add_details(coll, mats):
+    # Slightly Z-tilted wardrobe mirror: the tutorial's infinity-mirror trick, scaled to a bedroom.
+    add_box("Wardrobe", (1.52, 0.35, 1.05), (0.38, 0.72, 2.05), coll, mats["desk"])
+    mirror = add_box("Mirror", (1.32, 0.35, 1.12), (0.02, 0.58, 1.55), coll, mats["mirror"])
+    mirror.rotation_euler[2] = math.radians(1.8)
+    add_box("Shelf", (1.35, 1.42, 0.92), (0.38, 0.22, 0.04), coll, mats["wood"])
+    add_cylinder("Pot", (1.35, 1.42, 1.05), 0.07, 0.14, coll, mats["brass"], 16)
     for i in range(6):
-        a = math.radians(-68 + i * 27)
-        p0 = (2.35 + math.cos(a) * 0.62, 1.0 + math.sin(a) * 0.62, 2.20)
-        p1 = (2.35 + math.cos(a) * 0.42, 0.72 + math.sin(a) * 0.42, 1.56)
-        beam(f"ChairStrap{i}", p0, p1, 0.035, coll, mats["metal_high"])
-    # A framed minimal picture.
-    add_box("PictureFrame", (2.72, 2.82, 2.58), (0.62, 0.05, 0.88), coll, mats["wood"])
-    add_box("Picture", (2.72, 2.78, 2.58), (0.52, 0.025, 0.78), coll, mats["sheer"])
+        a = math.radians(i * 60)
+        beam(
+            f"Leaf{i}",
+            (1.35, 1.42, 1.12),
+            (1.35 + math.cos(a) * 0.12, 1.42 + math.sin(a) * 0.12, 1.32),
+            0.015,
+            coll,
+            mats["green"],
+        )
+    add_box("PictureFrame", (1.55, 1.69, 2.15), (0.32, 0.03, 0.42), coll, mats["wood"])
+    add_box("Picture", (1.55, 1.67, 2.15), (0.26, 0.01, 0.36), coll, mats["sheer"])
+    add_cylinder("HangHook", (1.22, 0.92, 2.42), 0.01, 0.28, coll, mats["metal"], 8)
+    add_cylinder("HangRing", (1.22, 0.92, 1.78), 0.32, 0.03, coll, mats["metal_high"], 28, rotation=(math.radians(90), 0, 0))
+    add_box("HangSeat", (1.22, 0.78, 1.42), (0.42, 0.32, 0.05), coll, mats["wood"])
 
 
-def add_plants(coll, mats):
-    # Small plant on a shelf near the window.
-    add_box("Shelf", (1.95, 2.54, 0.95), (0.72, 0.28, 0.07), coll, mats["wood"])
-    add_cylinder("PlantPot", (1.95, 2.42, 1.18), 0.13, 0.22, coll, mats["brass"], 20)
-    for i in range(7):
-        a = math.radians(i * 51)
-        beam("PlantLeaf" + str(i), (1.95, 2.42, 1.28), (1.95 + math.cos(a) * 0.23, 2.42 + math.sin(a) * 0.23, 1.65 + 0.08 * math.sin(a)), 0.028, coll, mats["green"])
-
-
-def add_world_and_lights():
+def add_lights():
     world = bpy.data.worlds.new("RoomWorld")
     bpy.context.scene.world = world
     world.use_nodes = True
     bg = world.node_tree.nodes.get("Background")
     if bg:
-        bg.inputs["Color"].default_value = (0.18, 0.25, 0.34, 1)
-        bg.inputs["Strength"].default_value = 0.42
-    key = bpy.data.lights.new("WindowDaylight", "AREA")
-    key.energy = 850
-    key.size = 4.2
-    key.color = (0.82, 0.90, 1.0)
-    key_obj = bpy.data.objects.new("WindowDaylight", key)
-    key_obj.location = (0, -0.5, 3.0)
-    key_obj.rotation_euler = (math.radians(32), 0, math.radians(180))
-    bpy.context.scene.collection.objects.link(key_obj)
-    fill = bpy.data.lights.new("WarmRoomFill", "AREA")
-    fill.energy = 500
-    fill.size = 5.0
-    fill.color = (1.0, 0.72, 0.48)
-    fill_obj = bpy.data.objects.new("WarmRoomFill", fill)
-    fill_obj.location = (-2.2, -2.0, 2.8)
-    fill_obj.rotation_euler = (math.radians(22), 0, math.radians(-30))
+        bg.inputs["Color"].default_value = (0.22, 0.32, 0.48, 1)
+        bg.inputs["Strength"].default_value = 0.35
+
+    window = bpy.data.lights.new("WindowLight", "AREA")
+    window.type = "AREA"
+    window.shape = "RECTANGLE"
+    window.size = 1.5
+    window.size_y = 2.0
+    window.energy = 110
+    window.color = (0.78, 0.88, 1.0)
+    window_obj = bpy.data.objects.new("WindowLight", window)
+    window_obj.location = (0.0, 1.85, 1.4)
+    window_obj.rotation_euler = (math.radians(-8), 0, math.radians(180))
+    bpy.context.scene.collection.objects.link(window_obj)
+
+    fill = bpy.data.lights.new("CeilingFill", "AREA")
+    fill.size = 2.4
+    fill.energy = 40
+    fill.color = (1.0, 0.93, 0.84)
+    fill_obj = bpy.data.objects.new("CeilingFill", fill)
+    fill_obj.location = (0.0, 0.1, 2.55)
+    fill_obj.rotation_euler = (math.radians(180), 0, 0)
     bpy.context.scene.collection.objects.link(fill_obj)
+
+    lamp = bpy.data.lights.new("DeskLamp", "POINT")
+    lamp.energy = 8
+    lamp.color = (1.0, 0.78, 0.52)
+    lamp_obj = bpy.data.objects.new("DeskLamp", lamp)
+    lamp_obj.location = (-0.42, 0.18, 1.12)
+    bpy.context.scene.collection.objects.link(lamp_obj)
 
 
 def add_camera(view):
     cam = bpy.data.cameras.new("Camera")
-    cam.lens = 39 if view == "front" else 30
+    cam.lens = 24 if view == "front" else 22
     cam.sensor_width = 36
+    cam.dof.use_dof = True
+    cam.dof.aperture_fstop = 3.2
     obj = bpy.data.objects.new("Camera", cam)
     if view == "front":
-        obj.location = (0.0, -9.2, 2.18)
-        target = Vector((0, 0.65, 1.58))
+        obj.location = (0.10, -2.22, 1.28)
+        target = Vector((0.08, 0.50, 1.42))
     else:
-        obj.location = (2.6, -8.0, 2.35)
-        target = Vector((0.1, 0.65, 1.55))
+        obj.location = (0.78, -2.05, 1.32)
+        target = Vector((0.02, 0.38, 1.38))
     obj.rotation_euler = (target - obj.location).to_track_quat("-Z", "Y").to_euler()
+    focus = bpy.data.objects.new("Focus", None)
+    focus.location = (-0.4, 0.25, 0.95)
+    bpy.context.scene.collection.objects.link(focus)
+    cam.dof.focus_object = focus
     bpy.context.scene.collection.objects.link(obj)
     bpy.context.scene.camera = obj
 
 
+def setup_compositor():
+    """Blur -> sharpen -> bloom glare -> streak glare, then light film grain."""
+    ng = bpy.data.node_groups.new("LiminalComp", "CompositorNodeTree")
+    ng.interface.new_socket(name="Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+    rl = ng.nodes.new("CompositorNodeRLayers")
+    blur = ng.nodes.new("CompositorNodeBlur")
+    blur.inputs["Size"].default_value = (1.2, 1.2)
+    sharp = ng.nodes.new("CompositorNodeFilter")
+    try:
+        sharp.inputs["Type"].default_value = "Sharpen"
+    except TypeError:
+        pass
+    sharp.inputs["Fac"].default_value = 0.35
+    bloom = ng.nodes.new("CompositorNodeGlare")
+    for glare_name in ("Bloom", "Fog Glow", "Ghosts"):
+        try:
+            bloom.inputs["Type"].default_value = glare_name
+            break
+        except TypeError:
+            continue
+    bloom.inputs["Threshold"].default_value = 0.85
+    bloom.inputs["Strength"].default_value = 0.55
+    bloom.inputs["Size"].default_value = 0.45
+    streaks = ng.nodes.new("CompositorNodeGlare")
+    streaks.inputs["Type"].default_value = "Streaks"
+    streaks.inputs["Threshold"].default_value = 1.1
+    streaks.inputs["Strength"].default_value = 0.28
+    streaks.inputs["Streaks"].default_value = 2
+    streaks.inputs["Streaks Angle"].default_value = math.radians(90)
+    mix_grain = ng.nodes.new("ShaderNodeMixRGB")
+    mix_grain.blend_type = "OVERLAY"
+    mix_grain.inputs["Fac"].default_value = 0.045
+    grain = bpy.data.images.new("FilmGrain", 1280, 1280, alpha=False)
+    pixels = [0.0] * (1280 * 1280 * 4)
+    rng = random.Random(7)
+    for i in range(0, len(pixels), 4):
+        v = 0.5 + (rng.random() - 0.5) * 0.35
+        pixels[i] = pixels[i + 1] = pixels[i + 2] = v
+        pixels[i + 3] = 1.0
+    grain.pixels = pixels
+    img_node = ng.nodes.new("CompositorNodeImage")
+    img_node.image = grain
+    out = ng.nodes.new("NodeGroupOutput")
+    links = ng.links
+    links.new(rl.outputs["Image"], blur.inputs["Image"])
+    links.new(blur.outputs["Image"], sharp.inputs["Image"])
+    links.new(sharp.outputs["Image"], bloom.inputs["Image"])
+    links.new(bloom.outputs["Image"], streaks.inputs["Image"])
+    links.new(streaks.outputs["Image"], mix_grain.inputs["Color1"])
+    links.new(img_node.outputs["Image"], mix_grain.inputs["Color2"])
+    links.new(mix_grain.outputs["Color"], out.inputs[0])
+    scene = bpy.context.scene
+    scene.compositing_node_group = ng
+    scene.render.use_compositing = True
+
+
 def setup_render(args):
     scene = bpy.context.scene
-    scene.render.engine = "BLENDER_EEVEE"
-    scene.render.resolution_x = 1100
-    scene.render.resolution_y = 1100
-    scene.render.resolution_percentage = 100
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = args["samples"]
+    scene.cycles.use_denoising = True
+    scene.cycles.denoiser = "OPENIMAGEDENOISE"
+    scene.cycles.max_bounces = 16
+    scene.cycles.glossy_bounces = 8
+    scene.cycles.transmission_bounces = 8
+    scene.cycles.diffuse_bounces = 4
+    scene.render.threads_mode = "FIXED"
+    scene.render.threads = 4
+    scene.render.resolution_x = 1280
+    scene.render.resolution_y = 1280
     scene.render.image_settings.file_format = "PNG"
-    scene.render.film_transparent = False
     scene.render.filepath = str(RENDER_DIR / f"single_room_{args['view']}.png")
     try:
         scene.view_settings.view_transform = "AgX"
     except TypeError:
         pass
-    scene.view_settings.exposure = 0.35
-    if hasattr(scene.eevee, "taa_render_samples"):
-        scene.eevee.taa_render_samples = max(32, args["samples"])
-    if hasattr(scene.eevee, "use_raytracing"):
-        scene.eevee.use_raytracing = True
+    scene.view_settings.exposure = 0.15
+    setup_compositor()
 
 
 def main():
@@ -330,31 +539,31 @@ def main():
     room = collection("Room")
     furniture = collection("Furniture")
     mats = {
-        "wall": make_mat("WarmWhiteWall", WALL, 0.8),
-        "ceiling": make_mat("Ceiling", CEILING, 0.9),
-        "floor": make_mat("WoodFloor", FLOOR, 0.72),
-        "floor_light": make_mat("WoodBoard", FLOOR_LIGHT, 0.68),
-        "metal": make_mat("VITVALCharcoal", METAL, 0.3, 0.5),
-        "metal_high": make_mat("SteelEdges", METAL_HIGHLIGHT, 0.24, 0.65),
-        "textile": make_mat("VITVALTextile", TEXTILE, 0.88),
-        "mattress": make_mat("Mattress", MATTRESS, 0.95),
-        "pillow": make_mat("Pillow", PILLOW, 0.95),
-        "desk": make_mat("DeskWhite", DESK, 0.65),
-        "wood": make_mat("ChairWood", WOOD, 0.55),
-        "glass": make_window_mat(),
-        "view": make_mat("WindowView", GLASS, 0.32),
-        "curtain": make_mat("SlateCurtain", CURTAIN, 0.9),
-        "sheer": make_mat("SheerCurtain", CURTAIN_LIGHT, 0.95),
-        "green": make_mat("PlantGreen", GREEN, 0.8),
-        "brass": make_mat("Brass", BRASS, 0.32, 0.5),
+        "wall": mat_drywall(),
+        "ceiling": mat_ceiling_tiles(),
+        "floor": mat_wood_floor(),
+        "metal": mat_metal("VITVALCharcoal", (0.07, 0.075, 0.08), 0.32, 0.55),
+        "metal_high": mat_metal("SteelEdge", (0.18, 0.18, 0.18), 0.22, 0.7),
+        "textile": mat_cloth("GuardCloth", (0.62, 0.63, 0.60)),
+        "sheet": mat_cloth("Bedding", (0.90, 0.89, 0.84), 0.85),
+        "mattress": mat_simple("Mattress", (0.86, 0.85, 0.80), 0.9),
+        "desk": mat_simple("Desk", (0.89, 0.88, 0.84), 0.45),
+        "wood": mat_simple("ChairWood", (0.32, 0.18, 0.09), 0.48),
+        "glass": mat_glass(),
+        "mirror": mat_mirror(),
+        "curtain": mat_cloth("SlateCurtain", (0.22, 0.24, 0.30)),
+        "sheer": mat_cloth("Sheer", (0.78, 0.78, 0.76), 0.7),
+        "trim": mat_simple("Trim", (0.9, 0.88, 0.82), 0.55),
+        "sky": mat_emission("SkyPanel", (0.42, 0.58, 0.82), 2.2),
+        "green": mat_simple("Plant", (0.12, 0.28, 0.12), 0.7),
+        "brass": mat_metal("Brass", (0.42, 0.28, 0.12), 0.35, 0.6),
     }
     add_room(room, mats)
     add_bed(furniture, mats)
     add_ladder(furniture, mats)
-    add_desk(furniture, mats)
-    add_chair_and_decor(furniture, mats)
-    add_plants(furniture, mats)
-    add_world_and_lights()
+    add_desk_and_chair(furniture, mats)
+    add_details(furniture, mats)
+    add_lights()
     add_camera(args["view"])
     setup_render(args)
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
