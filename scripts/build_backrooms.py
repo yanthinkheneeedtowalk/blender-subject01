@@ -399,11 +399,17 @@ def main() -> None:
     print("Saved", BLEND_PATH, "size", size_x, "x", size_y, "grid", tw, "x", th)
     if args["render"]:
         render_camera("CameraWalk", RENDER_DIR / "backrooms.png")
+        fill = bpy.data.lights.new("PlanFill", "SUN")
+        fill.energy = 2.5
+        fill_obj = bpy.data.objects.new("PlanFill", fill)
+        fill_obj.rotation_euler = (0.0, 0.0, 0.0)
+        bpy.context.scene.collection.objects.link(fill_obj)
         for name in ("Ceiling", "Fluorescents"):
             bpy.data.objects[name].hide_render = True
         render_camera("CameraPlan", RENDER_DIR / "backrooms_plan.png")
         for name in ("Ceiling", "Fluorescents"):
             bpy.data.objects[name].hide_render = False
+        bpy.data.objects.remove(fill_obj, do_unlink=True)
         bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
 
 
