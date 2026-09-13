@@ -23,6 +23,7 @@ import random
 import sys
 from pathlib import Path
 
+import bmesh
 import bpy
 from mathutils import Vector
 
@@ -40,18 +41,21 @@ def parse_args() -> dict:
         "fast": False,
         "cutouts": True,
         "seed": 11,
+        "debug_cut": False,
     }
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
     i = 0
     while i < len(argv):
         if argv[i] == "--fast":
             args["fast"] = True
-            args["samples"] = 16
+            args["samples"] = 28
             args["resolution"] = (1280, 720)
         elif argv[i] == "--no-render":
             args["render"] = False
         elif argv[i] == "--no-cutouts":
             args["cutouts"] = False
+        elif argv[i] == "--debug-cut":
+            args["debug_cut"] = True
         elif argv[i] == "--samples" and i + 1 < len(argv):
             args["samples"] = int(argv[i + 1])
             i += 1
@@ -242,67 +246,65 @@ def _noise(nt, scale: float, detail: float = 6.0):
     return n
 
 
+def _set(bsdf, name: str, value) -> None:
+    if name in bsdf.inputs:
+        bsdf.inputs[name].default_value = value
+
+
 def mat_wallpaper() -> bpy.types.Material:
-    """Dirty beige / mustard. The wallpaper is not yellow."""
+    """Dirty beige paper, grime at the skirting line. Not candy yellow."""
     mat = bpy.data.materials.new("Wallpaper")
     mat.use_nodes = True
     nt = mat.node_tree
     nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputMaterial")
-    out.location = (900, 0)
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
-    bsdf.location = (600, 0)
-    bsdf.inputs["Roughness"].default_value = 0.78
+    _set(bsdf, "Roughness", 0.72)
+    _set(bsdf, "Specular IOR Level", 0.22)
     coord = nt.nodes.new("ShaderNodeTexCoord")
-    coord.location = (-700, 0)
     mapping = nt.nodes.new("ShaderNodeMapping")
-    mapping.location = (-480, 0)
-    mapping.inputs["Scale"].default_value = (0.55, 0.55, 0.55)
-    wave = nt.nodes.new("ShaderNodeTexWave")
-    wave.location = (-250, 160)
-    wave.wave_type = "BANDS"
-    wave.bands_direction = "X"
-    wave.inputs["Scale"].default_value = 3.2
-    wave.inputs["Distortion"].default_value = 2.2
-    noise = _noise(nt, 7.5)
-    noise.location = (-250, -80)
-    stains = _noise(nt, 1.6, 4.0)
-    stains.location = (-250, -320)
-    ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.location = (40, 80)
-    ramp.color_ramp.elements[0].position = 0.22
-    ramp.color_ramp.elements[0].color = srgb(0.60, 0.54, 0.38)
-    ramp.color_ramp.elements[1].position = 0.82
-    ramp.color_ramp.elements[1].color = srgb(0.70, 0.63, 0.46)
-    mix = nt.nodes.new("ShaderNodeMixRGB")
-    mix.location = (320, 40)
-    mix.blend_type = "MIX"
-    mix.inputs["Color1"].default_value = srgb(0.66, 0.59, 0.42)
-    fac = nt.nodes.new("ShaderNodeMath")
-    fac.location = (40, 220)
-    fac.operation = "MULTIPLY"
-    fac.inputs[1].default_value = 0.20
-    stains_mix = nt.nodes.new("ShaderNodeMixRGB")
-    stains_mix.location = (500, 20)
-    stains_mix.blend_type = "MULTIPLY"
-    stains_mix.inputs["Fac"].default_value = 0.18
+    mapping.inputs["Scale"].default_value = (0.7, 0.7, 0.7)
+    paper = _noise(nt, 48.0, 10.0)
+    stains = _noise(nt, 1.35, 5.0)
+    mold = _noise(nt, 0.55, 3.0)
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    dirt_z = nt.nodes.new("ShaderNodeValToRGB")
+    dirt_z.color_ramp.elements[0].position = 0.0
+    dirt_z.color_ramp.elements[0].color = (0.42, 0.36, 0.24, 1.0)
+    dirt_z.color_ramp.elements[1].position = 0.22
+    dirt_z.color_ramp.elements[1].color = (1.0, 1.0, 1.0, 1.0)
+    base_mix = nt.nodes.new("ShaderNodeMixRGB")
+    base_mix.blend_type = "MULTIPLY"
+    base_mix.inputs["Fac"].default_value = 0.28
+    base_mix.inputs["Color1"].default_value = srgb(0.67, 0.60, 0.43)
+    stain_mix = nt.nodes.new("ShaderNodeMixRGB")
+    stain_mix.blend_type = "MULTIPLY"
+    stain_mix.inputs["Fac"].default_value = 0.22
+    zdiv = nt.nodes.new("ShaderNodeMath")
+    zdiv.operation = "DIVIDE"
+    zdiv.inputs[1].default_value = 3.6
+    rough = nt.nodes.new("ShaderNodeMath")
+    rough.operation = "MULTIPLY_ADD"
+    rough.inputs[1].default_value = 0.18
+    rough.inputs[2].default_value = 0.62
     bump = nt.nodes.new("ShaderNodeBump")
-    bump.location = (320, -220)
-    bump.inputs["Strength"].default_value = 0.12
-    bump.inputs["Distance"].default_value = 0.012
+    bump.inputs["Strength"].default_value = 0.08
+    bump.inputs["Distance"].default_value = 0.004
     links = nt.links
     links.new(coord.outputs["Object"], mapping.inputs["Vector"])
-    links.new(mapping.outputs["Vector"], wave.inputs["Vector"])
-    links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
+    links.new(coord.outputs["Object"], sep.inputs["Vector"])
+    links.new(mapping.outputs["Vector"], paper.inputs["Vector"])
     links.new(mapping.outputs["Vector"], stains.inputs["Vector"])
-    links.new(wave.outputs["Fac"], ramp.inputs["Fac"])
-    links.new(wave.outputs["Fac"], fac.inputs[0])
-    links.new(fac.outputs["Value"], mix.inputs["Fac"])
-    links.new(ramp.outputs["Color"], mix.inputs["Color2"])
-    links.new(mix.outputs["Color"], stains_mix.inputs["Color1"])
-    links.new(stains.outputs["Fac"], stains_mix.inputs["Color2"])
-    links.new(stains_mix.outputs["Color"], bsdf.inputs["Base Color"])
-    links.new(noise.outputs["Fac"], bump.inputs["Height"])
+    links.new(mapping.outputs["Vector"], mold.inputs["Vector"])
+    links.new(sep.outputs["Z"], zdiv.inputs[0])
+    links.new(zdiv.outputs["Value"], dirt_z.inputs["Fac"])
+    links.new(stains.outputs["Fac"], base_mix.inputs["Color2"])
+    links.new(base_mix.outputs["Color"], stain_mix.inputs["Color1"])
+    links.new(dirt_z.outputs["Color"], stain_mix.inputs["Color2"])
+    links.new(stain_mix.outputs["Color"], bsdf.inputs["Base Color"])
+    links.new(paper.outputs["Fac"], rough.inputs[0])
+    links.new(rough.outputs["Value"], bsdf.inputs["Roughness"])
+    links.new(paper.outputs["Fac"], bump.inputs["Height"])
     links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
     links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     return mat
@@ -315,29 +317,36 @@ def mat_carpet() -> bpy.types.Material:
     nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
-    bsdf.inputs["Roughness"].default_value = 0.95
-    try:
-        bsdf.inputs["Sheen Weight"].default_value = 0.35
-    except KeyError:
-        pass
+    _set(bsdf, "Sheen Weight", 0.55)
+    _set(bsdf, "Sheen Roughness", 0.4)
+    _set(bsdf, "Specular IOR Level", 0.18)
     coord = nt.nodes.new("ShaderNodeTexCoord")
     mapping = nt.nodes.new("ShaderNodeMapping")
-    mapping.inputs["Scale"].default_value = (1.8, 1.8, 1.8)
-    noise = _noise(nt, 28.0, 8.0)
+    mapping.inputs["Scale"].default_value = (2.4, 2.4, 2.4)
+    noise = _noise(nt, 22.0, 8.0)
     voro = nt.nodes.new("ShaderNodeTexVoronoi")
-    voro.inputs["Scale"].default_value = 42.0
+    voro.inputs["Scale"].default_value = 64.0
+    wet = _noise(nt, 1.1, 2.0)
     ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = srgb(0.38, 0.32, 0.18)
-    ramp.color_ramp.elements[1].color = srgb(0.55, 0.48, 0.30)
+    ramp.color_ramp.elements[0].color = srgb(0.34, 0.28, 0.14)
+    ramp.color_ramp.elements[1].color = srgb(0.52, 0.44, 0.24)
+    rough = nt.nodes.new("ShaderNodeMapRange")
+    rough.inputs["From Min"].default_value = 0.0
+    rough.inputs["From Max"].default_value = 1.0
+    rough.inputs["To Min"].default_value = 0.42
+    rough.inputs["To Max"].default_value = 0.92
     bump = nt.nodes.new("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = 0.45
-    bump.inputs["Distance"].default_value = 0.008
+    bump.inputs["Strength"].default_value = 0.55
+    bump.inputs["Distance"].default_value = 0.006
     links = nt.links
     links.new(coord.outputs["Object"], mapping.inputs["Vector"])
     links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
     links.new(mapping.outputs["Vector"], voro.inputs["Vector"])
+    links.new(mapping.outputs["Vector"], wet.inputs["Vector"])
     links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
     links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    links.new(wet.outputs["Fac"], rough.inputs["Value"])
+    links.new(rough.outputs["Result"], bsdf.inputs["Roughness"])
     links.new(voro.outputs["Distance"], bump.inputs["Height"])
     links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
     links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
@@ -362,13 +371,13 @@ def mat_ceiling() -> bpy.types.Material:
     brick.inputs["Mortar Size"].default_value = 0.028
     brick.inputs["Brick Width"].default_value = 1.0
     brick.inputs["Row Height"].default_value = 1.0
-    brick.inputs["Color1"].default_value = srgb(0.80, 0.78, 0.72)
-    brick.inputs["Color2"].default_value = srgb(0.76, 0.74, 0.68)
-    brick.inputs["Mortar"].default_value = srgb(0.58, 0.56, 0.50)
-    noise = _noise(nt, 9.0, 5.0)
+    brick.inputs["Color1"].default_value = srgb(0.78, 0.75, 0.66)
+    brick.inputs["Color2"].default_value = srgb(0.72, 0.70, 0.62)
+    brick.inputs["Mortar"].default_value = srgb(0.48, 0.46, 0.40)
+    noise = _noise(nt, 4.5, 6.0)
     mix = nt.nodes.new("ShaderNodeMixRGB")
     mix.blend_type = "MULTIPLY"
-    mix.inputs["Fac"].default_value = 0.12
+    mix.inputs["Fac"].default_value = 0.2
     bump = nt.nodes.new("ShaderNodeBump")
     bump.inputs["Strength"].default_value = 0.12
     links = nt.links
@@ -385,23 +394,37 @@ def mat_ceiling() -> bpy.types.Material:
 
 
 def mat_light() -> bpy.types.Material:
-    """Fluorescent panel. Strength comes from the GN 'emit' attribute."""
+    """Fluorescent diffuser. Strength comes from the GN 'emit' attribute."""
     mat = bpy.data.materials.new("Fluorescent")
     mat.use_nodes = True
     nt = mat.node_tree
     nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     emit = nt.nodes.new("ShaderNodeEmission")
-    emit.inputs["Color"].default_value = srgb(0.93, 1.0, 0.78)
+    emit.inputs["Color"].default_value = srgb(0.96, 1.0, 0.78)
     attr = nt.nodes.new("ShaderNodeAttribute")
     attr.attribute_name = "emit"
     math = nt.nodes.new("ShaderNodeMath")
     math.operation = "MAXIMUM"
-    math.inputs[1].default_value = 4.0
+    math.inputs[1].default_value = 8.0
     links = nt.links
     links.new(attr.outputs["Fac"], math.inputs[0])
     links.new(math.outputs["Value"], emit.inputs["Strength"])
     links.new(emit.outputs["Emission"], out.inputs["Surface"])
+    return mat
+
+
+def mat_housing() -> bpy.types.Material:
+    mat = bpy.data.materials.new("LightHousing")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    _set(bsdf, "Base Color", srgb(0.12, 0.12, 0.11))
+    _set(bsdf, "Metallic", 0.65)
+    _set(bsdf, "Roughness", 0.38)
+    nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     return mat
 
 
@@ -430,6 +453,8 @@ def build_geometry_nodes(
     wall_height: float,
     use_cutouts: bool,
     seed: int,
+    hero_cut: Vector,
+    hero_obj: bpy.types.Object | None = None,
 ) -> bpy.types.NodeTree:
     ng = bpy.data.node_groups.new("BackroomsGenerator", "GeometryNodeTree")
     ng.interface.new_socket(name="Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
@@ -442,14 +467,14 @@ def build_geometry_nodes(
         pass
     cut_sock = ng.interface.new_socket(name="Cutout Density", in_out="INPUT", socket_type="NodeSocketFloat")
     try:
-        cut_sock.default_value = 0.018 if use_cutouts else 0.0
+        cut_sock.default_value = 0.02 if use_cutouts else 0.0
         cut_sock.min_value = 0.0
         cut_sock.max_value = 0.2
     except Exception:
         pass
     light_sock = ng.interface.new_socket(name="Light Density", in_out="INPUT", socket_type="NodeSocketFloat")
     try:
-        light_sock.default_value = 0.22
+        light_sock.default_value = 0.16
         light_sock.min_value = 0.02
         light_sock.max_value = 1.0
     except Exception:
@@ -542,39 +567,51 @@ def build_geometry_nodes(
     link(extrude.outputs["Mesh"], set_wall.inputs["Geometry"])
     link(mat_wall.outputs["Material"], set_wall.inputs["Material"])
     link(set_wall.outputs["Geometry"], shade_wall.inputs["Mesh"])
+    merge = nodes.new("GeometryNodeMergeByDistance")
+    merge.location = (620, 40)
+    merge.inputs["Distance"].default_value = 0.002
+    link(shade_wall.outputs["Geometry"], merge.inputs["Geometry"])
     _parent(
-        [del_walls, extrude, combine, set_wall, mat_wall, shade_wall],
+        [del_walls, extrude, combine, set_wall, mat_wall, shade_wall, merge],
         _frame(ng, "Adaptive walls + outer shell", (0.20, 0.17, 0.12)),
     )
 
-    walls_geo = shade_wall.outputs["Geometry"]
+    walls_geo = merge.outputs["Geometry"]
 
-    # Random wall cutouts (boolean cubes hugging the walls)
+    # Door-like cutouts: world-aligned boxes from the floor up (~90% wall height).
+    # Do not rotate onto the face normal — that left floating shelves on the right wall.
     dist_cut = nodes.new("GeometryNodeDistributePointsOnFaces")
-    dist_cut.location = (640, -80)
+    dist_cut.location = (840, -80)
     dist_cut.distribute_method = "RANDOM"
     nrm = nodes.new("GeometryNodeInputNormal")
-    nrm.location = (200, -220)
+    nrm.location = (420, -220)
     sep_n = nodes.new("ShaderNodeSeparateXYZ")
-    sep_n.location = (380, -220)
+    sep_n.location = (600, -220)
     abs_z = nodes.new("ShaderNodeMath")
-    abs_z.location = (560, -220)
+    abs_z.location = (780, -220)
     abs_z.operation = "ABSOLUTE"
     vert_sel = nodes.new("FunctionNodeCompare")
-    vert_sel.location = (740, -220)
+    vert_sel.location = (960, -220)
     vert_sel.operation = "LESS_THAN"
-    vert_sel.inputs["B"].default_value = 0.35
-    cube = nodes.new("GeometryNodeMeshCube")
-    cube.location = (640, -400)
-    cube.inputs["Size"].default_value = (1.35, 0.55, 2.7)
+    vert_sel.inputs["B"].default_value = 0.25
+    door = nodes.new("GeometryNodeMeshCube")
+    door.location = (840, -400)
+    door.inputs["Size"].default_value = (1.18, 1.18, 3.22)
     inst_cut = nodes.new("GeometryNodeInstanceOnPoints")
-    inst_cut.location = (900, -80)
+    inst_cut.location = (1100, -80)
+    drop = nodes.new("GeometryNodeTranslateInstances")
+    drop.location = (1280, -80)
+    drop.inputs["Translation"].default_value = (0.0, 0.0, -0.22)
+    if "Local Space" in drop.inputs:
+        drop.inputs["Local Space"].default_value = False
     real_cut = nodes.new("GeometryNodeRealizeInstances")
-    real_cut.location = (1100, -80)
+    real_cut.location = (1460, -80)
     boolean = nodes.new("GeometryNodeMeshBoolean")
-    boolean.location = (1300, 40)
+    boolean.location = (1640, 40)
     boolean.operation = "DIFFERENCE"
-    boolean.solver = "FLOAT"
+    boolean.solver = "EXACT"
+    if "Hole Tolerant" in boolean.inputs:
+        boolean.inputs["Hole Tolerant"].default_value = True
     link(walls_geo, dist_cut.inputs["Mesh"])
     link(n_in.outputs["Cutout Density"], dist_cut.inputs["Density"])
     link(n_in.outputs["Seed"], dist_cut.inputs["Seed"])
@@ -583,16 +620,36 @@ def build_geometry_nodes(
     link(abs_z.outputs["Value"], vert_sel.inputs["A"])
     link(vert_sel.outputs["Result"], dist_cut.inputs["Selection"])
     link(dist_cut.outputs["Points"], inst_cut.inputs["Points"])
-    link(dist_cut.outputs["Rotation"], inst_cut.inputs["Rotation"])
-    link(cube.outputs["Mesh"], inst_cut.inputs["Instance"])
-    link(inst_cut.outputs["Instances"], real_cut.inputs["Geometry"])
+    link(door.outputs["Mesh"], inst_cut.inputs["Instance"])
+    link(inst_cut.outputs["Instances"], drop.inputs["Instances"])
+    link(drop.outputs["Instances"], real_cut.inputs["Geometry"])
+    hero_door = nodes.new("GeometryNodeMeshCube")
+    hero_door.location = (1460, -280)
+    hero_door.inputs["Size"].default_value = (1.42, 0.72, 3.22)
+    hero_xf = nodes.new("GeometryNodeTransform")
+    hero_xf.location = (1640, -280)
+    hero_vec = nodes.new("FunctionNodeInputVector")
+    hero_vec.location = (1460, -400)
+    hero_vec.vector = (hero_cut.x, hero_cut.y, hero_cut.z)
+    link(hero_vec.outputs["Vector"], hero_xf.inputs["Translation"])
+    link(hero_door.outputs["Mesh"], hero_xf.inputs["Geometry"])
+    join_cut = nodes.new("GeometryNodeJoinGeometry")
+    join_cut.location = (1680, -80)
+    link(real_cut.outputs["Geometry"], join_cut.inputs["Geometry"])
+    link(hero_xf.outputs["Geometry"], join_cut.inputs["Geometry"])
+    if hero_obj is not None:
+        info = nodes.new("GeometryNodeObjectInfo")
+        info.location = (1460, -520)
+        info.transform_space = "ORIGINAL"
+        info.inputs["Object"].default_value = hero_obj
+        link(info.outputs["Geometry"], join_cut.inputs["Geometry"])
     link(walls_geo, boolean.inputs["Mesh 1"])
-    link(real_cut.outputs["Geometry"], boolean.inputs["Mesh 2"])
+    link(join_cut.outputs["Geometry"], boolean.inputs["Mesh 2"])
     _parent(
-        [dist_cut, nrm, sep_n, abs_z, vert_sel, cube, inst_cut, real_cut, boolean],
-        _frame(ng, "Random wall cutouts", (0.14, 0.12, 0.16)),
+        [dist_cut, nrm, sep_n, abs_z, vert_sel, door, inst_cut, drop, real_cut, boolean],
+        _frame(ng, "Floor-hugging door cutouts", (0.14, 0.12, 0.16)),
     )
-    walls_out = boolean.outputs["Mesh"]
+    walls_out = boolean.outputs["Mesh"] if use_cutouts else walls_geo
 
     # Ceiling over the whole layout
     xform = nodes.new("GeometryNodeTransform")
@@ -624,7 +681,17 @@ def build_geometry_nodes(
     dist_lights.distribute_method = "RANDOM"
     panel = nodes.new("GeometryNodeMeshCube")
     panel.location = (640, 520)
-    panel.inputs["Size"].default_value = (1.22, 0.38, 0.06)
+    panel.inputs["Size"].default_value = (1.18, 0.58, 0.03)
+    house = nodes.new("GeometryNodeMeshCube")
+    house.location = (640, 380)
+    house.inputs["Size"].default_value = (1.28, 0.68, 0.08)
+    set_house_mat = nodes.new("GeometryNodeSetMaterial")
+    set_house_mat.location = (860, 380)
+    mat_house = nodes.new("GeometryNodeInputMaterial")
+    mat_house.location = (640, 260)
+    mat_house.material = mats["housing"]
+    link(house.outputs["Mesh"], set_house_mat.inputs["Geometry"])
+    link(mat_house.outputs["Material"], set_house_mat.inputs["Material"])
     rnd_on = nodes.new("FunctionNodeRandomValue")
     rnd_on.location = (640, 880)
     rnd_on.data_type = "BOOLEAN"
@@ -638,22 +705,33 @@ def build_geometry_nodes(
     rnd_emit = nodes.new("FunctionNodeRandomValue")
     rnd_emit.location = (860, 900)
     rnd_emit.data_type = "FLOAT"
-    rnd_emit.inputs["Min"].default_value = 6.0
-    rnd_emit.inputs["Max"].default_value = 28.0
+    rnd_emit.inputs["Min"].default_value = 12.0
+    rnd_emit.inputs["Max"].default_value = 42.0
     inst_lights = nodes.new("GeometryNodeInstanceOnPoints")
     inst_lights.location = (900, 700)
+    inst_house = nodes.new("GeometryNodeInstanceOnPoints")
+    inst_house.location = (900, 520)
+    drop_diff = nodes.new("GeometryNodeTranslateInstances")
+    drop_diff.location = (1120, 700)
+    drop_diff.inputs["Translation"].default_value = (0.0, 0.0, -0.04)
+    if "Local Space" in drop_diff.inputs:
+        drop_diff.inputs["Local Space"].default_value = False
     store_emit = nodes.new("GeometryNodeStoreNamedAttribute")
-    store_emit.location = (1120, 700)
+    store_emit.location = (1320, 700)
     store_emit.data_type = "FLOAT"
     store_emit.domain = "INSTANCE"
     store_emit.inputs["Name"].default_value = "emit"
     real_lights = nodes.new("GeometryNodeRealizeInstances")
-    real_lights.location = (1340, 700)
+    real_lights.location = (1520, 700)
+    real_house = nodes.new("GeometryNodeRealizeInstances")
+    real_house.location = (1120, 520)
     set_light = nodes.new("GeometryNodeSetMaterial")
-    set_light.location = (1560, 700)
+    set_light.location = (1720, 700)
     mat_light = nodes.new("GeometryNodeInputMaterial")
-    mat_light.location = (1340, 840)
+    mat_light.location = (1520, 840)
     mat_light.material = mats["light"]
+    join_lights = nodes.new("GeometryNodeJoinGeometry")
+    join_lights.location = (1900, 620)
     link(set_ceil.outputs["Geometry"], del_light_area.inputs["Geometry"])
     link(not_path.outputs["Boolean"], del_light_area.inputs["Selection"])
     link(del_light_area.outputs["Geometry"], dist_lights.inputs["Mesh"])
@@ -669,13 +747,20 @@ def build_geometry_nodes(
     link(dist_lights.outputs["Points"], inst_lights.inputs["Points"])
     link(rnd_on.outputs["Value"], inst_lights.inputs["Selection"])
     link(panel.outputs["Mesh"], inst_lights.inputs["Instance"])
-    link(inst_lights.outputs["Instances"], store_emit.inputs["Geometry"])
+    link(inst_lights.outputs["Instances"], drop_diff.inputs["Instances"])
+    link(drop_diff.outputs["Instances"], store_emit.inputs["Geometry"])
     link(rnd_emit.outputs["Value"], store_emit.inputs["Value"])
     link(store_emit.outputs["Geometry"], real_lights.inputs["Geometry"])
     link(real_lights.outputs["Geometry"], set_light.inputs["Geometry"])
     link(mat_light.outputs["Material"], set_light.inputs["Material"])
+    link(dist_lights.outputs["Points"], inst_house.inputs["Points"])
+    link(rnd_on.outputs["Value"], inst_house.inputs["Selection"])
+    link(set_house_mat.outputs["Geometry"], inst_house.inputs["Instance"])
+    link(inst_house.outputs["Instances"], real_house.inputs["Geometry"])
+    link(set_light.outputs["Geometry"], join_lights.inputs["Geometry"])
+    link(real_house.outputs["Geometry"], join_lights.inputs["Geometry"])
     _parent(
-        [xform, comb_up, flip, set_ceil, mat_ceil, del_light_area, dist_lights, panel, rnd_on, rnd_emit, inst_lights, store_emit, real_lights, set_light, mat_light, seed2],
+        [xform, comb_up, flip, set_ceil, mat_ceil, del_light_area, dist_lights, panel, house, set_house_mat, mat_house, rnd_on, rnd_emit, inst_lights, inst_house, drop_diff, store_emit, real_lights, real_house, set_light, mat_light, join_lights, seed2],
         _frame(ng, "Ceiling + random lights", (0.12, 0.16, 0.18)),
     )
 
@@ -684,9 +769,27 @@ def build_geometry_nodes(
     link(set_carpet.outputs["Geometry"], join.inputs["Geometry"])
     link(walls_out, join.inputs["Geometry"])
     link(set_ceil.outputs["Geometry"], join.inputs["Geometry"])
-    link(set_light.outputs["Geometry"], join.inputs["Geometry"])
+    link(join_lights.outputs["Geometry"], join.inputs["Geometry"])
     link(join.outputs["Geometry"], n_out.inputs["Geometry"])
     return ng
+
+
+def add_cutter_cube(name: str, location: Vector, dimensions: tuple[float, float, float]) -> bpy.types.Object:
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(obj)
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        v.co.x *= dimensions[0]
+        v.co.y *= dimensions[1]
+        v.co.z *= dimensions[2]
+    bm.to_mesh(mesh)
+    bm.free()
+    obj.location = location
+    obj.hide_render = True
+    obj.display_type = "WIRE"
+    return obj
 
 
 def add_backrooms_object(ng: bpy.types.NodeTree) -> bpy.types.Object:
@@ -698,7 +801,7 @@ def add_backrooms_object(ng: bpy.types.NodeTree) -> bpy.types.Object:
     return obj
 
 
-def add_world() -> None:
+def add_world(haze: float = 0.01) -> None:
     world = bpy.data.worlds.new("Void")
     bpy.context.scene.world = world
     world.use_nodes = True
@@ -706,9 +809,15 @@ def add_world() -> None:
     nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputWorld")
     bg = nt.nodes.new("ShaderNodeBackground")
-    bg.inputs["Color"].default_value = (0.0, 0.0, 0.0, 1.0)
-    bg.inputs["Strength"].default_value = 0.0
+    bg.inputs["Color"].default_value = (0.01, 0.012, 0.008, 1.0)
+    bg.inputs["Strength"].default_value = 0.04
+    scatter = nt.nodes.new("ShaderNodeVolumeScatter")
+    scatter.inputs["Color"].default_value = srgb(0.85, 0.92, 0.70)
+    scatter.inputs["Density"].default_value = haze
+    if "Anisotropy" in scatter.inputs:
+        scatter.inputs["Anisotropy"].default_value = 0.35
     nt.links.new(bg.outputs["Background"], out.inputs["Surface"])
+    nt.links.new(scatter.outputs["Volume"], out.inputs["Volume"])
 
 
 def add_camera(size_x: float, size_y: float, width: int, height: int, cell: float, wall: float, corridor: tuple[int, int, int], wall_height: float) -> bpy.types.Object:
@@ -717,13 +826,13 @@ def add_camera(size_x: float, size_y: float, width: int, height: int, cell: floa
     y0 = -size_y / 2 + wall + (start_y + 1.2) * (cell + wall)
     y1 = -size_y / 2 + wall + (start_y + max(length - 0.4, 1.2)) * (cell + wall)
     cam = bpy.data.cameras.new("Camera")
-    cam.lens = 24
+    cam.lens = 28
     cam.sensor_width = 36
     cam.clip_end = 200
     cam.dof.use_dof = True
-    cam.dof.aperture_fstop = 2.8
+    cam.dof.aperture_fstop = 5.6
     obj = bpy.data.objects.new("Camera", cam)
-    obj.location = (origin_x, y0, 1.55)
+    obj.location = (origin_x, y0, 1.58)
     target = Vector((origin_x, y1, 1.35))
     direction = target - Vector(obj.location)
     obj.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
@@ -812,11 +921,16 @@ def setup_render(args: dict) -> None:
     scene.cycles.denoiser = "OPENIMAGEDENOISE"
     if hasattr(scene.cycles, "use_adaptive_sampling"):
         scene.cycles.use_adaptive_sampling = True
-    scene.cycles.max_bounces = 12
-    scene.cycles.diffuse_bounces = 8
+    scene.cycles.max_bounces = 16
+    scene.cycles.diffuse_bounces = 10
     scene.cycles.glossy_bounces = 4
     scene.cycles.transmission_bounces = 4
     scene.cycles.transparent_max_bounces = 4
+    scene.cycles.volume_bounces = 4
+    if hasattr(scene.cycles, "volume_step_rate"):
+        scene.cycles.volume_step_rate = 1.2
+    if hasattr(scene.cycles, "use_light_tree"):
+        scene.cycles.use_light_tree = True
     scene.render.threads_mode = "FIXED"
     scene.render.threads = 4
     scene.render.resolution_x, scene.render.resolution_y = args["resolution"]
@@ -829,7 +943,7 @@ def setup_render(args: dict) -> None:
         scene.view_settings.view_transform = "AgX"
     except TypeError:
         pass
-    scene.view_settings.exposure = -0.15
+    scene.view_settings.exposure = -0.05
     scene.view_settings.look = "None"
     setup_compositor()
 
@@ -856,7 +970,18 @@ def main() -> None:
         "carpet": mat_carpet(),
         "ceiling": mat_ceiling(),
         "light": mat_light(),
+        "housing": mat_housing(),
     }
+    corridor = longest_corridor(rooms_x, rooms_y, horiz)
+    cx, start_y, _length = corridor
+    origin_x = -size_x / 2 + wall_m + (cx + 0.5) * (cell_m + wall_m)
+    y0 = -size_y / 2 + wall_m + (start_y + 1.2) * (cell_m + wall_m)
+    cutter = add_cutter_cube(
+        "RightWallDoorCutter",
+        Vector((2.18, -11.15, 1.61)),
+        (1.48, 0.95, 3.22),
+    )
+    hero_cut = Vector(cutter.location)
     ng = build_geometry_nodes(
         maze_image,
         mats,
@@ -867,15 +992,32 @@ def main() -> None:
         wall_height,
         args["cutouts"],
         args["seed"],
+        hero_cut,
+        cutter,
     )
     add_backrooms_object(ng)
-    add_world()
-    corridor = longest_corridor(rooms_x, rooms_y, horiz)
+    add_world(0.0 if args["debug_cut"] else 0.01)
     add_camera(size_x, size_y, rooms_x, rooms_y, cell_m, wall_m, corridor, wall_height)
     setup_render(args)
 
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
-    print("Saved", BLEND_PATH)
+    print("hero_cut", tuple(round(c, 3) for c in hero_cut), "cam_guess", round(origin_x, 3), round(y0, 3))
+    # Visible marker for aligning the right-wall doorway, removed after lookdev.
+    if args.get("debug_cut"):
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=hero_cut)
+        marker = bpy.context.object
+        marker.name = "HeroCutMarker"
+        marker.scale = (0.38, 0.64, 1.61)
+        mat = bpy.data.materials.new("MarkerRed")
+        mat.use_nodes = True
+        nt = mat.node_tree
+        nt.nodes.clear()
+        out = nt.nodes.new("ShaderNodeOutputMaterial")
+        em = nt.nodes.new("ShaderNodeEmission")
+        em.inputs["Color"].default_value = (1, 0.05, 0.05, 1)
+        em.inputs["Strength"].default_value = 20
+        nt.links.new(em.outputs["Emission"], out.inputs["Surface"])
+        marker.data.materials.append(mat)
     print("Maze", verts_x, "x", verts_y, "size", round(size_x, 2), "x", round(size_y, 2), "corridor", corridor)
     if args["render"]:
         bpy.ops.render.render(write_still=True)
