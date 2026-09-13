@@ -29,7 +29,7 @@ RENDER_DIR = ROOT / "renders"
 
 
 def parse_args():
-    args = {"view": "front", "samples": 48, "render": True}
+    args = {"view": "front", "samples": 48, "render": True, "fast": False}
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
     i = 0
     while i < len(argv):
@@ -39,6 +39,9 @@ def parse_args():
         elif argv[i] == "--samples" and i + 1 < len(argv):
             args["samples"] = int(argv[i + 1])
             i += 1
+        elif argv[i] == "--fast":
+            args["fast"] = True
+            args["samples"] = 12
         elif argv[i] == "--no-render":
             args["render"] = False
         i += 1
@@ -514,6 +517,8 @@ def setup_render(args):
     scene.cycles.samples = args["samples"]
     scene.cycles.use_denoising = True
     scene.cycles.denoiser = "OPENIMAGEDENOISE"
+    if hasattr(scene.cycles, "use_adaptive_sampling"):
+        scene.cycles.use_adaptive_sampling = True
     scene.cycles.max_bounces = 16
     scene.cycles.glossy_bounces = 8
     scene.cycles.transmission_bounces = 8
@@ -523,7 +528,8 @@ def setup_render(args):
     scene.render.resolution_x = 1280
     scene.render.resolution_y = 1280
     scene.render.image_settings.file_format = "PNG"
-    scene.render.filepath = str(RENDER_DIR / f"single_room_{args['view']}.png")
+    suffix = f"{args['view']}_fast" if args.get("fast") else args["view"]
+    scene.render.filepath = str(RENDER_DIR / f"single_room_{suffix}.png")
     try:
         scene.view_settings.view_transform = "AgX"
     except TypeError:

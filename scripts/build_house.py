@@ -54,12 +54,18 @@ def parse_args() -> dict:
         "resolution": (1920, 1280),
         "render": True,
         "engine": "CYCLES",
+        "fast": False,
     }
     i = 0
     while i < len(argv):
         if argv[i] == "--preview":
             out["samples"] = 24
             out["resolution"] = (960, 640)
+        elif argv[i] == "--fast":
+            # CPU preview: ~10s instead of minutes. Does not replace the quality still.
+            out["fast"] = True
+            out["samples"] = 12
+            out["resolution"] = (1280, 853)
         elif argv[i] == "--no-render":
             out["render"] = False
         elif argv[i] == "--samples" and i + 1 < len(argv):
@@ -864,7 +870,8 @@ def setup_render(args: dict) -> None:
     scene.render.engine = args["engine"]
     scene.render.resolution_x, scene.render.resolution_y = args["resolution"]
     scene.render.resolution_percentage = 100
-    scene.render.filepath = str(RENDER_PATH)
+    dest = RENDER_PATH.with_name("house_fast.png") if args.get("fast") else RENDER_PATH
+    scene.render.filepath = str(dest)
     scene.render.image_settings.file_format = "PNG"
     scene.render.film_transparent = False
     try:
@@ -877,6 +884,8 @@ def setup_render(args: dict) -> None:
         scene.cycles.samples = args["samples"]
         scene.cycles.use_denoising = True
         scene.cycles.denoiser = "OPENIMAGEDENOISE"
+        if hasattr(scene.cycles, "use_adaptive_sampling"):
+            scene.cycles.use_adaptive_sampling = True
         scene.cycles.max_bounces = 8
         scene.cycles.transparent_max_bounces = 4
         scene.cycles.diffuse_bounces = 4
@@ -1034,7 +1043,7 @@ def main() -> None:
     print(f"Saved {BLEND_PATH}")
     if args["render"]:
         bpy.ops.render.render(write_still=True)
-        print(f"Rendered {RENDER_PATH}")
+        print(f"Rendered {bpy.context.scene.render.filepath}")
         bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
 
 
