@@ -303,14 +303,16 @@ def add_ceiling(size_x: float, size_y: float, mats: dict) -> bpy.types.Object:
     lights.data.materials.append(mats["light"])
     bpy.context.scene.collection.objects.link(lights)
     return obj
+
+
+def add_cameras(size_x: float, size_y: float) -> None:
     hall_y = 0.0
-    # Walk view: standing in the hall, looking down its length.
     cam = bpy.data.cameras.new("CameraWalk")
-    cam.lens = 28
+    cam.lens = 24
     cam.clip_end = 80
     obj = bpy.data.objects.new("CameraWalk", cam)
-    obj.location = (-size_x * 0.42, hall_y, 1.6)
-    target = Vector((size_x * 0.35, hall_y, 1.45))
+    obj.location = (-12.0, 0.0, 1.6)
+    target = Vector((14.0, 0.0, 1.45))
     obj.rotation_euler = (target - obj.location).to_track_quat("-Z", "Y").to_euler()
     bpy.context.scene.collection.objects.link(obj)
     bpy.context.scene.camera = obj
