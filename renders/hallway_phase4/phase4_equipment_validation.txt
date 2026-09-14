@@ -1,64 +1,64 @@
-PHASE 4 FUNCTIONAL EQUIPMENT / MAINTENANCE INFRASTRUCTURE
-Additive equipment pass; Phase 1, Phase 2, and Phase 3 objects were not moved.
+PHASE 4 功能設備與維修基礎設施
+本次為增量設備階段；未移動 Phase 1、Phase 2、Phase 3 的任何既有物件。
 
-ELECTRICAL
-  4 meaningful cabinet/box assemblies:
-  BOX_Junction_A_01 at right wall y=3.20
-  CABINET_Control_B_01 at right wall y=10.70
-  CABINET_Service_B_02 at right wall y=13.25
-  CABINET_Control_C_01 at right wall y=19.35
-  Each includes body, door panel/seam, hinges, handle, indicator, and cable entry.
+電氣設備
+  共 4 組具功能意義的控制櫃／接線盒：
+  BOX_Junction_A_01：Zone A 右牆 y=3.20
+  CABINET_Control_B_01：Zone B 右牆 y=10.70
+  CABINET_Service_B_02：Zone B 右牆 y=13.25
+  CABINET_Control_C_01：Zone C 右牆 y=19.35
+  每組包含櫃體、門板／門縫、鉸鏈、把手、指示區與電纜入口。
 
-PIPE INTERFACES
-  A minor right utility line enters BOX_Junction_A_01 through a short vertical conduit.
-  B minor right utility line enters CABINET_Control_B_01; B service cabinet has a parallel cable entry.
-  C minor right utility line enters CABINET_Control_C_01.
-  The C pressure gauge is mounted below the existing offset primary pipe and valve region.
+管線接口
+  Zone A 右側次要 utility line 透過短垂直 conduit 接入 BOX_Junction_A_01。
+  Zone B 右側次要 utility line 接入 CABINET_Control_B_01；服務櫃另有平行電纜入口。
+  Zone C 右側次要 utility line 接入 CABINET_Control_C_01。
+  Zone C 壓力表安裝於既有偏置主管與閥件區域下方。
 
-GAUGES / METERS
-  pressure gauges: 3 — A right y=3.78, B right y=14.25, C pipe-mounted y=20.55
+壓力表／儀表
+  共 3 個：A 右牆 y=3.78、B 右牆 y=14.25、C 管線下掛式 y=20.55。
 
-VENTILATION
-  1 restrained B-zone left wall ventilation grille with three slats at y=12.05, z=1.68.
+通風
+  Zone B 左牆 y=12.05、z=1.68 設置 1 組克制的壁面通風格柵，含 3 條格柵片。
 
-CABLE SYSTEM
-  4 short conduit entries reuse the Phase 3 right-side cable-tray/service region; no wire bundle network was added.
+電纜系統
+  4 組短 conduit 入口沿用 Phase 3 右側 cable tray／服務區域；未新增線束網路。
 
-SERVICE HATCHES
-  2 subordinate access hatches: B left wall y=10.20 and C right wall y=22.20, both low and human-accessible.
+維修艙門
+  共 2 個從屬式維修艙門：Zone B 左牆 y=10.20、Zone C 右牆 y=22.20，皆位於低位且可由人員操作。
 
-ZONE CHARACTER
-  A: one small junction box, one gauge, and a clean short conduit entry.
-  B: two cabinets, one gauge, one ventilation grille, two hatches, and the densest functional interfaces.
-  C: one isolated cabinet, one pipe-mounted gauge, and one low service hatch with reduced regularity.
+分區特徵
+  Zone A：單一小型接線盒、1 個壓力表與整齊的短 conduit 入口。
+  Zone B：2 組控制櫃、1 個壓力表、1 組通風格柵、2 個維修艙門，功能接口密度最高。
+  Zone C：孤立控制櫃、1 個管線下掛式壓力表與 1 個低位維修艙門，規律性降低但沒有損壞。
 
-PHASE 1 CLEAR STATIONS
-  label       y       measured width   measured ceiling   target width   target ceiling
-  A clear     3.25    2.200 m          3.000 m          2.200 m       3.000 m
-  B clear    11.75    2.050 m          2.740 m          2.050 m       2.740 m
-  C clear    21.55    2.200 m          2.930 m          2.200 m       2.930 m
+PHASE 1 空間凍結量測點
+  標籤       y       實測寬度       實測天花高度       目標寬度       目標天花高度
+  A clear     3.25    2.200 m       3.000 m          2.200 m       3.000 m
+  B clear    11.75    2.050 m       2.740 m          2.050 m       2.740 m
+  C clear    21.55    2.200 m       2.930 m          2.200 m       2.930 m
 
-FIRST-PERSON / GEOMETRY VALIDATION
-  Phase 4 objects: 68; mesh objects: 64
-  minimum camera side clearance: 0.829 m
-  minimum walkable width around equipment: 1.854 m
-  minimum camera overhead clearance: 2.125 m
-  camera path errors: 0
-  camera/equipment hits: 0
-  equipment/Phase 3 pipe conflicts: 0 unexpected
-  equipment/Phase 2 beam conflicts: 0 unexpected
-  access-height errors: 0
-  generic names: 0; unapplied scales: 0; below floor: 0
+第一人稱／幾何驗證
+  Phase 4 新增物件：68；其中 mesh 物件：64
+  相機最小單側淨空：0.829 m
+  設備周邊最小可行走寬度：1.854 m
+  相機最小上方淨空：2.125 m
+  相機路徑錯誤：0
+  相機／設備碰撞：0
+  設備／Phase 3 管線非預期衝突：0
+  設備／Phase 2 樑架非預期衝突：0
+  可達高度錯誤：0
+  泛用名稱：0；未套用縮放：0；低於地面：0
 
-PERFORMANCE
-  Reused linked meshes for cabinet sizes, doors, hinges, handles, vents, gauges, hatches, and conduit entries.
-  Medium-detail silhouettes only; no final textures, lighting, wires, debris, or destruction.
+效能與模組化
+  控制櫃尺寸、門板、鉸鏈、把手、通風格柵、壓力表、艙門與 conduit 入口均重用 linked mesh。
+  僅製作中等細節輪廓；未加入最終材質、最終燈光、線束、垃圾、碎屑或破壞效果。
 
-PHASE 1 FREEZE STATUS: PASS
-PHASE 2 FREEZE STATUS: PASS
-PHASE 3 FREEZE STATUS: PASS
-PHASE 4 EQUIPMENT VALIDATION: PASS
-  Phase 1 dimensions modified: NO
-  Phase 2 structural skeleton modified: NO
-  Phase 3 primary pipe routing modified: NO
-  Phase 5 not started.
+PHASE 1 空間凍結狀態： PASS
+PHASE 2 結構凍結狀態： PASS
+PHASE 3 管線凍結狀態： PASS
+PHASE 4 設備驗證： PASS
+  Phase 1 尺寸是否修改：否
+  Phase 2 結構骨架是否修改：否
+  Phase 3 主管線路由是否修改：否
+  尚未開始 Phase 5。
