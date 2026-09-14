@@ -1,0 +1,56 @@
+PHASE 2 STRUCTURAL VALIDATION
+Phase 1 envelope preserved; no detailed pipes or final look added.
+
+COLLECTIONS
+  STRUCTURE_BEAMS: 11 objects
+  STRUCTURE_WALL: 19 objects
+  STRUCTURE_MOUNTS: 27 objects
+  STRUCTURE_GUIDES: 12 objects
+
+REUSABLE MODULE MESHES
+  MODULE_CeilingBeam_A_MESH: shared by 3 instances
+  MODULE_CeilingBeam_B_MESH: shared by 5 instances
+  MODULE_CeilingBeam_C_MESH: shared by 3 instances
+  MODULE_WallSupport_MESH: shared by 19 instances
+  MODULE_UtilityRail_Short_MESH: shared by 7 instances
+  MODULE_UtilityRail_Long_MESH: shared by 3 instances
+  MODULE_PipeMountBracket_MESH: shared by 11 instances
+  MODULE_CeilingSideBrace_MESH: shared by 6 instances
+
+STRUCTURAL RHYTHM
+  ceiling beam Y positions: 1.70, 4.25, 6.85, 9.35, 10.90, 12.45, 14.00, 15.15, 17.85, 20.55, 22.95
+  wall support Y positions: 2.15, 4.95, 7.20, 9.65, 11.25, 12.85, 14.45, 17.95, 19.45, 21.20, 23.10
+  utility rail Y positions: 2.90, 5.75, 9.55, 10.85, 12.15, 13.45, 14.70, 18.35, 20.95, 22.75
+
+FROZEN CLEAR STATIONS
+  label       y       measured width   measured ceiling   target width   target ceiling
+  A clear     3.25    2.200 m          3.000 m          2.200 m       3.000 m
+  B clear    11.75    2.050 m          2.740 m          2.050 m       2.740 m
+  C clear    21.55    2.200 m          2.930 m          2.200 m       2.930 m
+
+LOCAL STRUCTURE CHECK
+  minimum sampled width at eye height: 2.040 m
+  minimum sampled overhead clearance from floor: 2.620 m
+  walkable width / clearance check: PASS
+
+PHASE 1 FREEZE STATUS: PASS
+PHASE 2 STRUCTURAL VALIDATION: PASS
+  Phase 1 dimensions modified: NO
+
+PIPE / CABLE RESERVATIONS
+  A upper-left wall pipe band: y=0.40–7.30, x=-0.86, z=2.46, clear radius=0.18 m
+  A upper-right wall pipe band: y=0.40–7.30, x=0.86, z=2.46, clear radius=0.18 m
+  B upper-left wall pipe band: y=9.05–15.35, x=-0.80, z=2.37, clear radius=0.16 m
+  B upper-right wall pipe band: y=9.05–15.35, x=0.80, z=2.37, clear radius=0.16 m
+  C upper-left wall pipe band: y=16.85–23.70, x=-0.86, z=2.54, clear radius=0.18 m
+  C upper-right wall pipe band: y=16.85–23.70, x=0.86, z=2.54, clear radius=0.18 m
+  A left ceiling-side cable tray: y=0.40–7.30, x=-0.52, z=2.70, clear radius=0.12 m
+  A right ceiling-side cable tray: y=0.40–7.30, x=0.52, z=2.70, clear radius=0.12 m
+  B left ceiling-side cable tray: y=9.05–15.35, x=-0.48, z=2.48, clear radius=0.12 m
+  B right ceiling-side cable tray: y=9.05–15.35, x=0.48, z=2.48, clear radius=0.12 m
+  C left ceiling-side cable tray: y=16.85–23.70, x=-0.52, z=2.65, clear radius=0.13 m
+  C right ceiling-side cable tray: y=16.85–23.70, x=0.52, z=2.65, clear radius=0.13 m
+
+OBJECT RULES
+  Phase 1 objects were not resized or moved.
+  No doors, branches, rooms, detailed pipes, valves, props, final lights, or animation were added.
