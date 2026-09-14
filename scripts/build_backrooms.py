@@ -183,26 +183,54 @@ def wall_opening_y(
     add_box(f"{name}.Lintel", x0, open_y0, open_z1, x1, open_y1, z1, col, mat)
 
 
+# Level 0 palette (sRGB 0-1). Base linear ≈ (0.584, 0.462, 0.157).
+WALL_BASE_SRGB = (201 / 255, 181 / 255, 110 / 255)  # #C9B56E
+WALL_HI_SRGB = (213 / 255, 197 / 255, 133 / 255)  # #D5C585
+WALL_DK_SRGB = (159 / 255, 142 / 255, 85 / 255)  # #9F8E55
+CEIL_BASE_SRGB = (212 / 255, 208 / 255, 181 / 255)  # #D4D0B5
+CEIL_STAIN_SRGB = (170 / 255, 165 / 255, 142 / 255)  # #AAA58E
+
+
+def hex_lin(srgb_tuple: tuple[float, float, float]) -> tuple[float, float, float, float]:
+    return srgb(srgb_tuple[0], srgb_tuple[1], srgb_tuple[2])
+
+
+def lerp3(a: tuple[float, ...], b: tuple[float, ...], t: float) -> tuple[float, float, float]:
+    return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t)
+
+
+def set_matte_dielectric(bsdf: bpy.types.Node, roughness: float) -> None:
+    bsdf.inputs["Roughness"].default_value = roughness
+    if "Metallic" in bsdf.inputs:
+        bsdf.inputs["Metallic"].default_value = 0.0
+    if "Specular IOR Level" in bsdf.inputs:
+        bsdf.inputs["Specular IOR Level"].default_value = 0.22
+    elif "Specular" in bsdf.inputs:
+        bsdf.inputs["Specular"].default_value = 0.18
+    if "Coat Weight" in bsdf.inputs:
+        bsdf.inputs["Coat Weight"].default_value = 0.0
+    if "Sheen Weight" in bsdf.inputs:
+        bsdf.inputs["Sheen Weight"].default_value = 0.0
+
+
 def make_wallpaper_image() -> bpy.types.Image:
-    """Tileable yellow damask-ish print, ~0.45 m repeat on the wall."""
+    """Very low-contrast tile. Pattern should read as grain, not a print."""
     n = 1024
     img = bpy.data.images.new("WallpaperTile", n, n, alpha=False)
+    img.colorspace_settings.name = "sRGB"
     pixels = [0.0] * (n * n * 4)
+    base, hi, dk = WALL_BASE_SRGB, WALL_HI_SRGB, WALL_DK_SRGB
     for y in range(n):
         for x in range(n):
-            fu = x / n
-            fv = y / n
-            d1 = abs(math.sin(fu * math.pi * 2) * math.sin(fv * math.pi * 2))
-            d2 = abs(math.sin((fu + fv) * math.pi * 2) * math.sin((fu - fv) * math.pi * 2))
-            cx, cy = fu - 0.5, fv - 0.5
-            diamond = abs(cx) + abs(cy)
-            motif = 0.50 * d1 + 0.22 * d2 + 0.18 * max(0.0, 1.0 - diamond / 0.22)
+            fu, fv = x / n, y / n
+            wave = math.sin(fu * math.pi * 2.0) * math.sin(fv * math.pi * 2.0)
+            diag = math.sin((fu + fv) * math.pi * 2.0) * math.sin((fu - fv) * math.pi * 2.0)
+            motif = 0.5 + 0.35 * wave + 0.15 * diag
             motif = max(0.0, min(1.0, motif))
-            r = 0.82 - 0.11 * motif
-            g = 0.72 - 0.13 * motif
-            b = 0.44 - 0.08 * motif
+            print_c = lerp3(dk, hi, motif)
+            rgb = lerp3(base, print_c, 0.16)
             i = (y * n + x) * 4
-            pixels[i : i + 4] = [r, g, b, 1.0]
+            pixels[i : i + 4] = [rgb[0], rgb[1], rgb[2], 1.0]
     img.pixels = pixels
     img.pack()
     WALLPAPER_PNG.parent.mkdir(parents=True, exist_ok=True)
@@ -224,48 +252,106 @@ def mat_wallpaper(tile: bpy.types.Image, space: bpy.types.Object) -> bpy.types.M
     mat, nt = new_mat("Wallpaper")
     nodes, links = nt.nodes, nt.links
     out = nodes.new("ShaderNodeOutputMaterial")
-    out.location = (720, 0)
+    out.location = (980, 40)
     bsdf = nodes.new("ShaderNodeBsdfPrincipled")
-    bsdf.location = (440, 0)
-    bsdf.inputs["Roughness"].default_value = 0.72
-    tex = nodes.new("ShaderNodeTexImage")
-    tex.location = (-40, 80)
-    tex.image = tile
-    tex.interpolation = "Smart"
-    tex.projection = "BOX"
-    tex.projection_blend = 0.12
+    bsdf.location = (740, 40)
+    set_matte_dielectric(bsdf, 0.72)
+
     coord = nodes.new("ShaderNodeTexCoord")
-    coord.location = (-520, 80)
+    coord.location = (-720, 40)
     coord.object = space
-    mapn = nodes.new("ShaderNodeMapping")
-    mapn.location = (-300, 80)
-    mapn.inputs["Scale"].default_value = (1.0 / 0.52, 1.0 / 0.52, 1.0 / 0.52)
-    dirt = nodes.new("ShaderNodeTexNoise")
-    dirt.location = (-40, -220)
-    dirt.inputs["Scale"].default_value = 3.4
-    dirt.inputs["Detail"].default_value = 8.0
-    dirt.inputs["Roughness"].default_value = 0.55
-    ramp = nodes.new("ShaderNodeValToRGB")
-    ramp.location = (160, -220)
-    ramp.color_ramp.elements[0].position = 0.35
-    ramp.color_ramp.elements[0].color = (0.55, 0.48, 0.28, 1.0)
-    ramp.color_ramp.elements[1].color = (1.0, 1.0, 1.0, 1.0)
-    mix = nodes.new("ShaderNodeMix")
-    mix.location = (240, 40)
-    mix.data_type = "RGBA"
-    mix.blend_type = "MULTIPLY"
-    mix.inputs["Factor"].default_value = 0.22
+
+    map_pat = nodes.new("ShaderNodeMapping")
+    map_pat.location = (-500, 160)
+    map_pat.inputs["Scale"].default_value = (1.0 / 0.85, 1.0 / 0.85, 1.0 / 0.85)
+    tex = nodes.new("ShaderNodeTexImage")
+    tex.location = (-280, 160)
+    tex.image = tile
+    tex.interpolation = "Linear"
+    tex.projection = "BOX"
+    tex.projection_blend = 0.28
+
+    map_age = nodes.new("ShaderNodeMapping")
+    map_age.location = (-500, -40)
+    map_age.inputs["Scale"].default_value = (0.55, 0.55, 0.55)
+    age = nodes.new("ShaderNodeTexNoise")
+    age.location = (-280, -40)
+    age.noise_type = "FBM"
+    age.inputs["Scale"].default_value = 1.6
+    age.inputs["Detail"].default_value = 3.0
+    age.inputs["Roughness"].default_value = 0.45
+    if "Distortion" in age.inputs:
+        age.inputs["Distortion"].default_value = 0.15
+
+    voro = nodes.new("ShaderNodeTexVoronoi")
+    voro.location = (-280, -260)
+    voro.feature = "F1"
+    voro.inputs["Scale"].default_value = 1.35
+    voro.inputs["Randomness"].default_value = 0.85
+
+    age_mix = nodes.new("ShaderNodeMix")
+    age_mix.location = (-40, 40)
+    age_mix.data_type = "RGBA"
+    age_mix.blend_type = "MIX"
+    age_mix.inputs["B"].default_value = hex_lin(WALL_DK_SRGB)
+    age_ramp = nodes.new("ShaderNodeValToRGB")
+    age_ramp.location = (-40, -180)
+    age_ramp.color_ramp.interpolation = "B_SPLINE"
+    age_ramp.color_ramp.elements[0].position = 0.42
+    age_ramp.color_ramp.elements[0].color = (0.0, 0.0, 0.0, 1.0)
+    age_ramp.color_ramp.elements[1].position = 0.68
+    age_ramp.color_ramp.elements[1].color = (0.22, 0.22, 0.22, 1.0)
+
+    stain_mix = nodes.new("ShaderNodeMix")
+    stain_mix.location = (180, 40)
+    stain_mix.data_type = "RGBA"
+    stain_mix.blend_type = "MIX"
+    stain_mix.inputs["B"].default_value = hex_lin(lerp3(WALL_BASE_SRGB, WALL_DK_SRGB, 0.35))
+    stain_ramp = nodes.new("ShaderNodeValToRGB")
+    stain_ramp.location = (180, -200)
+    stain_ramp.color_ramp.elements[0].position = 0.62
+    stain_ramp.color_ramp.elements[0].color = (0.0, 0.0, 0.0, 1.0)
+    stain_ramp.color_ramp.elements[1].position = 0.90
+    stain_ramp.color_ramp.elements[1].color = (0.12, 0.12, 0.12, 1.0)
+
+    rough_n = nodes.new("ShaderNodeTexNoise")
+    rough_n.location = (180, 280)
+    rough_n.inputs["Scale"].default_value = 4.5
+    rough_n.inputs["Detail"].default_value = 2.0
+    rough_map = nodes.new("ShaderNodeMapRange")
+    rough_map.location = (400, 280)
+    rough_map.inputs["From Min"].default_value = 0.2
+    rough_map.inputs["From Max"].default_value = 0.8
+    rough_map.inputs["To Min"].default_value = 0.66
+    rough_map.inputs["To Max"].default_value = 0.78
+
+    micro = nodes.new("ShaderNodeTexNoise")
+    micro.location = (400, -80)
+    micro.inputs["Scale"].default_value = 70.0
+    micro.inputs["Detail"].default_value = 6.0
+    micro.inputs["Roughness"].default_value = 0.55
     bump = nodes.new("ShaderNodeBump")
-    bump.location = (240, -80)
-    bump.inputs["Strength"].default_value = 0.08
-    links.new(coord.outputs["Object"], mapn.inputs["Vector"])
-    links.new(mapn.outputs["Vector"], tex.inputs["Vector"])
-    links.new(coord.outputs["Object"], dirt.inputs["Vector"])
-    links.new(dirt.outputs["Fac"], ramp.inputs["Fac"])
-    links.new(tex.outputs["Color"], mix.inputs["A"])
-    links.new(ramp.outputs["Color"], mix.inputs["B"])
-    links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
-    links.new(tex.outputs["Color"], bump.inputs["Height"])
+    bump.location = (580, -80)
+    bump.inputs["Strength"].default_value = 0.022
+    bump.inputs["Distance"].default_value = 0.004
+
+    links.new(coord.outputs["Object"], map_pat.inputs["Vector"])
+    links.new(map_pat.outputs["Vector"], tex.inputs["Vector"])
+    links.new(coord.outputs["Object"], map_age.inputs["Vector"])
+    links.new(map_age.outputs["Vector"], age.inputs["Vector"])
+    links.new(map_age.outputs["Vector"], voro.inputs["Vector"])
+    links.new(age.outputs["Fac"], age_ramp.inputs["Fac"])
+    links.new(tex.outputs["Color"], age_mix.inputs["A"])
+    links.new(age_ramp.outputs["Color"], age_mix.inputs["Factor"])
+    links.new(voro.outputs["Distance"], stain_ramp.inputs["Fac"])
+    links.new(age_mix.outputs["Result"], stain_mix.inputs["A"])
+    links.new(stain_ramp.outputs["Color"], stain_mix.inputs["Factor"])
+    links.new(stain_mix.outputs["Result"], bsdf.inputs["Base Color"])
+    links.new(coord.outputs["Object"], rough_n.inputs["Vector"])
+    links.new(rough_n.outputs["Fac"], rough_map.inputs["Value"])
+    links.new(rough_map.outputs["Result"], bsdf.inputs["Roughness"])
+    links.new(coord.outputs["Object"], micro.inputs["Vector"])
+    links.new(micro.outputs["Fac"], bump.inputs["Height"])
     links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
     links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     return mat
@@ -324,32 +410,64 @@ def mat_ceiling() -> bpy.types.Material:
     mat, nt = new_mat("CeilingTiles")
     nodes, links = nt.nodes, nt.links
     out = nodes.new("ShaderNodeOutputMaterial")
+    out.location = (860, 0)
     bsdf = nodes.new("ShaderNodeBsdfPrincipled")
-    bsdf.location = (420, 0)
-    bsdf.inputs["Roughness"].default_value = 0.88
+    bsdf.location = (640, 0)
+    set_matte_dielectric(bsdf, 0.84)
+
     coord = nodes.new("ShaderNodeTexCoord")
+    coord.location = (-560, 40)
     brick = nodes.new("ShaderNodeTexBrick")
-    brick.location = (-80, 40)
-    brick.inputs["Scale"].default_value = 1.0 / 0.60
-    brick.inputs["Mortar Size"].default_value = 0.018
-    brick.inputs["Color1"].default_value = srgb(0.78, 0.75, 0.68)
-    brick.inputs["Color2"].default_value = srgb(0.72, 0.70, 0.62)
-    brick.inputs["Mortar"].default_value = srgb(0.42, 0.40, 0.36)
+    brick.location = (-280, 80)
+    brick.offset = 0.0
+    brick.inputs["Scale"].default_value = 1.0 / 0.61
+    brick.inputs["Mortar Size"].default_value = 0.012
+    if "Mortar Smooth" in brick.inputs:
+        brick.inputs["Mortar Smooth"].default_value = 0.08
+    brick.inputs["Color1"].default_value = hex_lin(CEIL_BASE_SRGB)
+    brick.inputs["Color2"].default_value = hex_lin(lerp3(CEIL_BASE_SRGB, CEIL_STAIN_SRGB, 0.18))
+    brick.inputs["Mortar"].default_value = hex_lin(CEIL_STAIN_SRGB)
+
     stain = nodes.new("ShaderNodeTexNoise")
-    stain.inputs["Scale"].default_value = 2.8
-    stain.inputs["Detail"].default_value = 8.0
+    stain.location = (-280, -180)
+    stain.inputs["Scale"].default_value = 1.8
+    stain.inputs["Detail"].default_value = 3.0
+    stain.inputs["Roughness"].default_value = 0.4
+    stain_ramp = nodes.new("ShaderNodeValToRGB")
+    stain_ramp.location = (-40, -180)
+    stain_ramp.color_ramp.elements[0].position = 0.48
+    stain_ramp.color_ramp.elements[0].color = (0.0, 0.0, 0.0, 1.0)
+    stain_ramp.color_ramp.elements[1].position = 0.82
+    stain_ramp.color_ramp.elements[1].color = (0.16, 0.16, 0.16, 1.0)
     mix = nodes.new("ShaderNodeMix")
+    mix.location = (180, 40)
     mix.data_type = "RGBA"
-    mix.blend_type = "MULTIPLY"
-    mix.inputs["Factor"].default_value = 0.18
-    mix.inputs["B"].default_value = srgb(0.62, 0.58, 0.48)
+    mix.blend_type = "MIX"
+    mix.inputs["B"].default_value = hex_lin(CEIL_STAIN_SRGB)
+
+    rough_n = nodes.new("ShaderNodeTexNoise")
+    rough_n.location = (180, 260)
+    rough_n.inputs["Scale"].default_value = 3.2
+    rough_n.inputs["Detail"].default_value = 2.0
+    rough_map = nodes.new("ShaderNodeMapRange")
+    rough_map.location = (400, 260)
+    rough_map.inputs["To Min"].default_value = 0.76
+    rough_map.inputs["To Max"].default_value = 0.88
+
     bump = nodes.new("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = 0.18
+    bump.location = (400, -80)
+    bump.inputs["Strength"].default_value = 0.04
+    bump.inputs["Distance"].default_value = 0.006
+
     links.new(coord.outputs["Object"], brick.inputs["Vector"])
     links.new(coord.outputs["Object"], stain.inputs["Vector"])
+    links.new(stain.outputs["Fac"], stain_ramp.inputs["Fac"])
     links.new(brick.outputs["Color"], mix.inputs["A"])
-    links.new(stain.outputs["Fac"], mix.inputs["Factor"])
+    links.new(stain_ramp.outputs["Color"], mix.inputs["Factor"])
     links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
+    links.new(coord.outputs["Object"], rough_n.inputs["Vector"])
+    links.new(rough_n.outputs["Fac"], rough_map.inputs["Value"])
+    links.new(rough_map.outputs["Result"], bsdf.inputs["Roughness"])
     links.new(brick.outputs["Color"], bump.inputs["Height"])
     links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
     links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
@@ -364,7 +482,7 @@ def mat_housing() -> bpy.types.Material:
     bsdf.inputs["Base Color"].default_value = srgb(0.82, 0.82, 0.78)
     bsdf.inputs["Roughness"].default_value = 0.42
     if "Metallic" in bsdf.inputs:
-        bsdf.inputs["Metallic"].default_value = 0.35
+        bsdf.inputs["Metallic"].default_value = 0.12
     nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     return mat
 
@@ -374,9 +492,9 @@ def mat_emitter() -> bpy.types.Material:
     nodes = nt.nodes
     out = nodes.new("ShaderNodeOutputMaterial")
     emit = nodes.new("ShaderNodeEmission")
-    # Cool white. Yellow walls bounce it into a sickly yellow-green.
-    emit.inputs["Color"].default_value = srgb(0.86, 0.94, 1.0)
-    emit.inputs["Strength"].default_value = 48.0
+    # Cool-white fluorescent (~4100–4500 K phosphor), not blackbody yellow.
+    emit.inputs["Color"].default_value = srgb(0.94, 0.96, 1.0)
+    emit.inputs["Strength"].default_value = 44.0
     nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
     return mat
 
