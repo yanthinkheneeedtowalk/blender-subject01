@@ -1,3 +1,7 @@
 *.blend1
 __pycache__/
 *.pyc
+renders/found_footage_preview/frames/
+renders/found_footage_preview/check/
+renders/found_footage_vhs/frames/
+renders/found_footage_master/frames/
