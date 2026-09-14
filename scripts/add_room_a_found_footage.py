@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Room A 30s found-footage camcorder take on the EXISTING backrooms.blend.
 
-Does not rebuild walls, floor, ceiling, or lights. No formal Cycles render.
+Camera rig / animation / OSD only. Does not rebuild walls, blood, or lights.
+No formal Cycles render.
 
   blender -b backrooms.blend --python scripts/add_room_a_found_footage.py -- --check
   blender -b backrooms.blend --python scripts/add_room_a_found_footage.py -- --stills
@@ -11,25 +12,28 @@ Does not rebuild walls, floor, ceiling, or lights. No formal Cycles render.
 from __future__ import annotations
 
 import math
-import random
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-import bmesh
 import bpy
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[1]
 BLEND_PATH = ROOT / "backrooms.blend"
 PREVIEW_DIR = ROOT / "renders" / "room_a_preview"
+OSD_SEQ_DIR = ROOT / "assets" / "osd"
+OSD_MOV = ROOT / "assets" / "osd_timer.mov"
 
 FPS = 30
 DURATION = 30.0
 COLL = "CAM_FOUND_FOOTAGE"
-FX_COLL = "FX_DRIED_BLOOD"
 OSD_W, OSD_H = 640, 480
 BLOOD_C = (-1.90, 1.24)
+
+# Standing eye height after grip. Opening lives on the floor.
+STAND_Z = 1.60
 
 
 def parse_args() -> dict:
@@ -48,16 +52,6 @@ def frame_at(t: float) -> int:
 
 def lerp(a: float, b: float, u: float) -> float:
     return a + (b - a) * u
-
-
-def ease_look(u: float, pin: float = 2.15, pout: float = 1.55) -> float:
-    """Fast middle, slower settle. Not a symmetric smoothstep."""
-    u = max(0.0, min(1.0, u))
-    if u < 0.45:
-        t = u / 0.45
-        return 0.62 * (t ** pin)
-    t = (u - 0.45) / 0.55
-    return 0.62 + 0.38 * (1.0 - (1.0 - t) ** pout)
 
 
 def iter_fcurves(id_data):
@@ -92,8 +86,8 @@ def insert_xyz(obj, path: str, frame: int, value, interp: str = "BEZIER") -> Non
         for kp in fc.keyframe_points:
             if int(round(kp.co[0])) == frame:
                 kp.interpolation = interp
-                kp.handle_left_type = "FREE" if interp == "BEZIER" else "AUTO_CLAMPED"
-                kp.handle_right_type = "FREE" if interp == "BEZIER" else "AUTO_CLAMPED"
+                kp.handle_left_type = "FREE" if interp == "BEZIER" else "VECTOR"
+                kp.handle_right_type = "FREE" if interp == "BEZIER" else "VECTOR"
 
 
 def add_noise_mods(obj, data_path: str, scale: float, strength: float, seed: float) -> None:
@@ -112,15 +106,44 @@ def add_noise_mods(obj, data_path: str, scale: float, strength: float, seed: flo
         n += 1
 
 
-def sample_keys(keys, t, nvals=3, ease=False):
+def sample_keys(keys, t, nvals=3):
+    """Linear between authored keys. Shaping lives in the key values, not a global ease."""
     if t <= keys[0][0]:
         return keys[0][1:]
     for a, b in zip(keys, keys[1:]):
         if a[0] <= t <= b[0]:
-            raw = (t - a[0]) / max(1e-6, b[0] - a[0])
-            u = ease_look(raw) if ease else raw * raw * (3.0 - 2.0 * raw)
+            u = (t - a[0]) / max(1e-6, b[0] - a[0])
             return tuple(lerp(a[i], b[i], u) for i in range(1, nvals + 1))
     return keys[-1][1:]
+
+
+def shape_sparse_fcurves(obj) -> None:
+    """Handmade Bezier: holds stay vector-flat; motion uses asymmetric handles."""
+    for fc in iter_fcurves(obj):
+        pts = list(fc.keyframe_points)
+        n = len(pts)
+        for i, kp in enumerate(pts):
+            hold = False
+            if i + 1 < n and abs(pts[i + 1].co[1] - kp.co[1]) < 1e-5 and (pts[i + 1].co[0] - kp.co[0]) > 8:
+                hold = True
+            if i > 0 and abs(pts[i - 1].co[1] - kp.co[1]) < 1e-5 and (kp.co[0] - pts[i - 1].co[0]) > 8:
+                hold = True
+            if hold:
+                kp.interpolation = "BEZIER"
+                kp.handle_left_type = "VECTOR"
+                kp.handle_right_type = "VECTOR"
+                continue
+            kp.interpolation = "BEZIER"
+            kp.handle_left_type = "FREE"
+            kp.handle_right_type = "FREE"
+            t = kp.co[0]
+            v = kp.co[1]
+            dt_in = (t - pts[i - 1].co[0]) if i else 10.0
+            dt_out = (pts[i + 1].co[0] - t) if i + 1 < n else 10.0
+            a = 0.16 + (i % 5) * 0.07
+            b = 0.46 - (i % 5) * 0.06
+            kp.handle_left = (t - dt_in * a, v)
+            kp.handle_right = (t + dt_out * b, v)
 
 
 def hide_previous_take() -> None:
@@ -135,17 +158,30 @@ def hide_previous_take() -> None:
 
 
 def clear_this_take() -> None:
-    for name in (COLL, FX_COLL):
-        if name in bpy.data.collections:
-            col = bpy.data.collections[name]
-            for obj in list(col.objects):
-                bpy.data.objects.remove(obj, do_unlink=True)
-            bpy.data.collections.remove(col)
+    """Remove only this take's camera rig / OSD. Never touch blood or walls."""
+    if COLL in bpy.data.collections:
+        col = bpy.data.collections[COLL]
+        for obj in list(col.objects):
+            bpy.data.objects.remove(obj, do_unlink=True)
+        bpy.data.collections.remove(col)
+    keep = {"BLOOD.RoomA.Dried"}
     for obj in list(bpy.data.objects):
+        if obj.name in keep:
+            continue
         if (
-            obj.name.startswith("BLOOD.RoomA")
-            or obj.name.startswith("OSD_")
-            or obj.name in {"POV_ROOT", "BODY_MOTION", "HEAD_MOTION", "HAND_MOTION", "CAM_MAIN", "CAM_OSD", "CAM_PATH_GUIDE"}
+            obj.name.startswith("OSD_")
+            or obj.name in {
+                "POV_ROOT",
+                "BODY_MOTION",
+                "HEAD_MOTION",
+                "HAND_MOTION",
+                "CAM_MAIN",
+                "CAM_OSD",
+                "CAM_PATH_GUIDE",
+                "CAM_BODY",
+                "CAM_LOOK",
+                "CAM_ROOT",
+            }
         ):
             bpy.data.objects.remove(obj, do_unlink=True)
 
@@ -169,94 +205,18 @@ def parent_local(child, parent_obj) -> None:
     child.matrix_parent_inverse.identity()
 
 
-def _blood_ring(bm, ox, oy, rx, ry, seed, n=32, z=0.0):
-    rng = random.Random(seed)
-    verts = []
-    for i in range(n):
-        a = (2.0 * math.pi * i) / n
-        k = (
-            0.70
-            + 0.18 * math.sin(i * 0.71 + seed)
-            + 0.12 * math.sin(i * 1.87 + 0.6)
-            + 0.08 * math.sin(i * 3.3 + seed * 0.4)
-            + rng.uniform(-0.07, 0.07)
-        )
-        sx = 0.40 if math.cos(a) > 0.0 else 1.22
-        sy = 1.05 if math.sin(a) > 0.0 else 0.48
-        verts.append(bm.verts.new((ox + k * rx * sx * math.cos(a), oy + k * ry * sy * math.sin(a), z)))
-    return bm.faces.new(verts)
-
-
-def make_blood(col) -> bpy.types.Object:
-    bm = bmesh.new()
-    faces = [
-        _blood_ring(bm, 0.0, 0.0, 0.55, 0.42, 17, 40),
-        _blood_ring(bm, -0.38, 0.20, 0.18, 0.12, 23, 22),
-        _blood_ring(bm, 0.20, 0.26, 0.13, 0.09, 41, 18),
-        _blood_ring(bm, -0.14, -0.12, 0.10, 0.07, 8, 16),
-        _blood_ring(bm, -0.55, 0.08, 0.08, 0.06, 55, 14),
-    ]
-    geom = bmesh.ops.extrude_face_region(bm, geom=faces)
-    for g in geom["geom"]:
-        if isinstance(g, bmesh.types.BMVert):
-            g.co.z = 0.010
-    mesh = bpy.data.meshes.new("BLOOD.RoomA.Dried")
-    bm.to_mesh(mesh)
-    bm.free()
-    obj = bpy.data.objects.new("BLOOD.RoomA.Dried", mesh)
-    obj.location = (BLOOD_C[0], BLOOD_C[1], 0.006)
-    col.objects.link(obj)
-    obj.color = (0.05, 0.012, 0.008, 1.0)
-
-    mat = bpy.data.materials.get("MAT.DriedBlood") or bpy.data.materials.new("MAT.DriedBlood")
-    mat.use_nodes = True
-    mat.diffuse_color = (0.045, 0.012, 0.008, 1.0)
-    nt = mat.node_tree
-    nt.nodes.clear()
-    out = nt.nodes.new("ShaderNodeOutputMaterial")
-    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
-    tex = nt.nodes.new("ShaderNodeTexNoise")
-    tex.inputs["Scale"].default_value = 22.0
-    tex.inputs["Detail"].default_value = 10.0
-    tex.inputs["Roughness"].default_value = 0.68
-    ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].position = 0.22
-    ramp.color_ramp.elements[0].color = (0.015, 0.004, 0.003, 1.0)
-    ramp.color_ramp.elements[1].position = 0.82
-    ramp.color_ramp.elements[1].color = (0.07, 0.016, 0.010, 1.0)
-    coord = nt.nodes.new("ShaderNodeTexCoord")
-    nt.links.new(coord.outputs["Object"], tex.inputs["Vector"])
-    nt.links.new(tex.outputs["Fac"], ramp.inputs["Fac"])
-    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
-    splat = bpy.data.images.get("BLOOD.TEX") or bpy.data.images.new("BLOOD.TEX", 256, 256)
-    pix = []
-    rng = random.Random(9)
-    for y in range(256):
-        for x in range(256):
-            nx, ny = (x - 128) / 128.0, (y - 128) / 128.0
-            r = math.sqrt(nx * nx * 0.72 + ny * ny)
-            n = rng.random()
-            edge = max(0.0, min(1.0, 1.15 - r * 1.05 - 0.18 * n))
-            d = 0.018 + 0.04 * (1.0 - edge) + 0.01 * n
-            pix.extend((d, d * 0.28, d * 0.18, 1.0))
-    splat.pixels = pix
-    img = nt.nodes.new("ShaderNodeTexImage")
-    img.image = splat
-    if "Roughness" in bsdf.inputs:
-        bsdf.inputs["Roughness"].default_value = 0.96
-    if "Specular IOR Level" in bsdf.inputs:
-        bsdf.inputs["Specular IOR Level"].default_value = 0.02
-    if "Metallic" in bsdf.inputs:
-        bsdf.inputs["Metallic"].default_value = 0.0
-    if "Coat Weight" in bsdf.inputs:
-        bsdf.inputs["Coat Weight"].default_value = 0.0
-    nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
-    obj.data.materials.append(mat)
+def ensure_blood() -> bpy.types.Object | None:
+    obj = bpy.data.objects.get("BLOOD.RoomA.Dried")
+    if obj is None:
+        print("WARNING: BLOOD.RoomA.Dried missing — not recreating.")
+        return None
+    print("Keeping existing blood at", tuple(round(x, 4) for x in obj.location))
     return obj
 
 
 # ---------------------------------------------------------------------------
-# Screen-space OSD (compositor overlay). Never parented to the camera.
+# Screen-space OSD. Never parented to the camera.
+# Timer is an image sequence / movie driven by scene.frame_current.
 # ---------------------------------------------------------------------------
 
 _GLYPHS = {
@@ -268,7 +228,7 @@ _GLYPHS = {
     "5": "11111100001111000001000011000101110",
     "6": "01110100001111010001100011000101110",
     "7": "11111000010001000100010000100001000",
-    "8": "01110100010111010001100011000101110",
+    "8": "01110100011000101111000011000101110",
     "9": "01110100011000101111000011000101110",
     ":": "00000001000000000000001000000000000",
     "R": "11110100011111010001100011000110001",
@@ -313,6 +273,11 @@ def _rect(buf, w, h, x0, y0, x1, y1, rgb, a=1.0):
             buf[i : i + 4] = [r, g, b, a]
 
 
+def osd_cache_key(frame: int):
+    t = max(0.0, (frame - 1) / float(FPS))
+    return (int(t), (frame % 30) < 16, (frame % 44) < 30)
+
+
 def build_osd_pixels(frame: int) -> list[float]:
     w, h = OSD_W, OSD_H
     buf = [0.0] * (w * h * 4)
@@ -320,7 +285,6 @@ def build_osd_pixels(frame: int) -> list[float]:
     lcd = (0.90, 0.94, 0.78)
     red = (0.92, 0.12, 0.07)
     amber = (0.82, 0.28, 0.06)
-    # Battery outline top-left (y from bottom in Blender images).
     bx, by = 22, h - 42
     _rect(buf, w, h, bx, by + 16, bx + 46, by + 18, lcd)
     _rect(buf, w, h, bx, by, bx + 46, by + 2, lcd)
@@ -337,22 +301,90 @@ def build_osd_pixels(frame: int) -> list[float]:
     return buf
 
 
-def ensure_osd_image() -> bpy.types.Image:
-    img = bpy.data.images.get("OSD_OVERLAY")
+def ensure_osd_scratch() -> bpy.types.Image:
+    img = bpy.data.images.get("OSD_SCRATCH")
     if img is None or tuple(img.size) != (OSD_W, OSD_H):
         if img is not None:
             bpy.data.images.remove(img)
-        img = bpy.data.images.new("OSD_OVERLAY", OSD_W, OSD_H, alpha=True)
+        img = bpy.data.images.new("OSD_SCRATCH", OSD_W, OSD_H, alpha=True)
     return img
 
 
 def paint_osd_image(frame: int) -> bpy.types.Image:
-    img = ensure_osd_image()
+    img = ensure_osd_scratch()
     img.pixels = build_osd_pixels(frame)
     return img
 
 
-def setup_osd_compositor(scene) -> None:
+def write_osd_sequence() -> Path:
+    """Write 900 screen-space OSD frames + a movie the timeline can drive natively."""
+    if OSD_MOV.exists() and (OSD_SEQ_DIR / "osd_0900.png").exists():
+        print("OSD assets exist, skipping rebuild")
+        return OSD_MOV
+    OSD_SEQ_DIR.mkdir(parents=True, exist_ok=True)
+    img = ensure_osd_scratch()
+    cache: dict = {}
+    for f in range(1, 901):
+        key = osd_cache_key(f)
+        src = OSD_SEQ_DIR / f"src_{key[0]:02d}_{int(key[1])}_{int(key[2])}.png"
+        if key not in cache:
+            img.pixels = build_osd_pixels(f)
+            img.filepath_raw = str(src)
+            img.file_format = "PNG"
+            img.save()
+            cache[key] = src
+        dst = OSD_SEQ_DIR / f"osd_{f:04d}.png"
+        if dst.exists() or dst.is_symlink():
+            dst.unlink()
+        try:
+            dst.symlink_to(cache[key].name)
+        except OSError:
+            shutil.copyfile(cache[key], dst)
+    OSD_MOV.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.check_call(
+        [
+            "ffmpeg",
+            "-y",
+            "-loglevel",
+            "error",
+            "-framerate",
+            "30",
+            "-i",
+            str(OSD_SEQ_DIR / "osd_%04d.png"),
+            "-c:v",
+            "png",
+            "-pix_fmt",
+            "rgba",
+            str(OSD_MOV),
+        ]
+    )
+    print("OSD sequence", OSD_SEQ_DIR, "movie", OSD_MOV, "unique", len(cache))
+    return OSD_MOV
+
+
+def load_osd_movie() -> bpy.types.Image:
+    existing = bpy.data.images.get("OSD_TIMER")
+    if existing is not None:
+        bpy.data.images.remove(existing)
+    img = bpy.data.images.load(str(OSD_MOV), check_existing=False)
+    img.name = "OSD_TIMER"
+    img.source = "MOVIE"
+    img.filepath = str(OSD_MOV)
+    iu = getattr(img, "image_user", None)
+    if iu is not None:
+        iu.frame_duration = 900
+        iu.frame_start = 1
+        iu.frame_offset = 0
+        iu.use_auto_refresh = True
+        iu.use_cyclic = False
+    try:
+        img.reload()
+    except Exception:
+        pass
+    return img
+
+
+def setup_osd_compositor(scene, osd_img) -> None:
     ng = bpy.data.node_groups.get("OSD_SCREENSPACE")
     if ng is None:
         ng = bpy.data.node_groups.new("OSD_SCREENSPACE", "CompositorNodeTree")
@@ -362,8 +394,17 @@ def setup_osd_compositor(scene) -> None:
     rl = ng.nodes.new("CompositorNodeRLayers")
     rl.location = (0, 80)
     img_n = ng.nodes.new("CompositorNodeImage")
-    img_n.image = ensure_osd_image()
+    img_n.image = osd_img
     img_n.location = (0, -140)
+    for attr, val in (("frame_duration", 900), ("frame_start", 1), ("frame_offset", 0)):
+        if hasattr(img_n, attr):
+            setattr(img_n, attr, val)
+    iu = getattr(img_n, "image_user", None)
+    if iu is not None:
+        iu.frame_duration = 900
+        iu.frame_start = 1
+        iu.frame_offset = 0
+        iu.use_auto_refresh = True
     over = ng.nodes.new("CompositorNodeAlphaOver")
     over.location = (260, 40)
     out = ng.nodes.new("NodeGroupOutput")
@@ -375,24 +416,50 @@ def setup_osd_compositor(scene) -> None:
     scene.render.use_compositing = True
 
 
-def osd_frame_handler(scene):
-    paint_osd_image(scene.frame_current)
+def attach_camera_osd(cam, osd_img) -> None:
+    """Screen-space camcorder HUD in Camera View. Does not inherit CAM roll."""
+    cam.data.show_background_images = True
+    while cam.data.background_images:
+        cam.data.background_images.remove(cam.data.background_images[0])
+    bg = cam.data.background_images.new()
+    bg.image = osd_img
+    bg.alpha = 1.0
+    bg.display_depth = "FRONT"
+    if hasattr(bg, "frame_method"):
+        try:
+            bg.frame_method = "STRETCH"
+        except TypeError:
+            pass
+    iu = getattr(bg, "image_user", None)
+    if iu is not None:
+        iu.frame_duration = 900
+        iu.frame_start = 1
+        iu.frame_offset = 0
+        iu.use_auto_refresh = True
+        iu.use_cyclic = False
 
 
-def register_osd_handler():
+def unregister_osd_handler() -> None:
     for h in list(bpy.app.handlers.frame_change_pre):
-        if getattr(h, "__name__", "") == "osd_frame_handler":
+        name = getattr(h, "__name__", "")
+        if name in {"osd_frame_handler", "osd_update", "paint_osd_image"}:
             bpy.app.handlers.frame_change_pre.remove(h)
-    bpy.app.handlers.frame_change_pre.append(osd_frame_handler)
+    for h in list(bpy.app.handlers.frame_change_post):
+        name = getattr(h, "__name__", "")
+        if name in {"osd_frame_handler", "osd_update", "paint_osd_image"}:
+            bpy.app.handlers.frame_change_post.remove(h)
 
 
 def overlay_osd_on_jpeg(jpg: Path, frame: int) -> None:
-    """Guarantee screen-space OSD even if Workbench skips the compositor."""
-    png = jpg.with_suffix(".osd.png")
-    img = paint_osd_image(frame)
-    img.filepath_raw = str(png)
-    img.file_format = "PNG"
-    img.save()
+    """Workbench playblast does not composite; overlay the baked screen-space PNG."""
+    src = OSD_SEQ_DIR / f"osd_{frame:04d}.png"
+    if not src.exists():
+        png = jpg.with_suffix(".osd.png")
+        img = paint_osd_image(frame)
+        img.filepath_raw = str(png)
+        img.file_format = "PNG"
+        img.save()
+        src = png
     tmp = jpg.with_suffix(".comp.jpg")
     subprocess.check_call(
         [
@@ -403,7 +470,7 @@ def overlay_osd_on_jpeg(jpg: Path, frame: int) -> None:
             "-i",
             str(jpg),
             "-i",
-            str(png),
+            str(src),
             "-filter_complex",
             "overlay=0:0",
             "-q:v",
@@ -412,7 +479,6 @@ def overlay_osd_on_jpeg(jpg: Path, frame: int) -> None:
         ]
     )
     tmp.replace(jpg)
-    png.unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -437,16 +503,17 @@ def build_rig(col):
     osd = make_empty("CAM_OSD", col, 0.04)
     osd.parent = None
 
-    root.location = (-5.38, 2.48, 0.10)
-    root.rotation_euler = (0.0, 0.0, math.radians(92.0))
+    # Floor, looking toward the SE dried-blood corner — not the west wall.
+    root.location = (-3.16, 2.14, 0.078)
+    root.rotation_euler = (0.0, 0.0, math.radians(-114.0))
     body.location = (0, 0, 0)
     head.location = (0, 0, 0)
     head.rotation_mode = "XYZ"
-    head.rotation_euler = (math.radians(90.0), 0.0, 0.0)
+    head.rotation_euler = (math.radians(85.0), 0.0, math.radians(2.0))
     hand.location = (0, 0, 0)
     cam.location = (0, 0, 0)
     cam.rotation_mode = "XYZ"
-    cam.rotation_euler = (0.0, 0.0, math.radians(20.0))
+    cam.rotation_euler = (0.0, 0.0, math.radians(27.0))
 
     parent_local(body, root)
     parent_local(head, body)
@@ -457,264 +524,429 @@ def build_rig(col):
 
 
 # t, x, y, z, yaw_deg  (0=north, +90=west, -90=east)
-# Pickup keeps facing the west wall. Horizon recover is CAM roll, not ROOT yaw.
+# Opening faces the blood stain, off-center. Pickup is staged. Frame 900 stays
+# at the Room A threshold — does not walk out into Corr A.
 ROOT_KEYS = [
-    (0.00, -5.38, 2.48, 0.100, 92.0),
-    (1.80, -5.379, 2.481, 0.101, 92.3),
-    (1.88, -5.368, 2.492, 0.112, 93.8),
-    (1.96, -5.350, 2.470, 0.128, 89.5),
-    (2.10, -5.328, 2.448, 0.255, 91.0),
-    (2.28, -5.305, 2.475, 0.520, 87.5),
-    (2.48, -5.288, 2.452, 0.880, 90.5),
-    (2.70, -5.270, 2.430, 1.250, 88.0),
-    (2.95, -5.252, 2.412, 1.480, 90.0),
-    (3.20, -5.240, 2.400, 1.575, 89.0),
-    (3.50, -5.228, 2.388, 1.605, 87.0),
-    (3.80, -5.215, 2.372, 1.612, 84.0),
-    (4.15, -5.175, 2.310, 1.614, 62.0),
-    (4.55, -5.110, 2.220, 1.612, 28.0),
-    (5.00, -5.020, 2.120, 1.610, -8.0),
-    (5.35, -4.960, 2.050, 1.608, -22.0),
-    (5.80, -4.900, 1.980, 1.606, -48.0),
-    (6.50, -4.780, 1.920, 1.602, -72.0),
-    (6.90, -4.720, 1.880, 1.575, -80.0),
-    (7.50, -4.690, 1.860, 1.568, -84.0),
-    (8.20, -4.680, 1.855, 1.572, -82.0),
-    (8.80, -4.710, 1.878, 1.598, -76.0),
-    (9.50, -4.730, 1.905, 1.610, -62.0),
-    (10.10, -4.728, 1.930, 1.612, -18.0),
-    (10.80, -4.720, 1.960, 1.610, 8.0),
-    (11.40, -4.718, 1.972, 1.611, 22.0),
-    (12.00, -4.715, 1.980, 1.610, 6.0),
-    (12.70, -4.680, 2.040, 1.612, -38.0),
-    (13.50, -4.560, 2.140, 1.612, -58.0),
-    (14.10, -4.280, 2.420, 1.608, -22.0),
-    (14.80, -3.920, 2.780, 1.612, 4.0),
-    (15.30, -3.780, 2.980, 1.610, 10.0),
-    (15.70, -3.760, 3.040, 1.608, 8.0),
-    (16.40, -3.280, 3.220, 1.610, -36.0),
-    (17.20, -2.720, 3.120, 1.608, -78.0),
-    (18.00, -2.220, 2.960, 1.605, -90.0),
-    (18.70, -2.080, 2.900, 1.602, -93.0),
-    (19.40, -2.020, 2.882, 1.600, -90.0),
-    (20.60, -2.012, 2.878, 1.600, -88.0),
-    (21.50, -2.000, 2.872, 1.598, -90.0),
-    (22.20, -1.992, 2.885, 1.598, -86.0),
-    (24.40, -1.988, 2.890, 1.600, -88.0),
-    (26.40, -1.985, 2.898, 1.600, -84.0),
-    (27.00, -1.978, 2.930, 1.602, -72.0),
-    (27.28, -1.930, 3.20, 1.606, -52.0),
-    (27.55, -1.760, 3.40, 1.608, -68.0),
-    (27.85, -1.480, 3.48, 1.610, -98.0),
-    (28.20, -1.080, 3.38, 1.606, -128.0),
-    (28.55, -0.700, 3.08, 1.598, -152.0),
-    (28.85, -0.560, 2.86, 1.592, -168.0),
-    (29.15, -0.538, 2.78, 1.590, -172.0),
-    (29.50, -0.530, 2.76, 1.588, -166.0),
-    (30.00, -0.522, 2.75, 1.588, -160.0),
+    (0.00, -3.160, 2.140, 0.078, -114.0),
+    (1.85, -3.159, 2.141, 0.079, -113.5),
+    # 2–3s contact: bump, 2–5cm slide, no lift
+    (2.08, -3.158, 2.142, 0.080, -113.2),
+    (2.16, -3.142, 2.158, 0.088, -110.0),
+    (2.28, -3.118, 2.122, 0.084, -116.5),
+    (2.42, -3.124, 2.118, 0.081, -114.0),
+    (2.62, -3.126, 2.120, 0.080, -113.8),
+    (2.88, -3.125, 2.119, 0.079, -114.0),
+    (3.00, -3.124, 2.118, 0.080, -114.2),
+    # 3–5s pickup: back/side, irregular rise, stall around 1.1m, then eye height
+    (3.12, -3.162, 2.148, 0.095, -119.0),
+    (3.22, -3.175, 2.155, 0.168, -106.0),
+    (3.34, -3.148, 2.132, 0.310, -124.0),
+    (3.46, -3.128, 2.118, 0.455, -100.0),
+    (3.58, -3.142, 2.108, 0.620, -113.0),
+    (3.66, -3.136, 2.102, 0.590, -118.0),
+    (3.78, -3.122, 2.095, 0.820, -108.0),
+    (3.90, -3.112, 2.090, 1.050, -116.0),
+    (4.02, -3.108, 2.088, 1.140, -111.0),
+    (4.16, -3.098, 2.082, 1.320, -117.0),
+    (4.32, -3.086, 2.076, 1.520, -112.0),
+    (4.48, -3.074, 2.072, 1.595, -109.5),
+    (4.68, -3.066, 2.070, 1.625, -111.5),
+    (4.88, -3.060, 2.072, 1.612, -113.0),
+    (5.05, -3.058, 2.074, 1.602, -114.0),
+    # 5–8s re-look blood: lean in, hold, small recoil
+    (5.40, -3.050, 2.066, 1.590, -116.5),
+    (5.80, -3.040, 2.056, 1.568, -118.5),
+    (6.35, -3.036, 2.052, 1.562, -117.8),
+    (6.90, -3.038, 2.054, 1.566, -117.0),
+    (7.30, -3.048, 2.064, 1.582, -115.0),
+    (7.75, -3.054, 2.070, 1.595, -112.5),
+    (8.15, -3.056, 2.074, 1.602, -108.0),
+    # 8–12s look-around: ROOT lags HEAD
+    (8.55, -3.058, 2.082, 1.606, -88.0),
+    (9.05, -3.064, 2.098, 1.608, -42.0),
+    (9.50, -3.070, 2.112, 1.610, -16.0),
+    (10.00, -3.074, 2.122, 1.610, -6.0),
+    (10.45, -3.072, 2.128, 1.608, 10.0),
+    (10.85, -3.070, 2.132, 1.608, 6.0),
+    (11.25, -3.066, 2.136, 1.610, -8.0),
+    (11.70, -3.060, 2.140, 1.610, -40.0),
+    (12.15, -3.054, 2.144, 1.610, -60.0),
+    (12.40, -3.050, 2.148, 1.610, -66.0),
+    # 12.4–17 walk Room A, not a straight line to the door
+    (12.58, -3.10, 2.20, 1.612, -50.0),
+    (13.10, -3.36, 2.46, 1.610, -18.0),
+    (13.48, -3.58, 2.60, 1.608, 14.0),
+    (13.72, -3.62, 2.62, 1.606, 18.0),
+    (13.95, -3.63, 2.625, 1.605, 16.0),
+    (14.40, -3.63, 2.628, 1.606, 8.0),
+    (14.62, -3.58, 2.70, 1.608, -10.0),
+    (15.15, -3.40, 3.20, 1.610, -32.0),
+    (15.60, -3.12, 3.30, 1.610, -58.0),
+    (16.10, -2.74, 3.28, 1.608, -80.0),
+    (16.55, -2.42, 3.26, 1.606, -86.0),
+    (17.00, -2.18, 3.22, 1.604, -90.0),
+    # 17–21 approach the opening, stop, behind-check, then sidestep behind the wall
+    (17.45, -2.06, 3.18, 1.602, -92.0),
+    (17.95, -2.00, 3.16, 1.600, -90.0),
+    (18.35, -1.998, 3.15, 1.598, -88.0),
+    (18.85, -1.996, 3.145, 1.598, -84.0),
+    (19.20, -1.995, 3.14, 1.597, -76.0),
+    (19.55, -1.994, 3.14, 1.597, -82.0),
+    (20.00, -1.993, 3.12, 1.598, -88.0),
+    (20.55, -1.992, 3.02, 1.598, -90.0),
+    (21.15, -1.90, 2.94, 1.598, -90.0),
+    (21.65, -1.86, 2.87, 1.598, -91.0),
+    # 21.6–28 stand south of the jamb; HEAD peeks north
+    (22.40, -1.86, 2.87, 1.598, -90.0),
+    (23.40, -1.86, 2.87, 1.598, -91.0),
+    (24.50, -1.86, 2.87, 1.598, -90.0),
+    (26.10, -1.86, 2.87, 1.598, -88.0),
+    (27.40, -1.86, 2.87, 1.598, -86.0),
+    (28.10, -1.80, 2.94, 1.600, -84.0),
+    # HEAD already out; BODY then ROOT arc to the threshold and STOP
+    (28.45, -1.92, 2.98, 1.602, -82.0),
+    (28.80, -1.78, 3.08, 1.604, -90.0),
+    (29.15, -1.66, 3.14, 1.604, -100.0),
+    (29.50, -1.60, 3.17, 1.602, -106.0),
+    (29.80, -1.58, 3.18, 1.600, -103.0),
+    (30.00, -1.57, 3.19, 1.600, -101.0),
 ]
 
-# pitch (+=up), yaw (+=left relative to body)
+# pitch (+=up), yaw (+=left relative to body). Head leads root turns.
 LOOK_KEYS = [
-    (0.00, -11.0, 1.5),
-    (1.80, -10.5, 1.8),
-    (1.90, -4.0, -3.0),
-    (2.05, 8.0, 6.0),
-    (2.22, -6.0, -5.0),
-    (2.45, 4.0, 4.0),
-    (2.70, 1.0, -2.0),
-    (3.05, 0.6, 1.5),
-    (3.40, 0.3, 0.6),
-    (3.80, 0.2, 1.0),
-    (4.05, 0.4, 3.0),
-    (4.22, 0.6, 8.0),
-    (4.40, 0.3, 16.0),
-    (4.55, -1.0, 22.0),
-    (4.68, -2.5, 24.0),
-    (4.78, -2.0, 21.0),
-    (5.15, -6.0, 8.0),
-    (5.35, -8.5, 2.0),
-    (5.50, -9.0, 0.5),
-    (5.85, -12.0, -8.0),
-    (6.10, -14.0, -14.0),
-    (6.28, -15.5, -16.0),
-    (6.40, -14.5, -15.0),
-    (6.70, -18.0, -12.0),
-    (7.05, -22.0, -10.0),
-    (7.35, -24.0, -9.0),
-    (7.55, -23.0, -8.5),
-    (8.10, -22.5, -8.0),
-    (8.55, -20.0, -6.0),
-    (8.90, -16.0, -4.0),
-    (9.30, -8.0, -2.0),
-    (9.55, -2.0, 2.0),
-    (9.80, 3.0, 6.0),
-    (10.05, 8.0, 10.0),
-    (10.22, 11.0, 12.0),
-    (10.38, 9.5, 10.5),
-    (10.70, 2.0, 4.0),
-    (10.95, 1.0, 10.0),
-    (11.15, 1.4, 16.0),
-    (11.32, 1.6, 20.0),
-    (11.45, 1.2, 18.0),
-    (11.70, 0.8, 10.0),
-    (12.00, 0.6, 4.0),
-    (12.25, 0.5, 4.0),
-    (12.55, 0.8, -12.0),
-    (12.85, 1.0, -24.0),
-    (13.05, 1.2, -28.0),
-    (13.20, 0.9, -25.0),
-    (13.55, 0.6, -12.0),
-    (14.20, 1.0, 10.0),
-    (14.80, 2.2, 14.0),
-    (15.20, 9.0, 8.0),
-    (15.45, 10.5, 7.0),
-    (15.70, 2.0, 4.0),
-    (16.30, 0.8, -16.0),
-    (17.00, 0.5, 6.0),
-    (17.60, 0.6, 10.0),
-    (18.20, 0.8, 6.0),
-    (18.70, 1.2, 12.0),
-    (19.00, 2.0, 48.0),
-    (19.12, 2.4, 78.0),
-    (19.22, 2.6, 98.0),
-    (19.32, 2.2, 104.0),
-    (19.45, 1.8, 96.0),
-    (19.70, 1.4, 90.0),
-    (20.10, 1.0, 42.0),
-    (20.50, 0.6, 14.0),
-    (21.10, 0.4, 6.0),
-    (21.60, 0.5, 8.0),
-    (22.00, 0.8, 18.0),
-    (22.25, 1.0, 28.0),
-    (22.50, 0.6, 34.0),
-    (22.70, 0.4, 38.0),
-    (22.88, 0.3, 36.0),
-    (23.20, 0.4, 22.0),
-    (23.55, 0.5, 10.0),
-    (23.90, 0.4, 8.0),
-    (24.30, 0.7, 18.0),
-    (24.60, 0.5, 24.0),
-    (24.90, 0.4, 28.0),
-    (25.15, 0.3, 26.0),
-    (25.35, 0.4, 24.0),
-    (25.80, 0.5, 16.0),
-    (26.30, 0.6, 12.0),
-    (26.80, 0.8, 16.0),
-    (27.20, 1.0, 8.0),
-    (27.70, 0.6, -4.0),
-    (28.20, 0.5, 6.0),
-    (28.70, 1.6, 10.0),
-    (28.95, 1.2, 18.0),
-    (29.12, 0.8, 16.0),
-    (29.30, 0.5, 4.0),
-    (29.48, 0.7, -10.0),
-    (29.68, 1.0, -16.0),
-    (29.82, 0.7, -8.0),
-    (30.00, 0.6, -12.0),
+    (0.00, -5.0, 2.0),
+    (1.90, -4.6, 1.6),
+    (2.12, -1.5, -5.0),
+    (2.22, 4.0, 6.0),
+    (2.36, -7.0, -4.0),
+    (2.52, -4.2, 1.2),
+    (2.85, -5.0, 2.0),
+    (3.00, -4.5, 1.4),
+    (3.14, 3.0, -9.0),
+    (3.26, -9.0, 12.0),
+    (3.40, 7.0, -7.0),
+    (3.55, -12.0, 5.0),
+    (3.70, 2.5, -6.0),
+    (3.85, -7.0, 4.0),
+    (4.00, 0.8, -2.5),
+    (4.18, -4.0, 3.5),
+    (4.36, -3.0, -1.0),
+    (4.68, -5.0, 1.2),
+    (4.88, -10.0, 0.6),
+    (5.05, -14.0, -2.0),
+    # re-look stain, imperfect framing, pause, lean, recoil
+    (5.28, -12.0, -6.0),
+    (5.55, -22.0, -12.0),
+    (5.82, -28.0, -20.0),
+    (6.10, -31.0, -22.0),
+    (6.28, -32.0, -21.0),
+    (6.48, -29.0, -18.0),
+    (6.95, -30.0, -17.0),
+    (7.25, -28.0, -10.0),
+    (7.55, -20.0, -4.0),
+    (7.90, -12.0, 2.0),
+    (8.18, -7.0, 6.0),
+    (8.38, -6.0, 12.0),
+    (8.55, -6.5, 18.0),
+    (8.78, -6.0, 26.0),
+    (9.00, -6.5, 34.0),
+    (9.22, -7.0, 40.0),
+    (9.40, -6.5, 43.0),
+    (9.58, -6.0, 38.0),
+    (9.85, -6.2, 36.0),
+    (10.08, -6.0, 44.0),
+    (10.28, -6.5, 50.0),
+    (10.48, -7.0, 54.0),
+    (10.62, -6.5, 57.0),
+    (10.80, -6.5, 52.0),
+    (11.08, -7.0, 40.0),
+    (11.28, -6.5, 28.0),
+    (11.50, -6.5, 14.0),
+    (11.72, -6.0, 2.0),
+    (11.92, -6.5, -10.0),
+    (12.10, -7.0, -16.0),
+    (12.26, -6.5, -18.0),
+    (12.42, -6.5, -12.0),
+    (12.70, -6.5, -4.0),
+    (13.05, -7.0, 12.0),
+    (13.35, -6.5, 22.0),
+    (13.58, -6.0, 26.0),
+    (13.85, -7.0, 24.0),
+    (14.20, -6.5, 16.0),
+    (14.55, -6.5, 6.0),
+    (14.95, -7.0, -8.0),
+    (15.40, -6.5, -4.0),
+    (15.85, -6.5, 4.0),
+    (16.30, -6.0, 8.0),
+    (16.80, -6.5, 6.0),
+    (17.30, -6.0, 4.0),
+    (17.80, -5.5, 3.0),
+    (18.20, -5.5, 2.0),
+    (18.40, -5.5, 4.0),
+    # behind check over the right shoulder, toward the room they walked
+    (18.55, -5.0, -10.0),
+    (18.68, -5.5, -38.0),
+    (18.82, -12.0, -72.0),
+    (18.96, -14.0, -94.0),
+    (19.10, -16.0, -108.0),
+    (19.24, -15.0, -102.0),
+    (19.50, -14.0, -98.0),
+    (19.85, -6.0, -82.0),
+    (20.20, -6.0, -48.0),
+    (20.55, -6.0, -16.0),
+    (20.90, -5.5, -4.0),
+    (21.25, -5.5, 2.0),
+    (21.60, -5.5, 6.0),
+    (21.95, -5.0, 8.0),
+    (22.25, -5.5, 11.0),
+    (22.55, -6.0, 13.0),
+    (22.85, -5.5, 12.0),
+    (23.20, -6.0, 7.0),
+    (23.55, -6.0, 4.0),
+    (23.95, -6.0, 3.0),
+    (24.40, -6.5, 3.0),
+    (24.90, -6.0, 8.0),
+    (25.35, -5.5, 12.0),
+    (25.85, -6.0, 16.0),
+    (26.30, -5.5, 18.0),
+    (26.70, -6.0, 14.0),
+    (27.10, -6.5, 10.0),
+    (27.45, -6.0, 12.0),
+    (27.85, -6.5, 8.0),
+    (28.20, -6.0, 4.0),
+    (28.55, -6.0, 2.0),
+    (28.90, -6.5, -2.0),
+    (29.20, -6.0, 6.0),
+    (29.45, -5.5, 10.0),
+    (29.68, -6.0, 5.0),
+    (29.85, -6.0, 2.0),
+    (30.00, -6.5, 4.0),
 ]
 
-# Image roll on CAM local Z. Recovers to ~0 after pickup.
+# Image roll on CAM local Z. Large only while the camcorder is on the floor / being lifted.
 ROLL_KEYS = [
-    (0.00, 20.0),
-    (1.80, 19.4),
-    (1.90, 26.0),
-    (2.02, 34.0),
-    (2.16, 14.0),
-    (2.32, 6.0),
-    (2.50, -3.2),
-    (2.70, 1.8),
-    (2.92, -1.1),
-    (3.15, 0.7),
-    (3.45, -0.3),
-    (3.80, 0.2),
-    (6.90, 0.4),
-    (7.40, -0.6),
+    (0.00, 27.0),
+    (1.90, 26.2),
+    (2.12, 31.0),
+    (2.22, 34.5),
+    (2.36, 21.0),
+    (2.52, 29.0),
+    (2.85, 26.5),
+    (3.00, 26.8),
+    (3.14, 16.0),
+    (3.28, 38.0),
+    (3.44, 6.0),
+    (3.60, -16.0),
+    (3.72, 22.0),
+    (3.84, -14.0),
+    (3.96, 16.0),
+    (4.10, -9.0),
+    (4.24, 7.0),
+    (4.40, -3.5),
+    (4.58, 1.8),
+    (4.76, -0.7),
+    (4.92, 0.4),
+    (5.12, 0.2),
+    (6.20, 0.7),
+    (7.30, -0.5),
     (8.20, 0.3),
-    (9.50, 0.2),
-    (14.80, -0.8),
-    (15.70, 0.5),
-    (19.22, 1.4),
-    (19.50, 0.4),
-    (22.70, 0.6),
-    (25.15, -0.5),
-    (27.55, 0.8),
-    (29.15, -0.4),
-    (30.00, 0.3),
+    (10.50, 0.9),
+    (13.50, -0.7),
+    (14.20, 0.3),
+    (18.40, 0.2),
+    (19.12, 1.5),
+    (19.50, 0.3),
+    (22.60, 0.6),
+    (23.55, -0.4),
+    (26.30, 0.5),
+    (29.20, -0.3),
+    (30.00, 0.2),
 ]
 
+# Facing east (ROOT yaw ≈ -90): local +X is world south. Negative X peeks north into the door.
 PEEK_KEYS = [
     (0.00, 0.0, 0.0, 0.0),
-    (21.50, 0.0, 0.0, 0.0),
-    (22.10, -0.04, 0.008, 0.0),
-    (22.55, -0.09, 0.016, 0.006),
-    (22.90, -0.10, 0.018, 0.006),
-    (23.30, -0.06, 0.008, 0.002),
-    (23.70, -0.05, 0.006, 0.0),
-    (24.20, -0.05, 0.006, 0.0),
-    (24.70, -0.10, 0.018, 0.008),
-    (25.20, -0.13, 0.022, 0.010),
-    (25.70, -0.11, 0.016, 0.006),
-    (26.30, -0.04, 0.006, 0.0),
-    (27.00, 0.0, 0.0, 0.0),
+    (21.35, 0.0, 0.0, 0.0),
+    (21.70, -0.04, 0.0, 0.0),
+    (22.05, -0.08, 0.002, 0.0),
+    (22.35, -0.115, 0.004, 0.002),
+    (22.70, -0.125, 0.004, 0.002),
+    (23.00, -0.120, 0.003, 0.002),
+    (23.30, -0.078, 0.002, 0.0),
+    (23.60, -0.065, 0.001, 0.0),
+    (24.30, -0.062, 0.001, 0.0),
+    (24.90, -0.080, 0.002, 0.0),
+    (25.35, -0.12, 0.003, 0.002),
+    (25.80, -0.170, 0.005, 0.003),
+    (26.25, -0.195, 0.006, 0.004),
+    (26.80, -0.168, 0.005, 0.003),
+    (27.30, -0.150, 0.004, 0.002),
+    (27.90, -0.120, 0.003, 0.002),
+    (28.35, -0.070, 0.002, 0.0),
+    (28.75, -0.025, 0.0, 0.0),
+    (29.15, 0.0, 0.0, 0.0),
     (30.00, 0.0, 0.0, 0.0),
 ]
 
 WALK_SPANS = [
-    (13.50, 15.25),
-    (15.85, 18.50),
-    (27.05, 28.85),
+    (12.52, 13.78),
+    (14.55, 17.25),
+    (28.50, 29.35),
 ]
+
+# Irregular step durations 0.55–0.72s. Not a fixed period.
+STEP_DURS = (0.61, 0.67, 0.58, 0.64, 0.70, 0.60, 0.66, 0.59, 0.71, 0.63, 0.57, 0.68)
+STEP_AZ = (0.012, 0.018, 0.011, 0.020, 0.015, 0.022, 0.010, 0.017, 0.014, 0.019, 0.013, 0.016)
+STEP_AX = (0.009, 0.015, 0.011, 0.017, 0.010, 0.018, 0.008, 0.014, 0.012, 0.016, 0.009, 0.013)
+STEP_AY = (0.005, 0.009, 0.004, 0.010, 0.006, 0.008, 0.005, 0.007, 0.004, 0.009, 0.006, 0.008)
 
 
 def walk_weight(t: float) -> float:
     best = 0.0
     for a, b in WALK_SPANS:
         if a <= t <= b:
-            edge = min(t - a, b - t, 0.32) / 0.32
-            best = max(best, max(0.0, min(1.0, edge)) ** 1.4)
+            edge = min(t - a, b - t, 0.28) / 0.28
+            best = max(best, max(0.0, min(1.0, edge)) ** 1.35)
     return best
 
 
 def build_steps():
-    rng = random.Random(17)
     steps = []
     t = 0.0
-    while t < DURATION + 1.0:
-        d = rng.choice((0.58, 0.61, 0.67, 0.55, 0.70, 0.64, 0.59, 0.72))
-        amp_z = rng.uniform(0.010, 0.021)
-        amp_x = rng.uniform(0.008, 0.017)
-        amp_y = rng.uniform(0.004, 0.009)
-        steps.append((t, t + d, amp_z, amp_x, amp_y, 1 if len(steps) % 2 == 0 else -1))
+    i = 0
+    while t < DURATION + 2.0:
+        d = STEP_DURS[i % len(STEP_DURS)]
+        steps.append(
+            (
+                t,
+                t + d,
+                STEP_AZ[i % len(STEP_AZ)],
+                STEP_AX[i % len(STEP_AX)],
+                STEP_AY[i % len(STEP_AY)],
+                1 if i % 2 == 0 else -1,
+            )
+        )
         t += d
+        i += 1
     return steps
 
 
 STEPS = build_steps()
 
+# Irregular breath cycles 3–5s, not a perfect sine.
+BREATH = []
+_bt = 0.0
+for _p, _a in (
+    (3.35, 0.0020),
+    (4.55, 0.0016),
+    (3.80, 0.0022),
+    (4.90, 0.0015),
+    (3.20, 0.0019),
+    (4.25, 0.0017),
+    (3.65, 0.0021),
+    (4.70, 0.0014),
+):
+    BREATH.append((_bt, _bt + _p, _p, _a))
+    _bt += _p
+
+
+def breath_z(t: float) -> float:
+    for a, b, p, amp in BREATH:
+        if a <= t <= b:
+            u = (t - a) / p
+            if u < 0.36:
+                k = (u / 0.36) ** 1.15
+            else:
+                k = 1.0 - ((u - 0.36) / 0.64) ** 0.85
+            return amp * k
+    return 0.0
+
+
+def _step_vert(u: float) -> float:
+    """Foot contact → settle → weight transfer → mid-step rise → next contact."""
+    if u < 0.12:
+        return lerp(0.0, -0.28, u / 0.12)
+    if u < 0.28:
+        return lerp(-0.28, 0.06, (u - 0.12) / 0.16)
+    if u < 0.52:
+        return lerp(0.06, 1.0, (u - 0.28) / 0.24)
+    if u < 0.78:
+        return lerp(1.0, 0.16, (u - 0.52) / 0.26)
+    return lerp(0.16, 0.0, (u - 0.78) / 0.22)
+
+
+def _step_lat(u: float, side: float) -> float:
+    if u < 0.16:
+        k = 1.0
+    elif u < 0.46:
+        k = lerp(1.0, 0.08, (u - 0.16) / 0.30)
+    else:
+        k = lerp(0.08, -1.0, (u - 0.46) / 0.54)
+    return side * k
+
+
+def _step_fwd(u: float) -> float:
+    if u < 0.14:
+        return lerp(-0.40, 0.04, u / 0.14)
+    if u < 0.48:
+        return lerp(0.04, 1.0, (u - 0.14) / 0.34)
+    return lerp(1.0, -0.22, (u - 0.48) / 0.52)
+
 
 def body_offset(t: float):
     w = walk_weight(t)
-    z = x = y = 0.0
+    x = y = z = 0.0
     roll = pitch = yaw = 0.0
     if w > 1e-4:
         for a, b, az, ax, ay, side in STEPS:
             if a <= t <= b:
                 u = (t - a) / max(1e-6, b - a)
-                bump = math.sin(math.pi * (u ** 0.82))
-                z = w * az * bump
-                x = w * ax * side * math.sin(math.pi * u)
-                y = w * ay * math.sin(2.0 * math.pi * (u ** 1.12)) * 0.4
-                roll = w * math.radians(0.28 * side * math.sin(math.pi * u))
-                pitch = w * math.radians(-0.18 * bump)
-                yaw = w * math.radians(0.14 * side * math.sin(math.pi * u * 0.55))
+                z = w * az * _step_vert(u)
+                x = w * ax * _step_lat(u, side)
+                y = w * ay * _step_fwd(u)
+                roll = w * math.radians(0.32 * _step_lat(u, side))
+                pitch = w * math.radians(-0.20 * _step_vert(u))
+                yaw = w * math.radians(0.10 * side * (0.35 if u < 0.5 else -0.25))
                 break
-    br = 3.4 + 0.7 * math.sin(t * 0.13 + 0.4)
     idle = 1.0 - w
-    z += (0.0018 + 0.0016 * idle) * math.sin(t * 2.0 * math.pi / br)
-    z += 0.0004 * math.sin(t * 1.07 + 0.8)
-    x += (0.0005 + 0.0004 * idle) * math.sin(t * 0.51 + 1.2)
+    z += breath_z(t) * (0.55 + 0.85 * idle)
+    # Slow posture drift, not a walk cycle.
+    x += idle * 0.00055 * math.sin(t * 0.47 + 0.9)
+    y += idle * 0.00035 * math.sin(t * 0.31 + 1.7)
+    z += idle * 0.00025 * math.sin(t * 0.19 + 0.4)
+    # Contact bump on the body, 2.1–2.6s only.
+    if 2.10 <= t <= 2.58:
+        u = (t - 2.10) / 0.48
+        env = (1.0 - u) ** 1.7
+        if t < 2.22:
+            z += 0.0045 * env
+            x += 0.0030 * env
+        elif t < 2.34:
+            z -= 0.0035 * env
+            x -= 0.0020 * env
+        else:
+            z += 0.0015 * env
     return x, y, z, pitch, roll, yaw
+
+
+GRIP_TIMES = (4.82, 8.18, 15.58, 23.88)
+
+
+def hand_offset(t: float):
+    hx = 0.0010 * math.sin(t * 4.7 + 0.3) + 0.0005 * math.sin(t * 1.6 + 2.1)
+    hy = 0.0008 * math.sin(t * 3.8 + 1.1) + 0.0004 * math.sin(t * 2.3 + 0.4)
+    hz = 0.0006 * math.sin(t * 3.2 + 0.7) + 0.00035 * math.sin(t * 1.1 + 1.8)
+    rx = math.radians(0.05 * math.sin(t * 3.6 + 0.5))
+    ry = math.radians(0.04 * math.sin(t * 4.5 + 1.4))
+    rz = math.radians(0.05 * math.sin(t * 5.2 + 0.9))
+    for g in GRIP_TIMES:
+        d = abs(t - g)
+        if d < 0.10:
+            k = 1.0 - d / 0.10
+            hx += 0.0014 * k
+            rz += math.radians(0.28 * k)
+            ry += math.radians(-0.18 * k)
+    return hx, hy, hz, rx, ry, rz
 
 
 def animate(root, body, head, hand, cam):
@@ -725,46 +957,49 @@ def animate(root, body, head, hand, cam):
     for t, roll in ROLL_KEYS:
         f = frame_at(t)
         insert_xyz(cam, "rotation_euler", f, (0.0, 0.0, math.radians(roll)))
+    shape_sparse_fcurves(root)
+    shape_sparse_fcurves(cam)
+
     dt = 1.0 / FPS
     t = 0.0
     last = -1
+    walking = False
     while t <= DURATION + 1e-6:
         f = frame_at(t)
         if f != last:
-            bx, by, bz, bp, br, bya = body_offset(t)
-            insert_xyz(body, "location", f, (bx, by, bz))
-            insert_xyz(body, "rotation_euler", f, (bp, br, bya))
-            pitch, hyaw = sample_keys(LOOK_KEYS, t, 2, ease=True)
-            pitch -= math.degrees(bp) * 0.60
-            hyaw -= math.degrees(bya) * 0.55
-            insert_xyz(
-                head,
-                "rotation_euler",
-                f,
-                (math.radians(90.0 + pitch), 0.0, math.radians(hyaw)),
-            )
-            px, py, pz = sample_keys(PEEK_KEYS, t, 3)
-            insert_xyz(head, "location", f, (px - 0.58 * bx, py - 0.32 * by, pz - 0.22 * bz))
-            hx = 0.0011 * math.sin(t * 4.6 + 0.3) + 0.0006 * math.sin(t * 1.7)
-            hy = 0.0009 * math.sin(t * 3.9 + 1.0) + 0.0005 * math.sin(t * 2.2)
-            hz = 0.0007 * math.sin(t * 3.1 + 0.6)
-            if abs((t + 0.21) % 4.1 - 0.09) < 0.05:
-                hx += 0.0012
-            insert_xyz(hand, "location", f, (hx, hy, hz))
-            insert_xyz(
-                hand,
-                "rotation_euler",
-                f,
-                (
-                    math.radians(0.06 * math.sin(t * 3.7 + 0.5)),
-                    math.radians(0.05 * math.sin(t * 4.4)),
-                    math.radians(0.05 * math.sin(t * 5.1 + 1.1)),
-                ),
-            )
+            w = walk_weight(t)
+            walking = w > 0.02
+            # Dense keys while walking (foot contacts). Sparse-ish while standing.
+            key_body = walking or (f % 3 == 1) or t < 5.2
+            if key_body:
+                bx, by, bz, bp, br, bya = body_offset(t)
+                insert_xyz(body, "location", f, (bx, by, bz))
+                insert_xyz(body, "rotation_euler", f, (bp, br, bya))
+                pitch, hyaw = sample_keys(LOOK_KEYS, t, 2)
+                # Head counters 50–70% of body so the lens is not chest-locked.
+                pitch -= math.degrees(bp) * 0.62
+                hyaw -= math.degrees(bya) * 0.58
+                insert_xyz(
+                    head,
+                    "rotation_euler",
+                    f,
+                    (math.radians(90.0 + pitch), 0.0, math.radians(hyaw)),
+                )
+                px, py, pz = sample_keys(PEEK_KEYS, t, 3)
+                insert_xyz(
+                    head,
+                    "location",
+                    f,
+                    (px - 0.62 * bx, py - 0.30 * by, pz - 0.22 * bz),
+                )
+            if walking or (f % 4 == 1) or t < 5.2:
+                hx, hy, hz, hrx, hry, hrz = hand_offset(t)
+                insert_xyz(hand, "location", f, (hx, hy, hz))
+                insert_xyz(hand, "rotation_euler", f, (hrx, hry, hrz))
             last = f
         t += dt
-    add_noise_mods(hand, "location", 11.0, 0.00035, 1.6)
-    add_noise_mods(hand, "rotation_euler", 16.0, 0.00028, 3.1)
+    add_noise_mods(hand, "location", 13.0, 0.00028, 1.6)
+    add_noise_mods(hand, "rotation_euler", 18.0, 0.00022, 3.1)
 
 
 def add_path_guide(col):
@@ -779,7 +1014,7 @@ def add_path_guide(col):
     col.objects.link(obj)
 
 
-def setup_scene(scene):
+def setup_scene(scene, cam, osd_img):
     scene.frame_start = 1
     scene.frame_end = 900
     scene.frame_step = 1
@@ -794,7 +1029,8 @@ def setup_scene(scene):
         scene.view_settings.view_transform = "AgX"
     except TypeError:
         pass
-    setup_osd_compositor(scene)
+    setup_osd_compositor(scene, osd_img)
+    attach_camera_osd(cam, osd_img)
     scene.render.use_compositing = False
 
 
@@ -830,14 +1066,17 @@ def collision_report():
         dg.update()
         p = cam.matrix_world.translation.copy()
         t = (f - 1) / 30.0
-        r = 0.12 if 21.5 <= t <= 26.6 else 0.20
-        if t < 1.85:
-            if p.z < 0.06 or p.z > 0.22:
+        if 21.3 <= t <= 28.4 or t >= 28.4:
+            r = 0.12
+        else:
+            r = 0.20
+        if t < 3.02:
+            if p.z < 0.045 or p.z > 0.16:
                 problems.append(f"f{f} floor height {p.z:.3f}")
-        elif t > 3.8:
+        elif t > 5.05:
             if p.z < 1.40 or p.z > 1.80:
                 problems.append(f"f{f} height {p.z:.3f}")
-        if t >= 3.8:
+        if t >= 5.05:
             roll = cam_roll_deg(cam)
             if abs(roll) > 8.0:
                 problems.append(f"f{f} horizon roll {roll:.1f}")
@@ -849,28 +1088,46 @@ def collision_report():
                 continue
             if (loc - p).length < r:
                 problems.append(
-                    f"f{f} clip {(loc-p).length:.3f} {obj.name if obj else '?'} {tuple(round(x,2) for x in loc)}"
+                    f"f{f} clip {(loc-p).length:.3f} {obj.name if obj else '?'} {tuple(round(x, 2) for x in loc)}"
                 )
                 break
     return problems
+
+
+def blood_screen_note(cam) -> str:
+    blood = bpy.data.objects.get("BLOOD.RoomA.Dried")
+    if blood is None:
+        return "no-blood"
+    p = cam.matrix_world.translation
+    to_b = Vector((BLOOD_C[0], BLOOD_C[1], 0.01)) - p
+    look = look_vector(cam)
+    if to_b.length < 1e-6:
+        return "on-blood"
+    ang = math.degrees(look.angle(to_b.normalized()))
+    return f"blood_ang={ang:.1f} dist={to_b.length:.2f}"
 
 
 def print_sanity():
     scene = bpy.context.scene
     labels = (
         (0.0, "floor"),
-        (2.5, "pickup"),
-        (3.8, "settled"),
-        (5.5, "blood edge"),
-        (7.4, "blood look"),
-        (11.3, "look left"),
-        (13.1, "look exit"),
-        (15.5, "hesitate"),
-        (19.3, "look back"),
-        (22.8, "peek 1"),
-        (25.2, "peek 2"),
-        (28.2, "exit"),
-        (29.7, "scan / cut"),
+        (2.25, "contact"),
+        (3.0, "prelift"),
+        (4.0, "pickup"),
+        (5.0, "settled"),
+        (6.4, "blood look"),
+        (9.4, "look fwd"),
+        (10.5, "look left"),
+        (12.2, "look exit"),
+        (13.9, "walk pause"),
+        (16.5, "wander"),
+        (18.4, "at door"),
+        (19.15, "look back"),
+        (22.7, "peek 1"),
+        (23.7, "retract"),
+        (26.4, "peek 2"),
+        (29.6, "threshold"),
+        (30.0, "cut"),
     )
     for t, label in labels:
         scene.frame_set(frame_at(t))
@@ -880,9 +1137,10 @@ def print_sanity():
         v = look_vector(cam)
         heading = math.degrees(math.atan2(-v.x, v.y))
         roll = cam_roll_deg(cam)
+        extra = blood_screen_note(cam) if t in (0.0, 6.4) else ""
         print(
             f"  t={t:5.2f} {label:12s} pos=({p.x:6.2f},{p.y:6.2f},{p.z:5.2f}) "
-            f"look=({v.x:5.2f},{v.y:5.2f},{v.z:5.2f}) yaw={heading:7.1f} roll={roll:6.1f}"
+            f"look=({v.x:5.2f},{v.y:5.2f},{v.z:5.2f}) yaw={heading:7.1f} roll={roll:6.1f} {extra}"
         )
 
 
@@ -904,44 +1162,22 @@ def configure_preview(scene):
     return frames
 
 
-def encode_mp4(frame_dir: Path) -> Path:
-    out = PREVIEW_DIR / "room_a_found_footage_preview.mp4"
-    subprocess.check_call(
-        [
-            "ffmpeg",
-            "-y",
-            "-framerate",
-            "30",
-            "-i",
-            str(frame_dir / "frame_%04d.jpg"),
-            "-c:v",
-            "libx264",
-            "-pix_fmt",
-            "yuv420p",
-            "-crf",
-            "18",
-            str(out),
-        ]
-    )
-    return out
-
-
 STILL_FRAMES = (
     (1, "floor"),
-    (76, "pickup"),
-    (90, "osd90"),
-    (115, "settled"),
-    (166, "blood_edge"),
-    (180, "blood_notice"),
-    (223, "blood_look"),
-    (300, "osd300"),
-    (340, "look_left"),
-    (466, "wander"),
-    (580, "look_back"),
-    (600, "osd600"),
-    (685, "peek1"),
-    (757, "peek2"),
-    (847, "exit"),
+    (68, "contact"),
+    (90, "prelift"),
+    (112, "pickup"),
+    (150, "settled"),
+    (192, "blood_look"),
+    (282, "look_fwd"),
+    (318, "look_left"),
+    (418, "walk_pause"),
+    (552, "at_door"),
+    (575, "look_back"),
+    (682, "peek1"),
+    (712, "retract"),
+    (793, "peek2"),
+    (888, "threshold"),
     (900, "cut"),
 )
 
@@ -952,7 +1188,6 @@ def render_stills(scene) -> Path:
     configure_preview(scene)
     for f, label in STILL_FRAMES:
         scene.frame_set(f)
-        osd_frame_handler(scene)
         path = out_dir / f"{label}_{f:04d}.jpg"
         scene.render.filepath = str(path)
         bpy.ops.render.render(write_still=True)
@@ -964,23 +1199,13 @@ def render_stills(scene) -> Path:
 def overlay_preview_frames(frame_dir: Path) -> None:
     osd_dir = PREVIEW_DIR / "osd"
     osd_dir.mkdir(parents=True, exist_ok=True)
-    cache = {}
-    img = ensure_osd_image()
     for f in range(1, 901):
-        t = max(0.0, (f - 1) / float(FPS))
-        key = (int(t), (f % 30) < 16, (f % 44) < 30)
-        src = osd_dir / f"src_{key[0]:02d}_{int(key[1])}_{int(key[2])}.png"
-        if key not in cache:
-            paint_osd_image(f)
-            img.filepath_raw = str(src)
-            img.file_format = "PNG"
-            img.save()
-            cache[key] = src
+        src = OSD_SEQ_DIR / f"osd_{f:04d}.png"
         dst = osd_dir / f"osd_{f:04d}.png"
         if dst.exists() or dst.is_symlink():
             dst.unlink()
-        dst.symlink_to(cache[key].name)
-    print("osd pngs", len(cache))
+        dst.symlink_to(src)
+    print("osd links", 900)
 
 
 def main():
@@ -988,15 +1213,15 @@ def main():
     scene = bpy.context.scene
     hide_previous_take()
     clear_this_take()
-    fx = new_col(FX_COLL)
-    make_blood(fx)
+    ensure_blood()
     col = new_col(COLL)
     root, body, head, hand, cam = build_rig(col)
     animate(root, body, head, hand, cam)
     add_path_guide(col)
-    setup_scene(scene)
-    register_osd_handler()
-    paint_osd_image(1)
+    unregister_osd_handler()
+    write_osd_sequence()
+    osd_img = load_osd_movie()
+    setup_scene(scene, cam, osd_img)
 
     print("Sanity poses:")
     print_sanity()
@@ -1006,6 +1231,11 @@ def main():
         print(" ", line)
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
     print("Saved", BLEND_PATH, "frames", scene.frame_start, scene.frame_end)
+    print(
+        "OSD timer: movie",
+        OSD_MOV,
+        "driven by scene frame (no frame_change_pre).",
+    )
 
     if args["mode"] == "preview":
         frames = configure_preview(scene)
