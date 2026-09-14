@@ -4,6 +4,7 @@
 Does not rebuild walls, floor, ceiling, or lights. No formal Cycles render.
 
   blender -b backrooms.blend --python scripts/add_room_a_found_footage.py -- --check
+  blender -b backrooms.blend --python scripts/add_room_a_found_footage.py -- --stills
   blender -b backrooms.blend --python scripts/add_room_a_found_footage.py -- --preview
 """
 
@@ -32,7 +33,8 @@ FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
 # Room A interior (measured from backrooms.blend, do not change walls):
 #   x -5.80 .. -1.60   y 1.00 .. 4.80
 # East door: x -1.60 .. -1.40, y 3.00 .. 4.60
-BLOOD_C = (-2.08, 1.30)
+# SE corner stain: 10–30 cm from walls, elongated, not circular.
+BLOOD_C = (-1.90, 1.24)
 
 
 def parse_args() -> dict:
@@ -40,6 +42,8 @@ def parse_args() -> dict:
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
     if "--preview" in argv:
         mode = "preview"
+    elif "--stills" in argv:
+        mode = "stills"
     return {"mode": mode}
 
 
@@ -145,7 +149,11 @@ def clear_this_take() -> None:
         "OSD_TIME",
         "OSD_REC",
         "OSD_REC_DOT",
-        "OSD_BATT",
+        "OSD_BATT_T",
+        "OSD_BATT_B",
+        "OSD_BATT_L",
+        "OSD_BATT_R",
+        "OSD_BATT_NIP",
         "OSD_BATT_FILL",
         "OSD_MODE",
         "BLOOD.RoomA.Dried",
@@ -153,6 +161,9 @@ def clear_this_take() -> None:
     ):
         obj = bpy.data.objects.get(name)
         if obj is not None:
+            bpy.data.objects.remove(obj, do_unlink=True)
+    for obj in list(bpy.data.objects):
+        if obj.name.startswith("BLOOD.RoomA") or obj.name.startswith("OSD_"):
             bpy.data.objects.remove(obj, do_unlink=True)
 
 
@@ -175,83 +186,132 @@ def parent_local(child, parent_obj) -> None:
     child.matrix_parent_inverse.identity()
 
 
+def solid_image(name: str, rgb) -> bpy.types.Image:
+    img = bpy.data.images.get(name)
+    if img is None:
+        img = bpy.data.images.new(name, 16, 16)
+    pix = []
+    for _ in range(16 * 16):
+        pix.extend([float(rgb[0]), float(rgb[1]), float(rgb[2]), 1.0])
+    img.pixels = pix
+    return img
+
+
 def emissive(name, color, strength=1.0):
     mat = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     mat.use_nodes = True
+    mat.diffuse_color = (*color, 1.0)
     nt = mat.node_tree
     nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     em = nt.nodes.new("ShaderNodeEmission")
-    em.inputs["Color"].default_value = (*color, 1.0)
+    img = nt.nodes.new("ShaderNodeTexImage")
+    img.image = solid_image(name + ".IMG", color)
     em.inputs["Strength"].default_value = strength
+    nt.links.new(img.outputs["Color"], em.inputs["Color"])
     nt.links.new(em.outputs["Emission"], out.inputs["Surface"])
-    mat.blend_method = "OPAQUE"
     return mat
 
 
-def make_blood(col) -> bpy.types.Object:
-    rng = random.Random(17)
-    bm = bmesh.new()
-    n = 36
+def _blood_ring(bm, ox, oy, rx, ry, seed, n=32, z=0.0):
+    rng = random.Random(seed)
     verts = []
-    cx, cy = BLOOD_C
     for i in range(n):
         a = (2.0 * math.pi * i) / n
-        r = (
-            0.46
-            + 0.16 * math.sin(i * 0.73 + 0.2)
-            + 0.11 * math.sin(i * 1.91 + 1.4)
-            + 0.07 * math.sin(i * 3.4)
-            + rng.uniform(-0.05, 0.05)
+        k = (
+            0.70
+            + 0.18 * math.sin(i * 0.71 + seed)
+            + 0.12 * math.sin(i * 1.87 + 0.6)
+            + 0.08 * math.sin(i * 3.3 + seed * 0.4)
+            + rng.uniform(-0.07, 0.07)
         )
-        x = cx + r * math.cos(a) * 1.18
-        y = cy + r * math.sin(a) * 0.78
-        x = min(-1.72, max(-2.72, x))
-        y = min(1.92, max(1.12, y))
-        verts.append(bm.verts.new((x, y, 0.0018)))
-    face = bm.faces.new(verts)
-    # Extra irregular lobes near the east wall.
-    geom = bmesh.ops.extrude_face_region(bm, geom=[face])
-    verts2 = [g for g in geom["geom"] if isinstance(g, bmesh.types.BMVert)]
-    for v in verts2:
-        v.co.z = 0.0004
+        # Local +X east, +Y north. Keep the blob off the walls.
+        sx = 0.52 if math.cos(a) > 0.0 else 1.18
+        sy = 1.05 if math.sin(a) > 0.0 else 0.48
+        verts.append(bm.verts.new((ox + k * rx * sx * math.cos(a), oy + k * ry * sy * math.sin(a), z)))
+    return bm.faces.new(verts)
+
+
+def make_blood(col) -> bpy.types.Object:
+    bm = bmesh.new()
+    faces = [
+        _blood_ring(bm, 0.0, 0.0, 0.46, 0.36, 17, 40),
+        _blood_ring(bm, -0.34, 0.18, 0.16, 0.11, 23, 22),
+        _blood_ring(bm, 0.18, 0.22, 0.11, 0.08, 41, 18),
+        _blood_ring(bm, -0.12, -0.10, 0.09, 0.06, 8, 16),
+        _blood_ring(bm, -0.48, 0.06, 0.07, 0.05, 55, 14),
+    ]
+    geom = bmesh.ops.extrude_face_region(bm, geom=faces)
+    for g in geom["geom"]:
+        if isinstance(g, bmesh.types.BMVert):
+            g.co.z = 0.010
     mesh = bpy.data.meshes.new("BLOOD.RoomA.Dried")
     bm.to_mesh(mesh)
     bm.free()
     obj = bpy.data.objects.new("BLOOD.RoomA.Dried", mesh)
+    obj.location = (BLOOD_C[0], BLOOD_C[1], 0.006)
     col.objects.link(obj)
+    obj.color = (0.05, 0.012, 0.008, 1.0)
+    obj.show_in_front = False
 
-    mat = bpy.data.materials.new("MAT.DriedBlood")
+    mat = bpy.data.materials.get("MAT.DriedBlood") or bpy.data.materials.new("MAT.DriedBlood")
     mat.use_nodes = True
+    mat.diffuse_color = (0.045, 0.012, 0.008, 1.0)
     nt = mat.node_tree
     nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
     tex = nt.nodes.new("ShaderNodeTexNoise")
-    tex.inputs["Scale"].default_value = 18.0
-    tex.inputs["Detail"].default_value = 8.0
-    tex.inputs["Roughness"].default_value = 0.62
+    tex.inputs["Scale"].default_value = 22.0
+    tex.inputs["Detail"].default_value = 10.0
+    tex.inputs["Roughness"].default_value = 0.68
     ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].position = 0.28
-    ramp.color_ramp.elements[0].color = (0.012, 0.004, 0.003, 1.0)
-    ramp.color_ramp.elements[1].position = 0.78
-    ramp.color_ramp.elements[1].color = (0.045, 0.012, 0.008, 1.0)
+    ramp.color_ramp.elements[0].position = 0.22
+    ramp.color_ramp.elements[0].color = (0.015, 0.004, 0.003, 1.0)
+    ramp.color_ramp.elements[1].position = 0.82
+    ramp.color_ramp.elements[1].color = (0.07, 0.016, 0.010, 1.0)
     coord = nt.nodes.new("ShaderNodeTexCoord")
     nt.links.new(coord.outputs["Object"], tex.inputs["Vector"])
     nt.links.new(tex.outputs["Fac"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    splat = bpy.data.images.get("BLOOD.TEX")
+    if splat is None:
+        splat = bpy.data.images.new("BLOOD.TEX", 256, 256)
+    pix = []
+    rng = random.Random(9)
+    for y in range(256):
+        for x in range(256):
+            nx, ny = (x - 128) / 128.0, (y - 128) / 128.0
+            r = math.sqrt(nx * nx * 0.72 + ny * ny)
+            n = rng.random()
+            edge = max(0.0, min(1.0, 1.15 - r * 1.05 - 0.18 * n))
+            d = 0.018 + 0.04 * (1.0 - edge) + 0.01 * n
+            pix.extend((d, d * 0.28, d * 0.18, 1.0))
+    splat.pixels = pix
+    img = nt.nodes.new("ShaderNodeTexImage")
+    img.image = splat
     if "Roughness" in bsdf.inputs:
-        bsdf.inputs["Roughness"].default_value = 0.94
+        bsdf.inputs["Roughness"].default_value = 0.96
     if "Specular IOR Level" in bsdf.inputs:
-        bsdf.inputs["Specular IOR Level"].default_value = 0.04
+        bsdf.inputs["Specular IOR Level"].default_value = 0.02
     elif "Specular" in bsdf.inputs:
-        bsdf.inputs["Specular"].default_value = 0.04
+        bsdf.inputs["Specular"].default_value = 0.02
     if "Metallic" in bsdf.inputs:
         bsdf.inputs["Metallic"].default_value = 0.0
     if "Coat Weight" in bsdf.inputs:
         bsdf.inputs["Coat Weight"].default_value = 0.0
     nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     obj.data.materials.append(mat)
+    xs = [v.co.x for v in mesh.vertices]
+    ys = [v.co.y for v in mesh.vertices]
+    minx, maxx, miny, maxy = min(xs), max(xs), min(ys), max(ys)
+    uv = mesh.uv_layers.new(name="UVMap")
+    for loop in mesh.loops:
+        v = mesh.vertices[loop.vertex_index]
+        uv.data[loop.index].uv = (
+            (v.co.x - minx) / max(1e-6, maxx - minx),
+            (v.co.y - miny) / max(1e-6, maxy - miny),
+        )
     return obj
 
 
@@ -280,82 +340,178 @@ def make_disc(name, col, radius=0.0016):
     return obj
 
 
-def make_text(name, col, body, size=0.0034):
-    curve = bpy.data.curves.new(name, "FONT")
-    curve.body = body
-    curve.size = size
-    curve.align_x = "LEFT"
-    curve.align_y = "CENTER"
-    if Path(FONT).exists():
-        curve.font = bpy.data.fonts.load(FONT)
-    obj = bpy.data.objects.new(name, curve)
+def write_image(name: str, pixels, size) -> bpy.types.Image:
+    w, h = size
+    img = bpy.data.images.get(name)
+    if img is None or tuple(img.size) != (w, h):
+        if img is not None:
+            bpy.data.images.remove(img)
+        img = bpy.data.images.new(name, w, h, alpha=True)
+    img.pixels = pixels
+    try:
+        img.pack()
+    except Exception:
+        pass
+    return img
+
+
+# 5x7 caps / digits for a generic 2000s camcorder LCD.
+_GLYPHS = {
+    "0": "01110100011001110101100111000101110",
+    "1": "00100011000010000100001000010001110",
+    "2": "01110100010000100010001000100011111",
+    "3": "01110100010000100110000011000101110",
+    "4": "00010001100101010010111110001000010",
+    "5": "11111100001111000001000011000101110",
+    "6": "01110100001111010001100011000101110",
+    "7": "11111000010001000100010000100001000",
+    "8": "01110100010111010001100011000101110",
+    "9": "01110100011000101111000011000101110",
+    ":": "00000001000000000000001000000000000",
+    "R": "11110100011111010001100011000110001",
+    "E": "11111100001111010000100001000011111",
+    "C": "01110100011000010000100001000101110",
+    "S": "01111100000111000001000011000111110",
+    "P": "11110100011000111110100001000010000",
+    " ": "00000000000000000000000000000000000",
+}
+
+
+def osd_label_image(name: str, text: str, rgb, scale=6) -> bpy.types.Image:
+    glyphs = []
+    for ch in text:
+        bits = _GLYPHS.get(ch, _GLYPHS[" "])
+        glyphs.append([[int(bits[row * 5 + col]) for col in range(5)] for row in range(7)])
+    pad = 6
+    gw = 6
+    w = pad * 2 + max(1, len(glyphs) * gw * scale)
+    h = pad * 2 + 7 * scale
+    pix = [0.0] * (w * h * 4)
+    r, g, b = rgb
+    for gi, gpx in enumerate(glyphs):
+        for yy in range(7):
+            for xx in range(5):
+                if not gpx[yy][xx]:
+                    continue
+                for dy in range(scale):
+                    for dx in range(scale):
+                        x = pad + gi * gw * scale + xx * scale + dx
+                        y = pad + (6 - yy) * scale + dy
+                        i = (y * w + x) * 4
+                        pix[i : i + 4] = [r, g, b, 1.0]
+    return write_image(name, pix, (w, h))
+
+
+def make_image_plane(name, col, img, w, h, mat_rgb):
+    mesh = bpy.data.meshes.new(name)
+    # Quad in XY, +Z faces the camera when the plane sits at camera -Z.
+    verts = [(-w * 0.5, -h * 0.5, 0.0), (w * 0.5, -h * 0.5, 0.0), (w * 0.5, h * 0.5, 0.0), (-w * 0.5, h * 0.5, 0.0)]
+    mesh.from_pydata(verts, [], [(0, 1, 2, 3)])
+    uv = mesh.uv_layers.new(name="UVMap")
+    for i, (u, v) in enumerate(((0, 0), (1, 0), (1, 1), (0, 1))):
+        uv.data[i].uv = (u, v)
+    obj = bpy.data.objects.new(name, mesh)
     col.objects.link(obj)
+    mat = bpy.data.materials.get(f"MAT.{name}") or bpy.data.materials.new(f"MAT.{name}")
+    mat.use_nodes = True
+    mat.diffuse_color = (*mat_rgb, 1.0)
+    try:
+        mat.blend_method = "BLEND"
+    except TypeError:
+        pass
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    em = nt.nodes.new("ShaderNodeEmission")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    em.inputs["Strength"].default_value = 4.0
+    nt.links.new(tex.outputs["Color"], em.inputs["Color"])
+    nt.links.new(em.outputs["Emission"], out.inputs["Surface"])
+    obj.data.materials.append(mat)
     return obj
 
 
 def build_osd(col, cam) -> bpy.types.Object:
     osd = make_empty("CAM_OSD", col, 0.04)
     parent_local(osd, cam)
-    # Screen-space: camera looks -Z, +X right, +Y up. Sit on the near plane.
-    dist = 0.052
+    # Screen-space HUD: parented to the camera, sitting on the near plane.
+    dist = 0.048
     osd.location = (0.0, 0.0, -dist)
     osd.rotation_euler = (0.0, 0.0, 0.0)
-    w = dist * 36.0 / 28.0
-    h = dist * 27.0 / 28.0
-    white = emissive("MAT.OSD.White", (0.86, 0.90, 0.82), 3.5)
-    red = emissive("MAT.OSD.Red", (0.85, 0.07, 0.04), 6.0)
-    dark = emissive("MAT.OSD.Dark", (0.08, 0.09, 0.07), 0.8)
-    amber = emissive("MAT.OSD.Amber", (0.75, 0.18, 0.04), 5.0)
+    hw = dist * 36.0 / 28.0 * 0.5
+    hh = dist * 27.0 / 28.0 * 0.5
+    white = emissive("MAT.OSD.White", (0.88, 0.93, 0.80), 3.5)
+    red = emissive("MAT.OSD.Red", (0.90, 0.08, 0.05), 6.0)
+    amber = emissive("MAT.OSD.Amber", (0.82, 0.22, 0.04), 5.0)
 
-    batt = make_rect("OSD_BATT", col, 0.0072, 0.0036)
-    parent_local(batt, osd)
-    batt.location = (-w * 0.42, h * 0.40, 0.0008)
-    batt.data.materials.append(dark)
-    fill = make_rect("OSD_BATT_FILL", col, 0.00055, 0.0024)
-    parent_local(fill, osd)
-    fill.location = (-w * 0.42 - 0.0026, h * 0.40, 0.0012)
-    fill.data.materials.append(amber)
+    batt_w, batt_h, t = 0.0076, 0.0036, 0.00038
+    bx, by = -hw + 0.0088, hh - 0.0056
+    outline = [
+        ("OSD_BATT_T", batt_w, t, (bx, by + batt_h * 0.5, 0.0008)),
+        ("OSD_BATT_B", batt_w, t, (bx, by - batt_h * 0.5, 0.0008)),
+        ("OSD_BATT_L", t, batt_h, (bx - batt_w * 0.5, by, 0.0008)),
+        ("OSD_BATT_R", t, batt_h, (bx + batt_w * 0.5, by, 0.0008)),
+    ]
+    for name, rw, rh, loc in outline:
+        edge = make_rect(name, col, rw, rh)
+        parent_local(edge, osd)
+        edge.location = loc
+        edge.data.materials.append(white)
     nip = make_rect("OSD_BATT_NIP", col, 0.0007, 0.0015)
     parent_local(nip, osd)
-    nip.location = (-w * 0.42 + 0.0041, h * 0.40, 0.0008)
-    nip.data.materials.append(dark)
+    nip.location = (bx + batt_w * 0.5 + 0.00055, by, 0.0008)
+    nip.data.materials.append(white)
+    fill = make_rect("OSD_BATT_FILL", col, 0.00055, 0.0024)
+    parent_local(fill, osd)
+    fill.location = (bx - batt_w * 0.5 + 0.00075, by, 0.0012)
+    fill.data.materials.append(amber)
 
-    rec_dot = make_disc("OSD_REC_DOT", col, 0.0015)
+    rec_dot = make_disc("OSD_REC_DOT", col, 0.00135)
     parent_local(rec_dot, osd)
-    rec_dot.location = (w * 0.38, h * 0.40, 0.0008)
-    rec_dot.rotation_euler = (math.radians(90.0), 0.0, 0.0)
+    rec_dot.location = (hw - 0.0165, hh - 0.0056, 0.0008)
     rec_dot.data.materials.append(red)
-    rec = make_text("OSD_REC", col, "REC", 0.0030)
+
+    lcd = (0.90, 0.94, 0.78)
+    rec_img = osd_label_image("OSD_REC.IMG", "REC", (0.92, 0.10, 0.06), 7)
+    rec = make_image_plane("OSD_REC", col, rec_img, 0.0088, 0.0033, (0.92, 0.10, 0.06))
     parent_local(rec, osd)
-    rec.location = (w * 0.38 + 0.0024, h * 0.40, 0.0008)
-    rec.data.materials.append(red)
+    rec.location = (hw - 0.0102, hh - 0.0056, 0.0008)
 
-    time = make_text("OSD_TIME", col, "0:23:51", 0.0036)
+    time_img = osd_label_image("OSD_TIME.IMG", "0:23:51", lcd, 7)
+    time = make_image_plane("OSD_TIME", col, time_img, 0.0185, 0.0046, lcd)
     parent_local(time, osd)
-    time.location = (-0.010, -h * 0.41, 0.0008)
-    time.data.materials.append(white)
+    time.location = (-hw + 0.0145, -hh + 0.0058, 0.0008)
 
-    mode = make_text("OSD_MODE", col, "SP  4:3", 0.0022)
+    mode_img = osd_label_image("OSD_MODE.IMG", "SP  4:3", lcd, 6)
+    mode = make_image_plane("OSD_MODE", col, mode_img, 0.0115, 0.0032, lcd)
     parent_local(mode, osd)
-    mode.location = (w * 0.22, -h * 0.41, 0.0008)
-    mode.data.materials.append(white)
+    mode.location = (hw - 0.0118, -hh + 0.0058, 0.0008)
 
-    for obj in (osd, batt, fill, nip, rec_dot, rec, time, mode):
+    hud = [osd, nip, fill, rec_dot, rec, time, mode]
+    for obj in hud:
         obj.show_in_front = True
         obj.hide_render = False
         obj.display_type = "SOLID"
+    for name, _rw, _rh, _loc in outline:
+        bpy.data.objects[name].show_in_front = True
     return osd
+
+
+def _clock_text(t: float) -> str:
+    clock = 23 * 60 + 51 + t
+    mm = int(clock // 60)
+    ss = int(clock % 60)
+    return f"{mm // 60}:{mm % 60:02d}:{ss:02d}" if mm >= 60 else f"0:{mm:02d}:{ss:02d}"
 
 
 def osd_frame_handler(scene):
     f = scene.frame_current
     t = max(0.0, (f - 1) / float(FPS))
-    clock = 23 * 60 + 51 + t
-    mm = int(clock // 60)
-    ss = int(clock % 60)
-    time = bpy.data.objects.get("OSD_TIME")
-    if time is not None and time.type == "FONT":
-        time.data.body = f"{mm // 60}:{mm % 60:02d}:{ss:02d}" if mm >= 60 else f"0:{mm:02d}:{ss:02d}"
+    text = _clock_text(t)
+    if getattr(osd_frame_handler, "_clock", None) != text:
+        osd_frame_handler._clock = text
+        osd_label_image("OSD_TIME.IMG", text, (0.90, 0.94, 0.78), 7)
     rec = bpy.data.objects.get("OSD_REC")
     dot = bpy.data.objects.get("OSD_REC_DOT")
     rec_on = (f % 30) < 16
@@ -444,8 +600,9 @@ ROOT_KEYS = [
     (19.80, -2.012, 2.872, 1.602, -90.0),
     (20.80, -2.000, 2.868, 1.600, -86.0),
     (21.40, -1.995, 2.860, 1.598, -92.0),
-    (24.80, -1.992, 2.858, 1.600, -90.0),
-    (26.20, -1.990, 2.862, 1.600, -82.0),
+    (22.20, -1.990, 2.888, 1.598, -88.0),
+    (24.80, -1.988, 2.892, 1.600, -86.0),
+    (26.20, -1.985, 2.900, 1.600, -80.0),
     (26.80, -1.980, 2.900, 1.605, -70.0),
     (27.25, -1.920, 3.32, 1.608, -48.0),
     (27.70, -1.520, 3.48, 1.610, -80.0),
@@ -473,16 +630,19 @@ LOOK_KEYS = [
     (7.20, -28.0, -42.0, 0.5),
     (7.55, -18.0, -22.0, 0.3),
     (8.00, -10.0, -8.0, 0.2),
-    (8.55, -4.0, 6.0, 0.4),
-    (9.10, 8.0, 14.0, 0.6),
-    (9.35, 10.0, 18.0, 0.8),
-    (9.55, 8.5, 16.0, 0.4),
-    (10.10, 2.0, -2.0, 0.2),
-    (10.70, 1.0, -22.0, -0.4),
-    (11.00, 1.4, -26.0, -0.5),
-    (11.20, 1.0, -23.0, -0.2),
-    (11.80, 0.4, -8.0, 0.2),
-    (12.40, 0.8, 4.0, 0.3),
+    (8.40, 2.0, -2.0, 0.3),
+    (8.75, 11.0, 8.0, 0.4),
+    (9.05, 13.0, 12.0, 0.6),
+    (9.22, 10.0, 10.0, 0.3),
+    (9.55, 2.0, 26.0, 0.5),
+    (9.78, 1.4, 33.0, 0.8),
+    (9.98, 1.0, 28.0, 0.3),
+    (10.35, 0.6, 5.0, 0.2),
+    (10.80, 0.8, -24.0, -0.3),
+    (11.05, 1.1, -31.0, -0.5),
+    (11.28, 0.6, -26.0, -0.2),
+    (11.70, 0.4, -8.0, 0.2),
+    (12.20, 0.8, -16.0, 0.3),
     (13.20, 1.2, 10.0, 0.4),
     (14.20, 0.6, -4.0, 0.2),
     (15.30, 2.5, 8.0, 0.3),
@@ -496,38 +656,45 @@ LOOK_KEYS = [
     (19.80, 1.6, 100.0, 0.5),
     (20.40, 1.0, 42.0, 0.3),
     (21.00, 0.6, 8.0, 0.2),
-    (21.50, 0.4, -6.0, 0.2),
-    (22.10, 1.0, -18.0, 0.3),
-    (22.70, 0.8, -28.0, 0.4),
-    (23.20, 0.6, -24.0, 0.3),
-    (23.80, 0.5, -8.0, 0.2),
-    (24.40, 0.8, -22.0, 0.3),
-    (25.10, 0.6, -30.0, 0.4),
-    (25.70, 0.5, -26.0, 0.3),
-    (26.40, 0.8, -12.0, 0.2),
+    (21.50, 0.4, 6.0, 0.2),
+    (22.00, 0.9, 22.0, 0.3),
+    (22.35, 1.1, 52.0, 0.4),
+    (22.70, 0.6, 66.0, 0.5),
+    (22.95, 0.4, 71.0, 0.6),
+    (23.20, 0.5, 64.0, 0.3),
+    (23.60, 0.4, 24.0, 0.2),
+    (24.05, 0.5, 16.0, 0.2),
+    (24.45, 0.8, 44.0, 0.3),
+    (24.90, 0.5, 68.0, 0.4),
+    (25.20, 0.4, 73.0, 0.5),
+    (25.55, 0.5, 66.0, 0.3),
+    (26.10, 0.6, 18.0, 0.2),
+    (26.50, 0.8, 8.0, 0.2),
     (27.20, 1.2, 6.0, 0.3),
     (28.10, 0.6, -4.0, 0.2),
-    (28.80, 2.0, 8.0, 0.3),
-    (29.20, 1.0, 14.0, 0.4),
-    (29.45, 0.8, 18.0, 0.3),
-    (29.62, 0.6, 10.0, 0.2),
-    (29.80, 1.2, -16.0, 0.3),
-    (30.00, 0.8, -22.0, 0.2),
+    (28.55, 1.4, 12.0, 0.3),
+    (28.85, 1.0, 22.0, 0.4),
+    (29.10, 0.8, 18.0, 0.3),
+    (29.32, 0.5, 4.0, 0.2),
+    (29.52, 0.6, -14.0, -0.2),
+    (29.72, 1.0, -20.0, 0.2),
+    (29.88, 0.8, -8.0, 0.2),
+    (30.00, 0.7, -12.0, 0.2),
 ]
 
 # Head local translation for corner peek (local -X is left).
 PEEK_KEYS = [
     (0.00, 0.0, 0.0, 0.0),
     (21.40, 0.0, 0.0, 0.0),
-    (22.00, -0.02, 0.004, 0.0),
-    (22.55, -0.11, 0.012, 0.008),
-    (23.05, -0.13, 0.010, 0.006),
-    (23.55, -0.08, 0.004, 0.002),
-    (24.05, -0.05, 0.002, 0.0),
-    (24.55, -0.10, 0.010, 0.006),
-    (25.15, -0.145, 0.014, 0.010),
-    (25.70, -0.12, 0.008, 0.004),
-    (26.30, -0.04, 0.002, 0.0),
+    (22.00, -0.03, 0.006, 0.0),
+    (22.55, -0.10, 0.018, 0.008),
+    (23.05, -0.14, 0.022, 0.006),
+    (23.55, -0.07, 0.008, 0.002),
+    (24.05, -0.04, 0.004, 0.0),
+    (24.55, -0.09, 0.016, 0.006),
+    (25.15, -0.15, 0.024, 0.010),
+    (25.70, -0.11, 0.012, 0.004),
+    (26.30, -0.03, 0.004, 0.0),
     (27.00, 0.0, 0.0, 0.0),
     (30.00, 0.0, 0.0, 0.0),
 ]
@@ -592,15 +759,16 @@ def body_offset(t: float):
 
 
 def animate(root, body, head, hand):
+    for t, x, y, z, yaw in ROOT_KEYS:
+        f = frame_at(t)
+        insert_xyz(root, "location", f, (x, y, z))
+        insert_xyz(root, "rotation_euler", f, (0.0, 0.0, math.radians(yaw)))
     dt = 1.0 / FPS
     t = 0.0
     last = -1
     while t <= DURATION + 1e-6:
         f = frame_at(t)
         if f != last:
-            x, y, z, yaw = sample_keys(ROOT_KEYS, t, 4)
-            insert_xyz(root, "location", f, (x, y, z))
-            insert_xyz(root, "rotation_euler", f, (0.0, 0.0, math.radians(yaw)))
             bx, by, bz, bp, br, bya = body_offset(t)
             insert_xyz(body, "location", f, (bx, by, bz))
             insert_xyz(body, "rotation_euler", f, (bp, br, bya))
@@ -707,7 +875,7 @@ def collision_report():
             hit, loc, nor, idx, obj, mat = scene.ray_cast(dg, p, d)
             if not hit:
                 continue
-            if obj is not None and ("BLOOD" in obj.name or obj.name.startswith("OSD")):
+            if obj is not None and ("BLOOD" in obj.name or obj.name.startswith("OSD") or obj.name.startswith("CAM_")):
                 continue
             if (loc - p).length < r:
                 problems.append(
@@ -752,6 +920,10 @@ def configure_preview(scene):
     scene.render.engine = "BLENDER_WORKBENCH"
     scene.display.shading.light = "STUDIO"
     scene.display.shading.color_type = "TEXTURE"
+    try:
+        scene.display.shading.show_backface_culling = False
+    except Exception:
+        pass
     scene.render.resolution_x = 640
     scene.render.resolution_y = 480
     scene.render.image_settings.file_format = "JPEG"
@@ -786,6 +958,37 @@ def encode_mp4(frame_dir: Path) -> Path:
     return out
 
 
+STILL_FRAMES = (
+    (1, "floor"),
+    (70, "pickup"),
+    (127, "lift"),
+    (217, "blood"),
+    (272, "look_up"),
+    (295, "look_west"),
+    (332, "look_east"),
+    (451, "wander"),
+    (577, "look_back"),
+    (685, "peek1"),
+    (757, "peek2"),
+    (847, "exit"),
+    (892, "scan"),
+    (900, "cut"),
+)
+
+
+def render_stills(scene) -> Path:
+    out_dir = PREVIEW_DIR / "check"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    configure_preview(scene)
+    for f, label in STILL_FRAMES:
+        scene.frame_set(f)
+        osd_frame_handler(scene)
+        scene.render.filepath = str(out_dir / f"{label}_{f:04d}.jpg")
+        bpy.ops.render.render(write_still=True)
+        print("still", scene.render.filepath)
+    return out_dir
+
+
 def main():
     args = parse_args()
     scene = bpy.context.scene
@@ -817,6 +1020,8 @@ def main():
         bpy.ops.render.render(animation=True)
         out = encode_mp4(frames)
         print("Wrote", out)
+    elif args["mode"] == "stills":
+        print("Stills ->", render_stills(scene))
 
 
 if __name__ == "__main__":
