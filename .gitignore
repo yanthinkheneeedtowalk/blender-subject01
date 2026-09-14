@@ -5,6 +5,10 @@ renders/found_footage_preview/frames/
 renders/found_footage_preview/check/
 renders/found_footage_vhs/frames/
 renders/found_footage_master/frames/
+renders/found_footage_master/check/
+renders/found_footage_master/osd/
+assets/osd/
+assets/osd_master/
 renders/room_a_preview/frames/
 renders/room_a_preview/check/
 renders/room_a_preview/osd/
