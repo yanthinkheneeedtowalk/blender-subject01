@@ -28,11 +28,7 @@ FPS = 30
 DURATION = 30.0
 COLL = "CAM_FOUND_FOOTAGE"
 FX_COLL = "FX_DRIED_BLOOD"
-
-# Room A interior (measured from backrooms.blend, do not change walls):
-#   x -5.80 .. -1.60   y 1.00 .. 4.80
-# East door: x -1.60 .. -1.40, y 3.00 .. 4.60
-# SE corner stain: 10–30 cm from walls, elongated, not circular.
+OSD_W, OSD_H = 640, 480
 BLOOD_C = (-1.90, 1.24)
 
 
@@ -54,9 +50,14 @@ def lerp(a: float, b: float, u: float) -> float:
     return a + (b - a) * u
 
 
-def smoothstep(u: float) -> float:
+def ease_look(u: float, pin: float = 2.15, pout: float = 1.55) -> float:
+    """Fast middle, slower settle. Not a symmetric smoothstep."""
     u = max(0.0, min(1.0, u))
-    return u * u * (3.0 - 2.0 * u)
+    if u < 0.45:
+        t = u / 0.45
+        return 0.62 * (t ** pin)
+    t = (u - 0.45) / 0.55
+    return 0.62 + 0.38 * (1.0 - (1.0 - t) ** pout)
 
 
 def iter_fcurves(id_data):
@@ -91,8 +92,8 @@ def insert_xyz(obj, path: str, frame: int, value, interp: str = "BEZIER") -> Non
         for kp in fc.keyframe_points:
             if int(round(kp.co[0])) == frame:
                 kp.interpolation = interp
-                kp.handle_left_type = "AUTO_CLAMPED"
-                kp.handle_right_type = "AUTO_CLAMPED"
+                kp.handle_left_type = "FREE" if interp == "BEZIER" else "AUTO_CLAMPED"
+                kp.handle_right_type = "FREE" if interp == "BEZIER" else "AUTO_CLAMPED"
 
 
 def add_noise_mods(obj, data_path: str, scale: float, strength: float, seed: float) -> None:
@@ -104,31 +105,33 @@ def add_noise_mods(obj, data_path: str, scale: float, strength: float, seed: flo
             if mod.type == "NOISE":
                 fc.modifiers.remove(mod)
         mod = fc.modifiers.new("NOISE")
-        mod.scale = scale + 1.1 * n
+        mod.scale = scale + 1.4 * n
         mod.strength = strength
-        mod.phase = seed + n * 2.3
+        mod.phase = seed + n * 2.7
         mod.depth = 0
         n += 1
 
 
-def sample_keys(keys, t, nvals=3):
+def sample_keys(keys, t, nvals=3, ease=False):
     if t <= keys[0][0]:
         return keys[0][1:]
     for a, b in zip(keys, keys[1:]):
         if a[0] <= t <= b[0]:
-            u = smoothstep((t - a[0]) / max(1e-6, b[0] - a[0]))
+            raw = (t - a[0]) / max(1e-6, b[0] - a[0])
+            u = ease_look(raw) if ease else raw * raw * (3.0 - 2.0 * raw)
             return tuple(lerp(a[i], b[i], u) for i in range(1, nvals + 1))
     return keys[-1][1:]
 
 
 def hide_previous_take() -> None:
     old = bpy.data.collections.get("CAM_FOUND_FOOTAGE_01")
-    if old is not None:
-        old.hide_viewport = True
-        old.hide_render = True
-        for obj in old.objects:
-            obj.hide_viewport = True
-            obj.hide_render = True
+    if old is None:
+        return
+    old.hide_viewport = True
+    old.hide_render = True
+    for obj in old.objects:
+        obj.hide_viewport = True
+        obj.hide_render = True
 
 
 def clear_this_take() -> None:
@@ -138,31 +141,12 @@ def clear_this_take() -> None:
             for obj in list(col.objects):
                 bpy.data.objects.remove(obj, do_unlink=True)
             bpy.data.collections.remove(col)
-    for name in (
-        "POV_ROOT",
-        "BODY_MOTION",
-        "HEAD_MOTION",
-        "HAND_MOTION",
-        "CAM_MAIN",
-        "CAM_OSD",
-        "OSD_TIME",
-        "OSD_REC",
-        "OSD_REC_DOT",
-        "OSD_BATT_T",
-        "OSD_BATT_B",
-        "OSD_BATT_L",
-        "OSD_BATT_R",
-        "OSD_BATT_NIP",
-        "OSD_BATT_FILL",
-        "OSD_MODE",
-        "BLOOD.RoomA.Dried",
-        "CAM_PATH_GUIDE",
-    ):
-        obj = bpy.data.objects.get(name)
-        if obj is not None:
-            bpy.data.objects.remove(obj, do_unlink=True)
     for obj in list(bpy.data.objects):
-        if obj.name.startswith("BLOOD.RoomA") or obj.name.startswith("OSD_"):
+        if (
+            obj.name.startswith("BLOOD.RoomA")
+            or obj.name.startswith("OSD_")
+            or obj.name in {"POV_ROOT", "BODY_MOTION", "HEAD_MOTION", "HAND_MOTION", "CAM_MAIN", "CAM_OSD", "CAM_PATH_GUIDE"}
+        ):
             bpy.data.objects.remove(obj, do_unlink=True)
 
 
@@ -185,33 +169,6 @@ def parent_local(child, parent_obj) -> None:
     child.matrix_parent_inverse.identity()
 
 
-def solid_image(name: str, rgb) -> bpy.types.Image:
-    img = bpy.data.images.get(name)
-    if img is None:
-        img = bpy.data.images.new(name, 16, 16)
-    pix = []
-    for _ in range(16 * 16):
-        pix.extend([float(rgb[0]), float(rgb[1]), float(rgb[2]), 1.0])
-    img.pixels = pix
-    return img
-
-
-def emissive(name, color, strength=1.0):
-    mat = bpy.data.materials.get(name) or bpy.data.materials.new(name)
-    mat.use_nodes = True
-    mat.diffuse_color = (*color, 1.0)
-    nt = mat.node_tree
-    nt.nodes.clear()
-    out = nt.nodes.new("ShaderNodeOutputMaterial")
-    em = nt.nodes.new("ShaderNodeEmission")
-    img = nt.nodes.new("ShaderNodeTexImage")
-    img.image = solid_image(name + ".IMG", color)
-    em.inputs["Strength"].default_value = strength
-    nt.links.new(img.outputs["Color"], em.inputs["Color"])
-    nt.links.new(em.outputs["Emission"], out.inputs["Surface"])
-    return mat
-
-
 def _blood_ring(bm, ox, oy, rx, ry, seed, n=32, z=0.0):
     rng = random.Random(seed)
     verts = []
@@ -224,7 +181,6 @@ def _blood_ring(bm, ox, oy, rx, ry, seed, n=32, z=0.0):
             + 0.08 * math.sin(i * 3.3 + seed * 0.4)
             + rng.uniform(-0.07, 0.07)
         )
-        # Local +X east, +Y north. Keep the blob off the walls.
         sx = 0.40 if math.cos(a) > 0.0 else 1.22
         sy = 1.05 if math.sin(a) > 0.0 else 0.48
         verts.append(bm.verts.new((ox + k * rx * sx * math.cos(a), oy + k * ry * sy * math.sin(a), z)))
@@ -251,7 +207,6 @@ def make_blood(col) -> bpy.types.Object:
     obj.location = (BLOOD_C[0], BLOOD_C[1], 0.006)
     col.objects.link(obj)
     obj.color = (0.05, 0.012, 0.008, 1.0)
-    obj.show_in_front = False
 
     mat = bpy.data.materials.get("MAT.DriedBlood") or bpy.data.materials.new("MAT.DriedBlood")
     mat.use_nodes = True
@@ -273,9 +228,7 @@ def make_blood(col) -> bpy.types.Object:
     nt.links.new(coord.outputs["Object"], tex.inputs["Vector"])
     nt.links.new(tex.outputs["Fac"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
-    splat = bpy.data.images.get("BLOOD.TEX")
-    if splat is None:
-        splat = bpy.data.images.new("BLOOD.TEX", 256, 256)
+    splat = bpy.data.images.get("BLOOD.TEX") or bpy.data.images.new("BLOOD.TEX", 256, 256)
     pix = []
     rng = random.Random(9)
     for y in range(256):
@@ -293,53 +246,19 @@ def make_blood(col) -> bpy.types.Object:
         bsdf.inputs["Roughness"].default_value = 0.96
     if "Specular IOR Level" in bsdf.inputs:
         bsdf.inputs["Specular IOR Level"].default_value = 0.02
-    elif "Specular" in bsdf.inputs:
-        bsdf.inputs["Specular"].default_value = 0.02
     if "Metallic" in bsdf.inputs:
         bsdf.inputs["Metallic"].default_value = 0.0
     if "Coat Weight" in bsdf.inputs:
         bsdf.inputs["Coat Weight"].default_value = 0.0
     nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     obj.data.materials.append(mat)
-    xs = [v.co.x for v in mesh.vertices]
-    ys = [v.co.y for v in mesh.vertices]
-    minx, maxx, miny, maxy = min(xs), max(xs), min(ys), max(ys)
-    uv = mesh.uv_layers.new(name="UVMap")
-    for loop in mesh.loops:
-        v = mesh.vertices[loop.vertex_index]
-        uv.data[loop.index].uv = (
-            (v.co.x - minx) / max(1e-6, maxx - minx),
-            (v.co.y - miny) / max(1e-6, maxy - miny),
-        )
     return obj
 
 
-def make_rect(name, col, w, h, d=0.0004):
-    mesh = bpy.data.meshes.new(name)
-    bm = bmesh.new()
-    bmesh.ops.create_cube(bm, size=1.0)
-    bm.to_mesh(mesh)
-    bm.free()
-    obj = bpy.data.objects.new(name, mesh)
-    obj.scale = (w, h, d)
-    col.objects.link(obj)
-    return obj
+# ---------------------------------------------------------------------------
+# Screen-space OSD (compositor overlay). Never parented to the camera.
+# ---------------------------------------------------------------------------
 
-
-def make_disc(name, col, radius=0.0016):
-    mesh = bpy.data.meshes.new(name)
-    bm = bmesh.new()
-    bmesh.ops.create_circle(bm, cap_ends=True, cap_tris=True, segments=16, radius=radius)
-    for v in bm.verts:
-        v.co.z = 0.0
-    bm.to_mesh(mesh)
-    bm.free()
-    obj = bpy.data.objects.new(name, mesh)
-    col.objects.link(obj)
-    return obj
-
-
-# 5x7 caps / digits for a generic 2000s camcorder LCD.
 _GLYPHS = {
     "0": "01110100011001110101100111000101110",
     "1": "00100011000010000100001000010001110",
@@ -361,120 +280,6 @@ _GLYPHS = {
 }
 
 
-def build_lcd_mesh(name: str, text: str, pixel=0.00040, gap=0.00011):
-    bm = bmesh.new()
-    step = pixel + gap
-    for gi, ch in enumerate(text):
-        bits = _GLYPHS.get(ch, _GLYPHS[" "])
-        for row in range(7):
-            for col in range(5):
-                if bits[row * 5 + col] != "1":
-                    continue
-                x = gi * 6 * step + col * step
-                y = (6 - row) * step
-                v0 = bm.verts.new((x, y, 0.0))
-                v1 = bm.verts.new((x + pixel, y, 0.0))
-                v2 = bm.verts.new((x + pixel, y + pixel, 0.0))
-                v3 = bm.verts.new((x, y + pixel, 0.0))
-                bm.faces.new((v0, v1, v2, v3))
-    if bm.verts:
-        xs = [v.co.x for v in bm.verts]
-        ys = [v.co.y for v in bm.verts]
-        cx = 0.5 * (min(xs) + max(xs))
-        cy = 0.5 * (min(ys) + max(ys))
-        for v in bm.verts:
-            v.co.x -= cx
-            v.co.y -= cy
-    mesh = bpy.data.meshes.new(name)
-    bm.to_mesh(mesh)
-    bm.free()
-    return mesh
-
-
-def make_lcd(name, col, text, mat, pixel=0.00040):
-    mesh = build_lcd_mesh(name, text, pixel=pixel)
-    obj = bpy.data.objects.new(name, mesh)
-    col.objects.link(obj)
-    obj.data.materials.append(mat)
-    return obj
-
-
-def set_lcd_text(obj, text, pixel=0.00040):
-    mat = obj.data.materials[0] if obj.data.materials else None
-    old = obj.data
-    mesh = build_lcd_mesh(old.name, text, pixel=pixel)
-    if mat is not None:
-        mesh.materials.append(mat)
-    obj.data = mesh
-    if old.users == 0:
-        bpy.data.meshes.remove(old)
-
-
-def build_osd(col, cam) -> bpy.types.Object:
-    osd = make_empty("CAM_OSD", col, 0.04)
-    parent_local(osd, cam)
-    # Screen-space HUD: parented to the camera, sitting on the near plane.
-    dist = 0.048
-    osd.location = (0.0, 0.0, -dist)
-    osd.rotation_euler = (0.0, 0.0, 0.0)
-    hw = dist * 36.0 / 28.0 * 0.5
-    hh = dist * 27.0 / 28.0 * 0.5
-    white = emissive("MAT.OSD.White", (0.88, 0.93, 0.80), 3.5)
-    red = emissive("MAT.OSD.Red", (0.90, 0.08, 0.05), 6.0)
-    amber = emissive("MAT.OSD.Amber", (0.82, 0.22, 0.04), 5.0)
-
-    batt_w, batt_h, t = 0.0076, 0.0036, 0.00038
-    bx, by = -hw + 0.0088, hh - 0.0056
-    outline = [
-        ("OSD_BATT_T", batt_w, t, (bx, by + batt_h * 0.5, 0.0008)),
-        ("OSD_BATT_B", batt_w, t, (bx, by - batt_h * 0.5, 0.0008)),
-        ("OSD_BATT_L", t, batt_h, (bx - batt_w * 0.5, by, 0.0008)),
-        ("OSD_BATT_R", t, batt_h, (bx + batt_w * 0.5, by, 0.0008)),
-    ]
-    for name, rw, rh, loc in outline:
-        edge = make_rect(name, col, rw, rh)
-        parent_local(edge, osd)
-        edge.location = loc
-        edge.data.materials.append(white)
-    nip = make_rect("OSD_BATT_NIP", col, 0.0007, 0.0015)
-    parent_local(nip, osd)
-    nip.location = (bx + batt_w * 0.5 + 0.00055, by, 0.0008)
-    nip.data.materials.append(white)
-    fill = make_rect("OSD_BATT_FILL", col, 0.00055, 0.0024)
-    parent_local(fill, osd)
-    fill.location = (bx - batt_w * 0.5 + 0.00075, by, 0.0012)
-    fill.data.materials.append(amber)
-
-    rec_dot = make_disc("OSD_REC_DOT", col, 0.00135)
-    parent_local(rec_dot, osd)
-    rec_dot.location = (hw - 0.0165, hh - 0.0056, 0.0008)
-    rec_dot.data.materials.append(red)
-
-    lcd = (0.90, 0.94, 0.78)
-    lcd_mat = emissive("MAT.OSD.LCD", lcd, 4.0)
-    rec_mat = emissive("MAT.OSD.RecText", (0.92, 0.10, 0.06), 6.0)
-    rec = make_lcd("OSD_REC", col, "REC", rec_mat, 0.00042)
-    parent_local(rec, osd)
-    rec.location = (hw - 0.0108, hh - 0.0056, 0.0008)
-
-    time = make_lcd("OSD_TIME", col, "0:23:51", lcd_mat, 0.00040)
-    parent_local(time, osd)
-    time.location = (-hw + 0.0165, -hh + 0.0058, 0.0008)
-
-    mode = make_lcd("OSD_MODE", col, "SP  4:3", lcd_mat, 0.00032)
-    parent_local(mode, osd)
-    mode.location = (hw - 0.0125, -hh + 0.0058, 0.0008)
-
-    hud = [osd, nip, fill, rec_dot, rec, time, mode]
-    for obj in hud:
-        obj.show_in_front = True
-        obj.hide_render = False
-        obj.display_type = "SOLID"
-    for name, _rw, _rh, _loc in outline:
-        bpy.data.objects[name].show_in_front = True
-    return osd
-
-
 def _clock_text(t: float) -> str:
     clock = 23 * 60 + 51 + t
     mm = int(clock // 60)
@@ -482,27 +287,96 @@ def _clock_text(t: float) -> str:
     return f"{mm // 60}:{mm % 60:02d}:{ss:02d}" if mm >= 60 else f"0:{mm:02d}:{ss:02d}"
 
 
+def _stamp(buf, w, h, x0, y0, text, rgb, scale):
+    r, g, b = rgb
+    step = 6 * scale
+    for gi, ch in enumerate(text):
+        bits = _GLYPHS.get(ch, _GLYPHS[" "])
+        for row in range(7):
+            for col in range(5):
+                if bits[row * 5 + col] != "1":
+                    continue
+                for dy in range(scale):
+                    for dx in range(scale):
+                        x = x0 + gi * step + col * scale + dx
+                        y = y0 + (6 - row) * scale + dy
+                        if 0 <= x < w and 0 <= y < h:
+                            i = (y * w + x) * 4
+                            buf[i : i + 4] = [r, g, b, 1.0]
+
+
+def _rect(buf, w, h, x0, y0, x1, y1, rgb, a=1.0):
+    r, g, b = rgb
+    for y in range(max(0, y0), min(h, y1)):
+        for x in range(max(0, x0), min(w, x1)):
+            i = (y * w + x) * 4
+            buf[i : i + 4] = [r, g, b, a]
+
+
+def build_osd_pixels(frame: int) -> list[float]:
+    w, h = OSD_W, OSD_H
+    buf = [0.0] * (w * h * 4)
+    t = max(0.0, (frame - 1) / float(FPS))
+    lcd = (0.90, 0.94, 0.78)
+    red = (0.92, 0.12, 0.07)
+    amber = (0.82, 0.28, 0.06)
+    # Battery outline top-left (y from bottom in Blender images).
+    bx, by = 22, h - 42
+    _rect(buf, w, h, bx, by + 16, bx + 46, by + 18, lcd)
+    _rect(buf, w, h, bx, by, bx + 46, by + 2, lcd)
+    _rect(buf, w, h, bx, by, bx + 2, by + 18, lcd)
+    _rect(buf, w, h, bx + 44, by, bx + 46, by + 18, lcd)
+    _rect(buf, w, h, bx + 46, by + 5, bx + 50, by + 13, lcd)
+    if (frame % 44) < 30:
+        _rect(buf, w, h, bx + 3, by + 4, bx + 7, by + 14, amber)
+    if (frame % 30) < 16:
+        _rect(buf, w, h, w - 118, h - 36, w - 106, h - 24, red)
+        _stamp(buf, w, h, w - 100, h - 42, "REC", red, 3)
+    _stamp(buf, w, h, 22, 18, _clock_text(t), lcd, 3)
+    _stamp(buf, w, h, w - 148, 18, "SP  4:3", lcd, 2)
+    return buf
+
+
+def ensure_osd_image() -> bpy.types.Image:
+    img = bpy.data.images.get("OSD_OVERLAY")
+    if img is None or tuple(img.size) != (OSD_W, OSD_H):
+        if img is not None:
+            bpy.data.images.remove(img)
+        img = bpy.data.images.new("OSD_OVERLAY", OSD_W, OSD_H, alpha=True)
+    return img
+
+
+def paint_osd_image(frame: int) -> bpy.types.Image:
+    img = ensure_osd_image()
+    img.pixels = build_osd_pixels(frame)
+    return img
+
+
+def setup_osd_compositor(scene) -> None:
+    ng = bpy.data.node_groups.get("OSD_SCREENSPACE")
+    if ng is None:
+        ng = bpy.data.node_groups.new("OSD_SCREENSPACE", "CompositorNodeTree")
+    ng.nodes.clear()
+    ng.interface.clear()
+    ng.interface.new_socket(name="Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+    rl = ng.nodes.new("CompositorNodeRLayers")
+    rl.location = (0, 80)
+    img_n = ng.nodes.new("CompositorNodeImage")
+    img_n.image = ensure_osd_image()
+    img_n.location = (0, -140)
+    over = ng.nodes.new("CompositorNodeAlphaOver")
+    over.location = (260, 40)
+    out = ng.nodes.new("NodeGroupOutput")
+    out.location = (480, 40)
+    ng.links.new(rl.outputs["Image"], over.inputs[1])
+    ng.links.new(img_n.outputs["Image"], over.inputs[2])
+    ng.links.new(over.outputs["Image"], out.inputs[0])
+    scene.compositing_node_group = ng
+    scene.render.use_compositing = True
+
+
 def osd_frame_handler(scene):
-    f = scene.frame_current
-    t = max(0.0, (f - 1) / float(FPS))
-    text = _clock_text(t)
-    if getattr(osd_frame_handler, "_clock", None) != text:
-        osd_frame_handler._clock = text
-        time = bpy.data.objects.get("OSD_TIME")
-        if time is not None:
-            set_lcd_text(time, text, pixel=0.00040)
-    rec = bpy.data.objects.get("OSD_REC")
-    dot = bpy.data.objects.get("OSD_REC_DOT")
-    rec_on = (f % 30) < 16
-    for obj in (rec, dot):
-        if obj is not None:
-            obj.hide_viewport = not rec_on
-            obj.hide_render = not rec_on
-    fill = bpy.data.objects.get("OSD_BATT_FILL")
-    if fill is not None:
-        batt_on = (f % 44) < 30
-        fill.hide_viewport = not batt_on
-        fill.hide_render = not batt_on
+    paint_osd_image(scene.frame_current)
 
 
 def register_osd_handler():
@@ -510,8 +384,40 @@ def register_osd_handler():
         if getattr(h, "__name__", "") == "osd_frame_handler":
             bpy.app.handlers.frame_change_pre.remove(h)
     bpy.app.handlers.frame_change_pre.append(osd_frame_handler)
-    osd_frame_handler._clock = None
 
+
+def overlay_osd_on_jpeg(jpg: Path, frame: int) -> None:
+    """Guarantee screen-space OSD even if Workbench skips the compositor."""
+    png = jpg.with_suffix(".osd.png")
+    img = paint_osd_image(frame)
+    img.filepath_raw = str(png)
+    img.file_format = "PNG"
+    img.save()
+    tmp = jpg.with_suffix(".comp.jpg")
+    subprocess.check_call(
+        [
+            "ffmpeg",
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            str(jpg),
+            "-i",
+            str(png),
+            "-filter_complex",
+            "overlay=0:0",
+            "-q:v",
+            "3",
+            str(tmp),
+        ]
+    )
+    tmp.replace(jpg)
+    png.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Rig — roll lives on CAM_MAIN local Z (look axis), never on HEAD Y.
+# ---------------------------------------------------------------------------
 
 def build_rig(col):
     root = make_empty("POV_ROOT", col, 0.22)
@@ -528,15 +434,19 @@ def build_rig(col):
     data.dof.use_dof = False
     cam = bpy.data.objects.new("CAM_MAIN", data)
     col.objects.link(cam)
+    osd = make_empty("CAM_OSD", col, 0.04)
+    osd.parent = None
 
     root.location = (-5.38, 2.48, 0.10)
     root.rotation_euler = (0.0, 0.0, math.radians(92.0))
     body.location = (0, 0, 0)
     head.location = (0, 0, 0)
-    head.rotation_euler = (math.radians(90.0 + 8.0), math.radians(22.0), 0.0)
+    head.rotation_mode = "XYZ"
+    head.rotation_euler = (math.radians(90.0), 0.0, 0.0)
     hand.location = (0, 0, 0)
     cam.location = (0, 0, 0)
-    cam.rotation_euler = (0, 0, 0)
+    cam.rotation_mode = "XYZ"
+    cam.rotation_euler = (0.0, 0.0, math.radians(20.0))
 
     parent_local(body, root)
     parent_local(head, body)
@@ -546,144 +456,214 @@ def build_rig(col):
     return root, body, head, hand, cam
 
 
-# t, x, y, z, yaw_deg  (yaw 0=north, +90=west, -90=east, ±180=south)
+# t, x, y, z, yaw_deg  (0=north, +90=west, -90=east)
+# Pickup keeps facing the west wall. Horizon recover is CAM roll, not ROOT yaw.
 ROOT_KEYS = [
     (0.00, -5.38, 2.48, 0.100, 92.0),
-    (2.00, -5.379, 2.481, 0.101, 92.4),
-    (2.12, -5.370, 2.488, 0.108, 94.0),
-    (2.22, -5.355, 2.505, 0.155, 86.0),
-    (2.38, -5.325, 2.460, 0.240, 104.0),
-    (2.70, -5.280, 2.510, 0.560, 74.0),
-    (3.15, -5.235, 2.430, 0.980, 48.0),
-    (3.65, -5.195, 2.360, 1.380, 14.0),
-    (4.20, -5.155, 2.310, 1.550, -10.0),
-    (5.00, -5.120, 2.270, 1.610, -24.0),
-    (5.50, -5.020, 2.180, 1.615, -36.0),
-    (6.25, -4.680, 1.980, 1.600, -52.0),
-    (6.55, -4.560, 1.900, 1.590, -60.0),
-    (6.72, -4.548, 1.892, 1.595, -62.0),
-    (7.20, -4.490, 1.855, 1.568, -64.0),
-    (7.55, -4.610, 1.930, 1.612, -58.0),
-    (8.00, -4.600, 1.950, 1.608, -50.0),
-    (9.20, -4.585, 1.980, 1.610, -18.0),
-    (10.40, -4.570, 2.020, 1.612, 12.0),
-    (11.40, -4.555, 2.050, 1.608, -8.0),
-    (12.20, -4.500, 2.140, 1.612, -22.0),
-    (13.10, -4.080, 2.520, 1.608, 6.0),
-    (13.55, -4.050, 2.560, 1.605, 10.0),
-    (14.50, -3.520, 3.180, 1.615, 22.0),
-    (15.40, -3.150, 3.520, 1.608, -8.0),
-    (16.20, -2.720, 3.220, 1.612, -48.0),
-    (17.00, -2.320, 3.020, 1.608, -78.0),
-    (17.80, -2.100, 2.930, 1.605, -88.0),
-    (18.50, -2.015, 2.875, 1.600, -93.0),
-    (19.80, -2.012, 2.872, 1.602, -90.0),
-    (20.80, -2.000, 2.868, 1.600, -86.0),
-    (21.40, -1.995, 2.860, 1.598, -92.0),
-    (22.20, -1.990, 2.888, 1.598, -88.0),
-    (24.80, -1.988, 2.892, 1.600, -86.0),
-    (26.20, -1.985, 2.900, 1.600, -80.0),
-    (26.80, -1.980, 2.900, 1.605, -70.0),
-    (27.25, -1.920, 3.32, 1.608, -48.0),
-    (27.70, -1.520, 3.48, 1.610, -80.0),
-    (28.20, -0.980, 3.38, 1.605, -120.0),
-    (28.70, -0.640, 3.05, 1.598, -150.0),
-    (29.15, -0.555, 2.80, 1.592, -170.0),
-    (29.50, -0.528, 2.690, 1.590, -176.0),
-    (30.00, -0.518, 2.665, 1.588, -172.0),
+    (1.80, -5.379, 2.481, 0.101, 92.3),
+    (1.88, -5.368, 2.492, 0.112, 93.8),
+    (1.96, -5.350, 2.470, 0.128, 89.5),
+    (2.10, -5.328, 2.448, 0.255, 91.0),
+    (2.28, -5.305, 2.475, 0.520, 87.5),
+    (2.48, -5.288, 2.452, 0.880, 90.5),
+    (2.70, -5.270, 2.430, 1.250, 88.0),
+    (2.95, -5.252, 2.412, 1.480, 90.0),
+    (3.20, -5.240, 2.400, 1.575, 89.0),
+    (3.50, -5.228, 2.388, 1.605, 87.0),
+    (3.80, -5.215, 2.372, 1.612, 84.0),
+    (4.15, -5.175, 2.310, 1.614, 62.0),
+    (4.55, -5.110, 2.220, 1.612, 28.0),
+    (5.00, -5.020, 2.120, 1.610, -8.0),
+    (5.35, -4.960, 2.050, 1.608, -22.0),
+    (5.80, -4.900, 1.980, 1.606, -48.0),
+    (6.50, -4.780, 1.920, 1.602, -72.0),
+    (6.90, -4.720, 1.880, 1.575, -80.0),
+    (7.50, -4.690, 1.860, 1.568, -84.0),
+    (8.20, -4.680, 1.855, 1.572, -82.0),
+    (8.80, -4.710, 1.878, 1.598, -76.0),
+    (9.50, -4.730, 1.905, 1.610, -62.0),
+    (10.10, -4.728, 1.930, 1.612, -18.0),
+    (10.80, -4.720, 1.960, 1.610, 8.0),
+    (11.40, -4.718, 1.972, 1.611, 22.0),
+    (12.00, -4.715, 1.980, 1.610, 6.0),
+    (12.70, -4.680, 2.040, 1.612, -38.0),
+    (13.50, -4.560, 2.140, 1.612, -58.0),
+    (14.10, -4.280, 2.420, 1.608, -22.0),
+    (14.80, -3.920, 2.780, 1.612, 4.0),
+    (15.30, -3.780, 2.980, 1.610, 10.0),
+    (15.70, -3.760, 3.040, 1.608, 8.0),
+    (16.40, -3.280, 3.220, 1.610, -36.0),
+    (17.20, -2.720, 3.120, 1.608, -78.0),
+    (18.00, -2.220, 2.960, 1.605, -90.0),
+    (18.70, -2.080, 2.900, 1.602, -93.0),
+    (19.40, -2.020, 2.882, 1.600, -90.0),
+    (20.60, -2.012, 2.878, 1.600, -88.0),
+    (21.50, -2.000, 2.872, 1.598, -90.0),
+    (22.20, -1.992, 2.885, 1.598, -86.0),
+    (24.40, -1.988, 2.890, 1.600, -88.0),
+    (26.40, -1.985, 2.898, 1.600, -84.0),
+    (27.00, -1.978, 2.930, 1.602, -72.0),
+    (27.28, -1.930, 3.20, 1.606, -52.0),
+    (27.55, -1.760, 3.40, 1.608, -68.0),
+    (27.85, -1.480, 3.48, 1.610, -98.0),
+    (28.20, -1.080, 3.38, 1.606, -128.0),
+    (28.55, -0.700, 3.08, 1.598, -152.0),
+    (28.85, -0.560, 2.86, 1.592, -168.0),
+    (29.15, -0.538, 2.78, 1.590, -172.0),
+    (29.50, -0.530, 2.76, 1.588, -166.0),
+    (30.00, -0.522, 2.75, 1.588, -160.0),
 ]
 
-# additive head: pitch, yaw, roll (degrees)
+# pitch (+=up), yaw (+=left relative to body)
 LOOK_KEYS = [
-    (0.00, 9.0, 2.0, 22.0),
-    (2.00, 8.5, 2.4, 21.5),
-    (2.20, 14.0, -4.0, 28.0),
-    (2.40, 4.0, 8.0, 12.0),
-    (2.80, -6.0, -10.0, -8.0),
-    (3.30, 8.0, 6.0, 10.0),
-    (3.90, 2.0, -4.0, -3.0),
-    (4.50, 0.5, 3.0, 2.5),
-    (5.00, -2.0, 4.0, 1.0),
-    (5.80, -12.0, -18.0, 0.6),
-    (6.50, -22.0, -32.0, 0.8),
-    (6.75, -24.0, -40.0, 0.4),
-    (7.20, -28.0, -42.0, 0.5),
-    (7.55, -18.0, -22.0, 0.3),
-    (8.00, -10.0, -8.0, 0.2),
-    (8.40, 2.0, -2.0, 0.3),
-    (8.75, 11.0, 8.0, 0.4),
-    (9.05, 13.0, 12.0, 0.6),
-    (9.22, 10.0, 10.0, 0.3),
-    (9.55, 2.0, 26.0, 0.5),
-    (9.78, 1.4, 33.0, 0.8),
-    (9.98, 1.0, 28.0, 0.3),
-    (10.35, 0.6, 5.0, 0.2),
-    (10.80, 0.8, -24.0, -0.3),
-    (11.05, 1.1, -31.0, -0.5),
-    (11.28, 0.6, -26.0, -0.2),
-    (11.70, 0.4, -8.0, 0.2),
-    (12.20, 0.8, -16.0, 0.3),
-    (13.20, 1.2, 10.0, 0.4),
-    (14.20, 0.6, -4.0, 0.2),
-    (15.30, 2.5, 8.0, 0.3),
-    (16.40, 0.5, -6.0, 0.2),
-    (17.20, 0.8, 4.0, 0.2),
-    (18.20, 1.0, 8.0, 0.3),
-    (18.70, 2.0, 18.0, 0.4),
-    (19.05, 3.0, 96.0, 1.2),
-    (19.22, 2.4, 112.0, 1.6),
-    (19.40, 2.0, 104.0, 0.8),
-    (19.80, 1.6, 100.0, 0.5),
-    (20.40, 1.0, 42.0, 0.3),
-    (21.00, 0.6, 8.0, 0.2),
-    (21.50, 0.4, 6.0, 0.2),
-    (22.00, 0.9, 14.0, 0.3),
-    (22.35, 1.0, 26.0, 0.4),
-    (22.70, 0.5, 34.0, 0.5),
-    (22.95, 0.3, 38.0, 0.6),
-    (23.20, 0.4, 32.0, 0.3),
-    (23.60, 0.4, 16.0, 0.2),
-    (24.05, 0.5, 12.0, 0.2),
-    (24.45, 0.7, 22.0, 0.3),
-    (24.90, 0.4, 26.0, 0.4),
-    (25.20, 0.3, 22.0, 0.5),
-    (25.55, 0.4, 18.0, 0.3),
-    (26.10, 0.6, 18.0, 0.2),
-    (26.50, 0.8, 8.0, 0.2),
-    (27.20, 1.2, 6.0, 0.3),
-    (28.10, 0.6, -4.0, 0.2),
-    (28.55, 1.4, 12.0, 0.3),
-    (28.85, 1.0, 22.0, 0.4),
-    (29.10, 0.8, 18.0, 0.3),
-    (29.32, 0.5, 4.0, 0.2),
-    (29.52, 0.6, -14.0, -0.2),
-    (29.72, 1.0, -20.0, 0.2),
-    (29.88, 0.8, -8.0, 0.2),
-    (30.00, 0.7, -12.0, 0.2),
+    (0.00, -11.0, 1.5),
+    (1.80, -10.5, 1.8),
+    (1.90, -4.0, -3.0),
+    (2.05, 8.0, 6.0),
+    (2.22, -6.0, -5.0),
+    (2.45, 4.0, 4.0),
+    (2.70, 1.0, -2.0),
+    (3.05, 0.6, 1.5),
+    (3.40, 0.3, 0.6),
+    (3.80, 0.2, 1.0),
+    (4.05, 0.4, 3.0),
+    (4.22, 0.6, 8.0),
+    (4.40, 0.3, 16.0),
+    (4.55, -1.0, 22.0),
+    (4.68, -2.5, 24.0),
+    (4.78, -2.0, 21.0),
+    (5.15, -6.0, 8.0),
+    (5.35, -8.5, 2.0),
+    (5.50, -9.0, 0.5),
+    (5.85, -12.0, -8.0),
+    (6.10, -14.0, -14.0),
+    (6.28, -15.5, -16.0),
+    (6.40, -14.5, -15.0),
+    (6.70, -18.0, -12.0),
+    (7.05, -22.0, -10.0),
+    (7.35, -24.0, -9.0),
+    (7.55, -23.0, -8.5),
+    (8.10, -22.5, -8.0),
+    (8.55, -20.0, -6.0),
+    (8.90, -16.0, -4.0),
+    (9.30, -8.0, -2.0),
+    (9.55, -2.0, 2.0),
+    (9.80, 3.0, 6.0),
+    (10.05, 8.0, 10.0),
+    (10.22, 11.0, 12.0),
+    (10.38, 9.5, 10.5),
+    (10.70, 2.0, 4.0),
+    (10.95, 1.0, 10.0),
+    (11.15, 1.4, 16.0),
+    (11.32, 1.6, 20.0),
+    (11.45, 1.2, 18.0),
+    (11.70, 0.8, 10.0),
+    (12.00, 0.6, 4.0),
+    (12.25, 0.5, 4.0),
+    (12.55, 0.8, -12.0),
+    (12.85, 1.0, -24.0),
+    (13.05, 1.2, -28.0),
+    (13.20, 0.9, -25.0),
+    (13.55, 0.6, -12.0),
+    (14.20, 1.0, 10.0),
+    (14.80, 2.2, 14.0),
+    (15.20, 9.0, 8.0),
+    (15.45, 10.5, 7.0),
+    (15.70, 2.0, 4.0),
+    (16.30, 0.8, -16.0),
+    (17.00, 0.5, 6.0),
+    (17.60, 0.6, 10.0),
+    (18.20, 0.8, 6.0),
+    (18.70, 1.2, 12.0),
+    (19.00, 2.0, 48.0),
+    (19.12, 2.4, 78.0),
+    (19.22, 2.6, 98.0),
+    (19.32, 2.2, 104.0),
+    (19.45, 1.8, 96.0),
+    (19.70, 1.4, 90.0),
+    (20.10, 1.0, 42.0),
+    (20.50, 0.6, 14.0),
+    (21.10, 0.4, 6.0),
+    (21.60, 0.5, 8.0),
+    (22.00, 0.8, 18.0),
+    (22.25, 1.0, 28.0),
+    (22.50, 0.6, 34.0),
+    (22.70, 0.4, 38.0),
+    (22.88, 0.3, 36.0),
+    (23.20, 0.4, 22.0),
+    (23.55, 0.5, 10.0),
+    (23.90, 0.4, 8.0),
+    (24.30, 0.7, 18.0),
+    (24.60, 0.5, 24.0),
+    (24.90, 0.4, 28.0),
+    (25.15, 0.3, 26.0),
+    (25.35, 0.4, 24.0),
+    (25.80, 0.5, 16.0),
+    (26.30, 0.6, 12.0),
+    (26.80, 0.8, 16.0),
+    (27.20, 1.0, 8.0),
+    (27.70, 0.6, -4.0),
+    (28.20, 0.5, 6.0),
+    (28.70, 1.6, 10.0),
+    (28.95, 1.2, 18.0),
+    (29.12, 0.8, 16.0),
+    (29.30, 0.5, 4.0),
+    (29.48, 0.7, -10.0),
+    (29.68, 1.0, -16.0),
+    (29.82, 0.7, -8.0),
+    (30.00, 0.6, -12.0),
 ]
 
-# Head local translation for corner peek (local -X is left).
+# Image roll on CAM local Z. Recovers to ~0 after pickup.
+ROLL_KEYS = [
+    (0.00, 20.0),
+    (1.80, 19.4),
+    (1.90, 26.0),
+    (2.02, 34.0),
+    (2.16, 14.0),
+    (2.32, 6.0),
+    (2.50, -3.2),
+    (2.70, 1.8),
+    (2.92, -1.1),
+    (3.15, 0.7),
+    (3.45, -0.3),
+    (3.80, 0.2),
+    (6.90, 0.4),
+    (7.40, -0.6),
+    (8.20, 0.3),
+    (9.50, 0.2),
+    (14.80, -0.8),
+    (15.70, 0.5),
+    (19.22, 1.4),
+    (19.50, 0.4),
+    (22.70, 0.6),
+    (25.15, -0.5),
+    (27.55, 0.8),
+    (29.15, -0.4),
+    (30.00, 0.3),
+]
+
 PEEK_KEYS = [
     (0.00, 0.0, 0.0, 0.0),
-    (21.40, 0.0, 0.0, 0.0),
-    (22.00, -0.03, 0.006, 0.0),
-    (22.55, -0.10, 0.018, 0.008),
-    (23.05, -0.14, 0.022, 0.006),
-    (23.55, -0.07, 0.008, 0.002),
-    (24.05, -0.04, 0.004, 0.0),
-    (24.55, -0.09, 0.016, 0.006),
-    (25.15, -0.15, 0.024, 0.010),
-    (25.70, -0.11, 0.012, 0.004),
-    (26.30, -0.03, 0.004, 0.0),
+    (21.50, 0.0, 0.0, 0.0),
+    (22.10, -0.04, 0.008, 0.0),
+    (22.55, -0.09, 0.016, 0.006),
+    (22.90, -0.10, 0.018, 0.006),
+    (23.30, -0.06, 0.008, 0.002),
+    (23.70, -0.05, 0.006, 0.0),
+    (24.20, -0.05, 0.006, 0.0),
+    (24.70, -0.10, 0.018, 0.008),
+    (25.20, -0.13, 0.022, 0.010),
+    (25.70, -0.11, 0.016, 0.006),
+    (26.30, -0.04, 0.006, 0.0),
     (27.00, 0.0, 0.0, 0.0),
     (30.00, 0.0, 0.0, 0.0),
 ]
 
 WALK_SPANS = [
-    (12.20, 13.35),
-    (13.80, 16.85),
-    (17.20, 18.20),
-    (26.90, 29.20),
+    (13.50, 15.25),
+    (15.85, 18.50),
+    (27.05, 28.85),
 ]
 
 
@@ -691,20 +671,20 @@ def walk_weight(t: float) -> float:
     best = 0.0
     for a, b in WALK_SPANS:
         if a <= t <= b:
-            edge = min(t - a, b - t, 0.28) / 0.28
-            best = max(best, smoothstep(max(0.0, min(1.0, edge))))
+            edge = min(t - a, b - t, 0.32) / 0.32
+            best = max(best, max(0.0, min(1.0, edge)) ** 1.4)
     return best
 
 
 def build_steps():
-    rng = random.Random(41)
+    rng = random.Random(17)
     steps = []
     t = 0.0
     while t < DURATION + 1.0:
-        d = rng.uniform(0.55, 0.72)
-        amp_z = rng.uniform(0.012, 0.025)
-        amp_x = rng.uniform(0.008, 0.020)
-        amp_y = rng.uniform(0.004, 0.010)
+        d = rng.choice((0.58, 0.61, 0.67, 0.55, 0.70, 0.64, 0.59, 0.72))
+        amp_z = rng.uniform(0.010, 0.021)
+        amp_x = rng.uniform(0.008, 0.017)
+        amp_y = rng.uniform(0.004, 0.009)
         steps.append((t, t + d, amp_z, amp_x, amp_y, 1 if len(steps) % 2 == 0 else -1))
         t += d
     return steps
@@ -721,28 +701,30 @@ def body_offset(t: float):
         for a, b, az, ax, ay, side in STEPS:
             if a <= t <= b:
                 u = (t - a) / max(1e-6, b - a)
-                bump = math.sin(math.pi * u)
+                bump = math.sin(math.pi * (u ** 0.82))
                 z = w * az * bump
                 x = w * ax * side * math.sin(math.pi * u)
-                y = w * ay * math.sin(2.0 * math.pi * u) * 0.45
-                roll = w * math.radians(0.35 * side * math.sin(math.pi * u))
-                pitch = w * math.radians(-0.22 * bump)
-                yaw = w * math.radians(0.18 * side * math.sin(math.pi * u * 0.5))
+                y = w * ay * math.sin(2.0 * math.pi * (u ** 1.12)) * 0.4
+                roll = w * math.radians(0.28 * side * math.sin(math.pi * u))
+                pitch = w * math.radians(-0.18 * bump)
+                yaw = w * math.radians(0.14 * side * math.sin(math.pi * u * 0.55))
                 break
-    # Breathing always, stronger when idle.
-    br = 3.55 + 0.55 * math.sin(t * 0.17)
-    breath = (0.0024 + 0.0018 * (1.0 - w)) * math.sin(t * 2.0 * math.pi / br)
-    breath += 0.0006 * math.sin(t * 1.13 + 0.4)
-    z += breath
-    x += (0.0008 + 0.0005 * (1.0 - w)) * math.sin(t * 0.62 + 0.9)
+    br = 3.4 + 0.7 * math.sin(t * 0.13 + 0.4)
+    idle = 1.0 - w
+    z += (0.0018 + 0.0016 * idle) * math.sin(t * 2.0 * math.pi / br)
+    z += 0.0004 * math.sin(t * 1.07 + 0.8)
+    x += (0.0005 + 0.0004 * idle) * math.sin(t * 0.51 + 1.2)
     return x, y, z, pitch, roll, yaw
 
 
-def animate(root, body, head, hand):
+def animate(root, body, head, hand, cam):
     for t, x, y, z, yaw in ROOT_KEYS:
         f = frame_at(t)
         insert_xyz(root, "location", f, (x, y, z))
         insert_xyz(root, "rotation_euler", f, (0.0, 0.0, math.radians(yaw)))
+    for t, roll in ROLL_KEYS:
+        f = frame_at(t)
+        insert_xyz(cam, "rotation_euler", f, (0.0, 0.0, math.radians(roll)))
     dt = 1.0 / FPS
     t = 0.0
     last = -1
@@ -752,40 +734,37 @@ def animate(root, body, head, hand):
             bx, by, bz, bp, br, bya = body_offset(t)
             insert_xyz(body, "location", f, (bx, by, bz))
             insert_xyz(body, "rotation_euler", f, (bp, br, bya))
-            pitch, hyaw, hroll = sample_keys(LOOK_KEYS, t, 3)
-            # Head stabilization: 40–70% counter to body, never 100%.
-            hroll -= math.degrees(br) * 0.55
-            hyaw -= math.degrees(bya) * 0.48
+            pitch, hyaw = sample_keys(LOOK_KEYS, t, 2, ease=True)
+            pitch -= math.degrees(bp) * 0.60
+            hyaw -= math.degrees(bya) * 0.55
             insert_xyz(
                 head,
                 "rotation_euler",
                 f,
-                (math.radians(90.0 + pitch), math.radians(hroll), math.radians(hyaw)),
+                (math.radians(90.0 + pitch), 0.0, math.radians(hyaw)),
             )
             px, py, pz = sample_keys(PEEK_KEYS, t, 3)
-            insert_xyz(head, "location", f, (px - 0.52 * bx, py - 0.35 * by, pz - 0.18 * bz))
-            # Hand: millimetre drift + occasional grip correction.
-            fear = 0.35
-            if t >= 6.5:
-                fear = 0.7
-            if t >= 18.5:
-                fear = 0.85
-            if t >= 22.0:
-                fear = 1.0
-            hx = 0.0016 * math.sin(t * 5.1 + 0.2) + 0.0009 * math.sin(t * 1.9)
-            hy = 0.0012 * math.sin(t * 4.3 + 1.1) + 0.0007 * math.sin(t * 2.4)
-            hz = 0.0010 * math.sin(t * 3.6 + 0.7)
-            if abs((t + 0.17) % 3.4 - 0.12) < 0.08:
-                hx += 0.0018 * fear
+            insert_xyz(head, "location", f, (px - 0.58 * bx, py - 0.32 * by, pz - 0.22 * bz))
+            hx = 0.0011 * math.sin(t * 4.6 + 0.3) + 0.0006 * math.sin(t * 1.7)
+            hy = 0.0009 * math.sin(t * 3.9 + 1.0) + 0.0005 * math.sin(t * 2.2)
+            hz = 0.0007 * math.sin(t * 3.1 + 0.6)
+            if abs((t + 0.21) % 4.1 - 0.09) < 0.05:
+                hx += 0.0012
             insert_xyz(hand, "location", f, (hx, hy, hz))
-            hr = math.radians((0.06 + 0.08 * fear) * math.sin(t * 4.7))
-            hp = math.radians((0.05 + 0.05 * fear) * math.sin(t * 3.9 + 0.8))
-            hyy = math.radians((0.05 + 0.06 * fear) * math.sin(t * 5.6 + 1.4))
-            insert_xyz(hand, "rotation_euler", f, (hp, hr, hyy))
+            insert_xyz(
+                hand,
+                "rotation_euler",
+                f,
+                (
+                    math.radians(0.06 * math.sin(t * 3.7 + 0.5)),
+                    math.radians(0.05 * math.sin(t * 4.4)),
+                    math.radians(0.05 * math.sin(t * 5.1 + 1.1)),
+                ),
+            )
             last = f
         t += dt
-    add_noise_mods(hand, "location", 9.5, 0.00055, 2.2)
-    add_noise_mods(hand, "rotation_euler", 13.0, 0.00045, 4.8)
+    add_noise_mods(hand, "location", 11.0, 0.00035, 1.6)
+    add_noise_mods(hand, "rotation_euler", 16.0, 0.00028, 3.1)
 
 
 def add_path_guide(col):
@@ -806,20 +785,29 @@ def setup_scene(scene):
     scene.frame_step = 1
     scene.render.fps = FPS
     scene.render.fps_base = 1.0
-    scene.render.resolution_x = 640
-    scene.render.resolution_y = 480
+    scene.render.resolution_x = OSD_W
+    scene.render.resolution_y = OSD_H
     scene.render.resolution_percentage = 100
     scene.render.use_motion_blur = False
-    scene.render.use_compositing = False
     scene.render.use_sequencer = False
     try:
         scene.view_settings.view_transform = "AgX"
     except TypeError:
         pass
+    setup_osd_compositor(scene)
+    scene.render.use_compositing = False
 
 
 def look_vector(cam):
     return (cam.matrix_world.to_3x3() @ Vector((0.0, 0.0, -1.0))).normalized()
+
+
+def cam_roll_deg(cam) -> float:
+    mw = cam.matrix_world.to_3x3()
+    right = (mw @ Vector((1.0, 0.0, 0.0))).normalized()
+    up = (mw @ Vector((0.0, 1.0, 0.0))).normalized()
+    world_up = Vector((0.0, 0.0, 1.0))
+    return math.degrees(math.atan2(right.dot(world_up), up.dot(world_up)))
 
 
 def collision_report():
@@ -840,17 +828,19 @@ def collision_report():
     for f in range(1, 901, 2):
         scene.frame_set(f)
         dg.update()
-        osd_frame_handler(scene)
         p = cam.matrix_world.translation.copy()
         t = (f - 1) / 30.0
-        r = 0.12 if 21.5 <= t <= 26.4 else 0.20
-        if t < 2.1:
+        r = 0.12 if 21.5 <= t <= 26.6 else 0.20
+        if t < 1.85:
             if p.z < 0.06 or p.z > 0.22:
                 problems.append(f"f{f} floor height {p.z:.3f}")
-        else:
-            if p.z < 0.06 or (t > 5.0 and (p.z < 1.35 or p.z > 1.85)):
-                if not (2.1 <= t <= 5.0):
-                    problems.append(f"f{f} height {p.z:.3f}")
+        elif t > 3.8:
+            if p.z < 1.40 or p.z > 1.80:
+                problems.append(f"f{f} height {p.z:.3f}")
+        if t >= 3.8:
+            roll = cam_roll_deg(cam)
+            if abs(roll) > 8.0:
+                problems.append(f"f{f} horizon roll {roll:.1f}")
         for d in dirs:
             hit, loc, nor, idx, obj, mat = scene.ray_cast(dg, p, d)
             if not hit:
@@ -869,12 +859,14 @@ def print_sanity():
     scene = bpy.context.scene
     labels = (
         (0.0, "floor"),
-        (2.3, "pickup bump"),
-        (4.2, "lift"),
-        (7.2, "blood"),
-        (10.7, "look around"),
-        (15.0, "wander"),
-        (19.2, "look back"),
+        (2.5, "pickup"),
+        (3.8, "settled"),
+        (5.5, "blood edge"),
+        (7.4, "blood look"),
+        (11.3, "look left"),
+        (13.1, "look exit"),
+        (15.5, "hesitate"),
+        (19.3, "look back"),
         (22.8, "peek 1"),
         (25.2, "peek 2"),
         (28.2, "exit"),
@@ -883,14 +875,14 @@ def print_sanity():
     for t, label in labels:
         scene.frame_set(frame_at(t))
         bpy.context.evaluated_depsgraph_get().update()
-        osd_frame_handler(bpy.context.scene)
         cam = bpy.data.objects["CAM_MAIN"]
         p = cam.matrix_world.translation
         v = look_vector(cam)
         heading = math.degrees(math.atan2(-v.x, v.y))
+        roll = cam_roll_deg(cam)
         print(
             f"  t={t:5.2f} {label:12s} pos=({p.x:6.2f},{p.y:6.2f},{p.z:5.2f}) "
-            f"look=({v.x:5.2f},{v.y:5.2f},{v.z:5.2f}) yaw={heading:6.1f}"
+            f"look=({v.x:5.2f},{v.y:5.2f},{v.z:5.2f}) yaw={heading:7.1f} roll={roll:6.1f}"
         )
 
 
@@ -900,12 +892,8 @@ def configure_preview(scene):
     scene.render.engine = "BLENDER_WORKBENCH"
     scene.display.shading.light = "STUDIO"
     scene.display.shading.color_type = "TEXTURE"
-    try:
-        scene.display.shading.show_backface_culling = False
-    except Exception:
-        pass
-    scene.render.resolution_x = 640
-    scene.render.resolution_y = 480
+    scene.render.resolution_x = OSD_W
+    scene.render.resolution_y = OSD_H
     scene.render.image_settings.file_format = "JPEG"
     scene.render.image_settings.quality = 88
     scene.render.filepath = str(frames / "frame_")
@@ -940,18 +928,20 @@ def encode_mp4(frame_dir: Path) -> Path:
 
 STILL_FRAMES = (
     (1, "floor"),
-    (70, "pickup"),
-    (127, "lift"),
-    (217, "blood"),
-    (272, "look_up"),
-    (295, "look_west"),
-    (332, "look_east"),
-    (451, "wander"),
-    (577, "look_back"),
+    (76, "pickup"),
+    (90, "osd90"),
+    (115, "settled"),
+    (166, "blood_edge"),
+    (180, "blood_notice"),
+    (223, "blood_look"),
+    (300, "osd300"),
+    (340, "look_left"),
+    (466, "wander"),
+    (580, "look_back"),
+    (600, "osd600"),
     (685, "peek1"),
     (757, "peek2"),
     (847, "exit"),
-    (892, "scan"),
     (900, "cut"),
 )
 
@@ -963,10 +953,34 @@ def render_stills(scene) -> Path:
     for f, label in STILL_FRAMES:
         scene.frame_set(f)
         osd_frame_handler(scene)
-        scene.render.filepath = str(out_dir / f"{label}_{f:04d}.jpg")
+        path = out_dir / f"{label}_{f:04d}.jpg"
+        scene.render.filepath = str(path)
         bpy.ops.render.render(write_still=True)
-        print("still", scene.render.filepath)
+        overlay_osd_on_jpeg(path, f)
+        print("still", path)
     return out_dir
+
+
+def overlay_preview_frames(frame_dir: Path) -> None:
+    osd_dir = PREVIEW_DIR / "osd"
+    osd_dir.mkdir(parents=True, exist_ok=True)
+    cache = {}
+    img = ensure_osd_image()
+    for f in range(1, 901):
+        t = max(0.0, (f - 1) / float(FPS))
+        key = (int(t), (f % 30) < 16, (f % 44) < 30)
+        src = osd_dir / f"src_{key[0]:02d}_{int(key[1])}_{int(key[2])}.png"
+        if key not in cache:
+            paint_osd_image(f)
+            img.filepath_raw = str(src)
+            img.file_format = "PNG"
+            img.save()
+            cache[key] = src
+        dst = osd_dir / f"osd_{f:04d}.png"
+        if dst.exists() or dst.is_symlink():
+            dst.unlink()
+        dst.symlink_to(cache[key].name)
+    print("osd pngs", len(cache))
 
 
 def main():
@@ -978,18 +992,17 @@ def main():
     make_blood(fx)
     col = new_col(COLL)
     root, body, head, hand, cam = build_rig(col)
-    build_osd(col, cam)
-    animate(root, body, head, hand)
+    animate(root, body, head, hand, cam)
     add_path_guide(col)
     setup_scene(scene)
     register_osd_handler()
-    osd_frame_handler(scene)
+    paint_osd_image(1)
 
     print("Sanity poses:")
     print_sanity()
     problems = collision_report()
-    print("Collision hits", len(problems))
-    for line in problems[:20]:
+    print("Collision/horizon hits", len(problems))
+    for line in problems[:24]:
         print(" ", line)
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
     print("Saved", BLEND_PATH, "frames", scene.frame_start, scene.frame_end)
@@ -998,7 +1011,32 @@ def main():
         frames = configure_preview(scene)
         print("Preview ->", frames)
         bpy.ops.render.render(animation=True)
-        out = encode_mp4(frames)
+        overlay_preview_frames(frames)
+        osd_dir = PREVIEW_DIR / "osd"
+        out = PREVIEW_DIR / "room_a_found_footage_preview.mp4"
+        subprocess.check_call(
+            [
+                "ffmpeg",
+                "-y",
+                "-framerate",
+                "30",
+                "-i",
+                str(frames / "frame_%04d.jpg"),
+                "-framerate",
+                "30",
+                "-i",
+                str(osd_dir / "osd_%04d.png"),
+                "-filter_complex",
+                "overlay=0:0",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-crf",
+                "18",
+                str(out),
+            ]
+        )
         print("Wrote", out)
     elif args["mode"] == "stills":
         print("Stills ->", render_stills(scene))
