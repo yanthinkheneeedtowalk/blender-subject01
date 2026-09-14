@@ -469,6 +469,7 @@ def add_path_guide(col: bpy.types.Collection) -> None:
 def setup_scene(scene: bpy.types.Scene) -> None:
     scene.frame_start = 1
     scene.frame_end = frame_at(DURATION)
+    scene.frame_step = 1
     scene.render.fps = FPS
     scene.render.fps_base = 1.0
     scene.render.resolution_percentage = 100
