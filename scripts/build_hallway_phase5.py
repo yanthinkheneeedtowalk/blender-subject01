@@ -252,6 +252,8 @@ def build_surface(
     zone_darken: float = 0.0,
     metallic_b: float | None = None,
     viewport: tuple[float, float, float] | None = None,
+    mix_lo: float = 0.22,
+    mix_hi: float = 0.40,
 ) -> bpy.types.Material:
     mat, nt = new_material(name)
     _out, bsdf = add_output(nt)
@@ -259,7 +261,8 @@ def build_surface(
     zone = zone_amount(nt, y_sock)
     large = noise(nt, position, large_scale, 2.0, (-360, 80), 0.40)
     fine = noise(nt, position, fine_scale, 4.0, (-360, -140), 0.55)
-    color = mix_color(nt, large.outputs["Factor"], color_a, color_b, (220, 80))
+    color_fac = map_range(nt, large.outputs["Factor"], 0.0, 1.0, mix_lo, mix_hi, (40, 80))
+    color = mix_color(nt, color_fac, color_a, color_b, (220, 80))
     if zone_darken > 0.0:
         dark = tuple(max(0.02, c * (1.0 - zone_darken)) for c in color_a)
         darken_node = nt.nodes.new("ShaderNodeMix")
@@ -297,26 +300,30 @@ def build_library() -> dict[str, bpy.types.Material]:
             0.0,
             large_scale=5.5,
             fine_scale=92.0,
-            bump_strength=0.045,
-            bump_distance=0.018,
+            bump_strength=0.022,
+            bump_distance=0.014,
             spec=0.32,
             zone_darken=0.08,
-            viewport=(0.40, 0.39, 0.36),
+            viewport=(0.44, 0.42, 0.38),
+            mix_lo=0.18,
+            mix_hi=0.34,
         ),
         "MAT_Floor_IndustrialConcrete": build_surface(
             "MAT_Floor_IndustrialConcrete",
-            (0.145, 0.138, 0.128),
-            (0.112, 0.108, 0.100),
+            (0.125, 0.118, 0.110),
+            (0.098, 0.094, 0.088),
             0.66,
             0.82,
             0.0,
             large_scale=4.2,
             fine_scale=58.0,
-            bump_strength=0.035,
-            bump_distance=0.016,
+            bump_strength=0.028,
+            bump_distance=0.014,
             spec=0.28,
             zone_darken=0.05,
-            viewport=(0.13, 0.12, 0.11),
+            viewport=(0.11, 0.10, 0.10),
+            mix_lo=0.22,
+            mix_hi=0.40,
         ),
         "MAT_Ceiling_AgedConcrete": build_surface(
             "MAT_Ceiling_AgedConcrete",
@@ -331,7 +338,8 @@ def build_library() -> dict[str, bpy.types.Material]:
             bump_distance=0.02,
             spec=0.30,
             zone_darken=0.06,
-            viewport=(0.24, 0.23, 0.21),
+            mix_lo=0.20,
+            mix_hi=0.38,
         ),
         "MAT_Structure_PaintedSteel": build_surface(
             "MAT_Structure_PaintedSteel",
@@ -449,9 +457,9 @@ def build_cabinet_material() -> bpy.types.Material:
     zone = zone_amount(nt, y_sock)
     large = noise(nt, position, 14.0, 2.0, (-360, 40), 0.38)
     fine = noise(nt, position, 76.0, 3.0, (-360, -160), 0.50)
-    beige = (0.40, 0.375, 0.325)
-    green = (0.285, 0.315, 0.285)
-    dull = (0.30, 0.285, 0.255)
+    beige = (0.46, 0.42, 0.34)
+    green = (0.30, 0.34, 0.29)
+    dull = (0.33, 0.31, 0.27)
     ab = mix_color(nt, zone, beige, green, (40, 160))
     family = mix_color(nt, zone, beige, dull, (40, 280))
     # Use mid corridor as green-grey, far end as dull beige-grey.
@@ -463,10 +471,11 @@ def build_cabinet_material() -> bpy.types.Material:
     link(nt, family, sock(zoned, "A_Color"))
     link(nt, ab, sock(zoned, "B_Color"))
     base = sock(zoned, "Result_Color")
+    paint_fac = map_range(nt, large.outputs["Factor"], 0.0, 1.0, 0.12, 0.28, (220, 40))
     varied = nt.nodes.new("ShaderNodeMix")
     varied.data_type = "RGBA"
     varied.location = (440, 80)
-    link(nt, large.outputs["Factor"], sock(varied, "Factor_Float"))
+    link(nt, paint_fac, sock(varied, "Factor_Float"))
     link(nt, base, sock(varied, "A_Color"))
     sock(varied, "B_Color").default_value = (0.24, 0.24, 0.22, 1.0)
     color = sock(varied, "Result_Color")
@@ -809,7 +818,8 @@ def configure_inspect_render(scene: bpy.types.Scene, samples: int) -> None:
     scene.eevee.use_fast_gi = True
     scene.eevee.fast_gi_method = "GLOBAL_ILLUMINATION"
     scene.eevee.fast_gi_quality = 0.45
-    scene.eevee.fast_gi_ray_count = 8
+    scene.eevee.fast_gi_ray_count = 12
+    scene.eevee.clamp_surface_indirect = 2.5
     try:
         scene.view_settings.view_transform = "Standard"
     except TypeError:
@@ -818,7 +828,7 @@ def configure_inspect_render(scene: bpy.types.Scene, samples: int) -> None:
 
 def render_stills(scene: bpy.types.Scene) -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    configure_inspect_render(scene, 32)
+    configure_inspect_render(scene, 48)
     scene.render.image_settings.file_format = "JPEG"
     scene.render.image_settings.quality = 92
     for frame, label in STILLS:
