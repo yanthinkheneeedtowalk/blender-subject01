@@ -1,0 +1,57 @@
+PHASE 3 PRIMARY INDUSTRIAL PIPE / UTILITY NETWORK
+Additive utility geometry only; Phase 1 and Phase 2 objects were not moved.
+
+PRIMARY PIPE SYSTEM
+  major runs: 2
+  diameter range: 0.20–0.26 m
+  route: Left wall header y=0.55–17.84, then C offset to x=-0.36 and y=23.45
+  route: Right wall companion y=0.60–14.40, inline valve, then B wall ingress
+
+SECONDARY PIPE SYSTEM
+  secondary/minor curve count: 15
+  diameter range: 0.030–0.090 m
+  branch connectors: 4 low-poly collars plus one B valve riser
+  distribution: A has two secondary lines plus one minor; B is densest with three secondary lines, one cross-connection, and two minors; C uses one crossover, one offset secondary, and one minor.
+
+VALVES / FLANGES
+  valves: 2 meaningful hand-wheel assemblies
+  flanges: 5 selected connections
+  locations: two inline valve assemblies at right B y=14.62 and offset left C y=20.55; flanges are at selected A/B/C joints and the B wall ingress.
+
+SUPPORT SYSTEM
+  wall bracket / plate objects: 48
+  ceiling hangers: 3
+  pipe clamps: 27
+  strategy: reuse Phase 2 wall mounting bands conceptually, add shallow wall arms and plates for wall runs, torus clamps at selected intervals, and ceiling hangers after the Zone C offset.
+
+CABLE TRAY
+  one right-side route, split into A/B/C structural segments; no wires were added.
+
+ZONE CHARACTER
+  A: two long, orderly primary lines with sparse parallel secondaries and regular supports.
+  B: denser overhead/side utilities, one cross-connection, more supports, and the only primary inline valve/ingress assembly.
+  C: left primary line offsets inward through two elbows, the right primary companion is absent, and secondary routing is reduced and irregular.
+
+PHASE 1 CLEAR STATIONS
+  label       y       measured width   measured ceiling   target width   target ceiling
+  A clear     3.25    2.200 m          3.000 m          2.200 m       3.000 m
+  B clear    11.75    2.050 m          2.740 m          2.050 m       2.740 m
+  C clear    21.55    2.200 m          2.930 m          2.200 m       2.930 m
+
+VALIDATION
+  Phase 3 objects: 134; pipe curve/mesh objects: 30
+  minimum camera side clearance: 1.020 m
+  minimum camera overhead clearance: 2.125 m
+  camera path errors: 0
+  camera/pipe hits: 0
+  pipe/Phase 2 beam AABB conflicts: 0
+  pipe/pipe AABB conflicts: 0
+  intentional pipe junctions: 4
+  generic names: 0; unapplied scales: 0; below floor: 0
+
+PHASE 1 FREEZE STATUS: PASS
+PHASE 2 FREEZE STATUS: PASS
+PHASE 3 PIPE VALIDATION: PASS
+  Phase 1 dimensions modified: NO
+  Phase 2 structural skeleton modified: NO
+  final materials/lighting/events/animation/sound: NOT STARTED
