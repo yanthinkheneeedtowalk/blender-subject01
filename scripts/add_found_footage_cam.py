@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import math
 import random
+import subprocess
 import sys
 from pathlib import Path
 
@@ -194,31 +195,31 @@ ROOT_KEYS = [
     (3.60, 5.14, -3.12, 34.0),
     (4.40, 4.68, -2.50, 64.0),
     (5.20, 4.02, -2.36, 80.0),
-    (6.20, 3.28, -2.24, 88.0),
-    (7.00, 2.72, -2.18, 91.0),
-    (8.20, 2.36, -2.16, 94.0),
-    (9.00, 2.18, -2.14, 90.0),
-    (9.50, 2.182, -2.138, 89.0),  # pause ~0.5s
-    (10.20, 2.16, -1.90, 62.0),
-    (11.10, 2.10, -1.32, 28.0),
-    (12.05, 2.06, -0.90, 10.0),  # still south of north wall, east of stub
-    (12.55, 1.98, -0.48, 5.0),  # through opening (y > -0.60)
-    (13.40, 1.70, 0.04, 3.0),
-    (14.20, 1.50, 0.20, 6.0),
-    (15.20, 1.46, 0.22, 10.0),
-    (16.40, 1.44, 0.225, 14.0),
-    (16.80, 1.441, 0.226, 14.5),
-    (17.20, 1.439, 0.224, 15.0),  # full stop ~0.8s
-    (18.00, 1.440, 0.223, 14.0),
-    (18.50, 1.441, 0.224, 13.0),
-    (19.20, 1.442, 0.224, 8.0),
-    (20.40, 1.443, 0.223, 5.0),
-    (22.00, 1.46, 0.22, 2.0),
-    (23.00, 2.02, 0.26, -10.0),
-    (24.20, 2.50, 0.30, -16.0),
-    (25.40, 2.84, 0.32, -12.0),
-    (25.70, 2.86, 0.321, -11.0),
-    (26.00, 2.86, 0.322, -10.0),
+    (6.20, 3.28, -2.24, 86.0),
+    (7.00, 2.88, -2.20, 88.0),
+    (8.20, 2.62, -2.18, 92.0),
+    (9.00, 2.56, -2.16, 90.0),
+    (9.50, 2.562, -2.158, 88.0),  # pause ~0.5s, 0.76m east of StubV
+    (10.20, 2.42, -1.88, 58.0),
+    (11.10, 2.22, -1.28, 24.0),
+    (12.05, 2.08, -0.90, 8.0),  # still south of north wall, east of stub
+    (12.55, 1.92, -0.48, 18.0),  # through opening; start yawing into Hall B
+    (13.40, 1.62, -0.02, 48.0),
+    (14.20, 1.48, 0.14, 72.0),  # look west down Hall B, not into the north wall
+    (15.20, 1.44, 0.18, 82.0),
+    (16.40, 1.42, 0.20, 86.0),
+    (16.80, 1.421, 0.201, 87.0),
+    (17.20, 1.419, 0.199, 88.0),  # full stop ~0.8s, glance west / Room B
+    (18.00, 1.420, 0.200, 86.0),
+    (18.50, 1.421, 0.200, 84.0),
+    (19.20, 1.422, 0.200, 70.0),  # body lags the head snap
+    (20.40, 1.424, 0.200, 10.0),
+    (22.00, 1.52, 0.20, -36.0),
+    (23.00, 1.98, 0.21, -28.0),
+    (24.20, 2.46, 0.22, -52.0),
+    (25.40, 2.80, 0.23, -62.0),  # ENE down Hall B; Core stays behind the north wall
+    (25.70, 2.84, 0.231, -60.0),
+    (26.00, 2.86, 0.232, -58.0),
 ]
 
 # Additive head: pitch (deg, − = down), yaw (deg, + = left/west), roll
@@ -231,24 +232,24 @@ LOOK_KEYS = [
     (4.05, 0.5, 16.0, 0.6),
     (5.10, 0.3, 7.0, 0.2),
     (6.80, 0.2, 4.0, -0.3),
-    (8.20, 0.4, 16.0, 0.4),  # start looking left at the L-stub
-    (8.85, 0.7, 40.0, 0.9),  # peek behind the jog; eyes first
-    (9.40, 0.4, 34.0, 0.5),
-    (9.85, 0.5, 18.0, 0.3),  # eyes toward Hall B ~0.35s before body
-    (10.55, 0.3, 6.0, 0.2),
-    (12.00, 0.4, 4.0, -0.2),
-    (13.20, 0.2, 2.5, 0.1),
-    (14.60, 0.5, 12.0, 0.3),
-    (16.10, 0.9, 28.0, 0.5),  # glance Room B / west, do not enter
-    (17.30, 1.1, 34.0, 0.7),
-    (18.20, 0.6, 32.0, 0.3),
-    (18.50, 0.5, 30.0, 0.2),  # snap start
-    (18.95, 0.1, -14.0, -0.9),  # Core / Hall N, ~45° in 0.45s + overshoot
-    (19.35, 0.3, -6.0, -0.2),  # correction
-    (20.60, 0.4, -8.0, 0.2),
-    (22.00, 0.5, -9.0, 0.1),
-    (23.40, 1.5, -12.0, 0.4),  # lean / peek forward
-    (25.20, 0.8, -9.0, 0.2),
+    (8.20, 0.5, 12.0, 0.4),  # start looking left at the L-stub
+    (8.85, 0.6, 22.0, 0.8),  # peek the L-corner / behind the jog; eyes first
+    (9.40, 0.3, 10.0, 0.4),
+    (9.85, 0.4, -52.0, -0.3),  # eyes toward Hall B ~0.35s before body
+    (10.55, 0.3, -22.0, 0.1),
+    (12.00, 0.4, -4.0, -0.2),
+    (13.20, 0.3, 8.0, 0.2),
+    (14.60, 0.4, 10.0, 0.3),
+    (16.10, 0.8, 8.0, 0.4),  # glance Room B / west, do not enter
+    (17.30, 1.0, 12.0, 0.6),
+    (18.20, 0.5, 10.0, 0.3),
+    (18.50, 0.4, 8.0, 0.2),  # snap start (looking west down Hall B)
+    (18.95, 0.2, -32.0, -1.0),  # Core / Hall N, ~48° + 2° overshoot
+    (19.35, 0.3, -12.0, -0.2),  # correction back along the hall
+    (20.60, 0.4, -10.0, 0.2),
+    (22.00, 0.5, -10.0, 0.1),
+    (23.40, 1.2, -6.0, 0.4),  # lean / peek forward along Hall B east
+    (25.20, 0.7, -4.0, 0.2),
     (25.55, 0.4, -8.0, 0.1),
     (26.00, 0.3, -7.0, 0.2),
 ]
@@ -572,14 +573,14 @@ def setup_vhs_compositor(scene: bpy.types.Scene) -> None:
     noise = ng.nodes.new("ShaderNodeTexNoise")
     noise.location = (2000, -240)
     noise.noise_dimensions = "4D"
-    _set_in(noise, "Scale", 240.0)
-    _set_in(noise, "Detail", 2.0)
-    _set_in(noise, "Roughness", 0.45)
+    _set_in(noise, "Scale", 160.0)
+    _set_in(noise, "Detail", 1.0)
+    _set_in(noise, "Roughness", 0.35)
 
     mix_n = ng.nodes.new("ShaderNodeMixRGB")
     mix_n.blend_type = "OVERLAY"
     mix_n.location = (2200, 0)
-    _set_in(mix_n, "Factor", 0.065)
+    _set_in(mix_n, "Factor", 0.028)
 
     trans = ng.nodes.new("CompositorNodeTranslate")
     trans.location = (2400, 0)
@@ -701,34 +702,56 @@ def print_sanity() -> None:
         p = cam.matrix_world.translation
         v = look_vector()
         heading = math.degrees(math.atan2(-v.x, v.y))
+        hit, loc, *_r = scene.ray_cast(bpy.context.evaluated_depsgraph_get(), p, v)
+        dist = (loc - p).length if hit else 99.0
         print(
             f"  t={t:5.2f} {label:12s} pos=({p.x:6.2f},{p.y:6.2f},{p.z:5.2f}) "
-            f"look=({v.x:5.2f},{v.y:5.2f},{v.z:5.2f}) yaw={heading:6.1f}"
+            f"look=({v.x:5.2f},{v.y:5.2f},{v.z:5.2f}) yaw={heading:6.1f} hit={dist:4.2f}m"
         )
 
 
+def encode_mp4(frame_dir: Path, pattern: str, out_path: Path, fps: int = FPS) -> Path:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-framerate",
+        str(fps),
+        "-i",
+        str(frame_dir / pattern),
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "18",
+        str(out_path),
+    ]
+    subprocess.check_call(cmd)
+    return out_path
+
+
 def configure_preview(scene: bpy.types.Scene) -> Path:
-    PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    frames = PREVIEW_DIR / "frames"
+    frames.mkdir(parents=True, exist_ok=True)
     scene.render.engine = "BLENDER_WORKBENCH"
     scene.display.shading.light = "STUDIO"
     scene.display.shading.color_type = "TEXTURE"
     scene.render.resolution_x = 640
     scene.render.resolution_y = 480
     scene.render.use_motion_blur = False
-    scene.render.image_settings.file_format = "FFMPEG"
-    scene.render.ffmpeg.format = "MPEG4"
-    scene.render.ffmpeg.codec = "H264"
-    scene.render.ffmpeg.constant_rate_factor = "MEDIUM"
-    scene.render.filepath = str(PREVIEW_DIR / "found_footage_preview.mp4")
+    scene.render.image_settings.file_format = "JPEG"
+    scene.render.image_settings.quality = 88
+    scene.render.filepath = str(frames / "frame_")
     scene.render.use_compositing = False
-    return Path(scene.render.filepath)
+    return frames
 
 
 def configure_stills(scene: bpy.types.Scene) -> None:
     STILLS_DIR.mkdir(parents=True, exist_ok=True)
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
-    scene.cycles.samples = 24
+    scene.cycles.samples = 20
     scene.cycles.use_denoising = False
     scene.render.resolution_x = 1280
     scene.render.resolution_y = 960
@@ -739,8 +762,9 @@ def configure_stills(scene: bpy.types.Scene) -> None:
     scene.render.threads = 4
 
 
-def configure_master(scene: bpy.types.Scene, filename: str = "found_footage_master.mp4") -> Path:
-    MASTER_DIR.mkdir(parents=True, exist_ok=True)
+def configure_master(scene: bpy.types.Scene) -> Path:
+    frames = MASTER_DIR / "frames"
+    frames.mkdir(parents=True, exist_ok=True)
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
     scene.cycles.samples = 12
@@ -749,19 +773,17 @@ def configure_master(scene: bpy.types.Scene, filename: str = "found_footage_mast
     scene.render.resolution_y = 960
     scene.render.use_motion_blur = True
     scene.render.motion_blur_shutter = 0.42
-    scene.render.image_settings.file_format = "FFMPEG"
-    scene.render.ffmpeg.format = "MPEG4"
-    scene.render.ffmpeg.codec = "H264"
-    scene.render.ffmpeg.constant_rate_factor = "MEDIUM"
-    scene.render.filepath = str(MASTER_DIR / filename)
-    scene.render.use_compositing = True
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.filepath = str(frames / "frame_")
+    scene.render.use_compositing = False
     scene.render.threads_mode = "FIXED"
     scene.render.threads = 4
-    return Path(scene.render.filepath)
+    return frames
 
 
 def configure_vhs_video(scene: bpy.types.Scene) -> Path:
-    VHS_DIR.mkdir(parents=True, exist_ok=True)
+    frames = VHS_DIR / "frames"
+    frames.mkdir(parents=True, exist_ok=True)
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
     scene.cycles.samples = 8
@@ -770,15 +792,13 @@ def configure_vhs_video(scene: bpy.types.Scene) -> Path:
     scene.render.resolution_y = 480
     scene.render.use_motion_blur = True
     scene.render.motion_blur_shutter = 0.42
-    scene.render.image_settings.file_format = "FFMPEG"
-    scene.render.ffmpeg.format = "MPEG4"
-    scene.render.ffmpeg.codec = "H264"
-    scene.render.ffmpeg.constant_rate_factor = "MEDIUM"
-    scene.render.filepath = str(VHS_DIR / "found_footage_vhs.mp4")
+    scene.render.image_settings.file_format = "JPEG"
+    scene.render.image_settings.quality = 92
+    scene.render.filepath = str(frames / "frame_")
     scene.render.use_compositing = True
     scene.render.threads_mode = "FIXED"
     scene.render.threads = 4
-    return Path(scene.render.filepath)
+    return frames
 
 
 def main() -> None:
@@ -812,13 +832,15 @@ def main() -> None:
     if args["mode"] == "check":
         return
     if args["mode"] == "preview":
-        path = configure_preview(scene)
-        print("Preview render ->", path)
+        frames = configure_preview(scene)
+        print("Preview render ->", frames)
         bpy.ops.render.render(animation=True)
-        print("Wrote", path)
+        out = encode_mp4(frames, "frame_%04d.jpg", PREVIEW_DIR / "found_footage_preview.mp4")
+        print("Wrote", out)
         return
     if args["mode"] == "stills":
         configure_stills(scene)
+        scene.render.use_compositing = False  # CGI master stills, VHS is a separate pass
         for t in (0.5, 5.0, 9.2, 13.5, 18.9, 25.4):
             scene.frame_set(frame_at(t))
             scene.render.filepath = str(STILLS_DIR / f"ff_{t:.1f}s.png")
@@ -826,16 +848,18 @@ def main() -> None:
             print("still", scene.render.filepath)
         return
     if args["mode"] == "master":
-        path = configure_master(scene)
-        print("Master render ->", path)
+        frames = configure_master(scene)
+        print("Master render ->", frames)
         bpy.ops.render.render(animation=True)
-        print("Wrote", path)
+        out = encode_mp4(frames, "frame_%04d.png", MASTER_DIR / "found_footage_master.mp4")
+        print("Wrote", out)
         return
     if args["mode"] == "vhs":
-        path = configure_vhs_video(scene)
-        print("VHS render ->", path)
+        frames = configure_vhs_video(scene)
+        print("VHS render ->", frames)
         bpy.ops.render.render(animation=True)
-        print("Wrote", path)
+        out = encode_mp4(frames, "frame_%04d.jpg", VHS_DIR / "found_footage_vhs.mp4")
+        print("Wrote", out)
 
 
 if __name__ == "__main__":
