@@ -28,7 +28,6 @@ FPS = 30
 DURATION = 30.0
 COLL = "CAM_FOUND_FOOTAGE"
 FX_COLL = "FX_DRIED_BLOOD"
-FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
 
 # Room A interior (measured from backrooms.blend, do not change walls):
 #   x -5.80 .. -1.60   y 1.00 .. 4.80
@@ -226,7 +225,7 @@ def _blood_ring(bm, ox, oy, rx, ry, seed, n=32, z=0.0):
             + rng.uniform(-0.07, 0.07)
         )
         # Local +X east, +Y north. Keep the blob off the walls.
-        sx = 0.52 if math.cos(a) > 0.0 else 1.18
+        sx = 0.40 if math.cos(a) > 0.0 else 1.22
         sy = 1.05 if math.sin(a) > 0.0 else 0.48
         verts.append(bm.verts.new((ox + k * rx * sx * math.cos(a), oy + k * ry * sy * math.sin(a), z)))
     return bm.faces.new(verts)
@@ -235,11 +234,11 @@ def _blood_ring(bm, ox, oy, rx, ry, seed, n=32, z=0.0):
 def make_blood(col) -> bpy.types.Object:
     bm = bmesh.new()
     faces = [
-        _blood_ring(bm, 0.0, 0.0, 0.46, 0.36, 17, 40),
-        _blood_ring(bm, -0.34, 0.18, 0.16, 0.11, 23, 22),
-        _blood_ring(bm, 0.18, 0.22, 0.11, 0.08, 41, 18),
-        _blood_ring(bm, -0.12, -0.10, 0.09, 0.06, 8, 16),
-        _blood_ring(bm, -0.48, 0.06, 0.07, 0.05, 55, 14),
+        _blood_ring(bm, 0.0, 0.0, 0.55, 0.42, 17, 40),
+        _blood_ring(bm, -0.38, 0.20, 0.18, 0.12, 23, 22),
+        _blood_ring(bm, 0.20, 0.26, 0.13, 0.09, 41, 18),
+        _blood_ring(bm, -0.14, -0.12, 0.10, 0.07, 8, 16),
+        _blood_ring(bm, -0.55, 0.08, 0.08, 0.06, 55, 14),
     ]
     geom = bmesh.ops.extrude_face_region(bm, geom=faces)
     for g in geom["geom"]:
@@ -340,21 +339,6 @@ def make_disc(name, col, radius=0.0016):
     return obj
 
 
-def write_image(name: str, pixels, size) -> bpy.types.Image:
-    w, h = size
-    img = bpy.data.images.get(name)
-    if img is None or tuple(img.size) != (w, h):
-        if img is not None:
-            bpy.data.images.remove(img)
-        img = bpy.data.images.new(name, w, h, alpha=True)
-    img.pixels = pixels
-    try:
-        img.pack()
-    except Exception:
-        pass
-    return img
-
-
 # 5x7 caps / digits for a generic 2000s camcorder LCD.
 _GLYPHS = {
     "0": "01110100011001110101100111000101110",
@@ -377,59 +361,53 @@ _GLYPHS = {
 }
 
 
-def osd_label_image(name: str, text: str, rgb, scale=6) -> bpy.types.Image:
-    glyphs = []
-    for ch in text:
+def build_lcd_mesh(name: str, text: str, pixel=0.00040, gap=0.00011):
+    bm = bmesh.new()
+    step = pixel + gap
+    for gi, ch in enumerate(text):
         bits = _GLYPHS.get(ch, _GLYPHS[" "])
-        glyphs.append([[int(bits[row * 5 + col]) for col in range(5)] for row in range(7)])
-    pad = 6
-    gw = 6
-    w = pad * 2 + max(1, len(glyphs) * gw * scale)
-    h = pad * 2 + 7 * scale
-    pix = [0.0] * (w * h * 4)
-    r, g, b = rgb
-    for gi, gpx in enumerate(glyphs):
-        for yy in range(7):
-            for xx in range(5):
-                if not gpx[yy][xx]:
+        for row in range(7):
+            for col in range(5):
+                if bits[row * 5 + col] != "1":
                     continue
-                for dy in range(scale):
-                    for dx in range(scale):
-                        x = pad + gi * gw * scale + xx * scale + dx
-                        y = pad + (6 - yy) * scale + dy
-                        i = (y * w + x) * 4
-                        pix[i : i + 4] = [r, g, b, 1.0]
-    return write_image(name, pix, (w, h))
-
-
-def make_image_plane(name, col, img, w, h, mat_rgb):
+                x = gi * 6 * step + col * step
+                y = (6 - row) * step
+                v0 = bm.verts.new((x, y, 0.0))
+                v1 = bm.verts.new((x + pixel, y, 0.0))
+                v2 = bm.verts.new((x + pixel, y + pixel, 0.0))
+                v3 = bm.verts.new((x, y + pixel, 0.0))
+                bm.faces.new((v0, v1, v2, v3))
+    if bm.verts:
+        xs = [v.co.x for v in bm.verts]
+        ys = [v.co.y for v in bm.verts]
+        cx = 0.5 * (min(xs) + max(xs))
+        cy = 0.5 * (min(ys) + max(ys))
+        for v in bm.verts:
+            v.co.x -= cx
+            v.co.y -= cy
     mesh = bpy.data.meshes.new(name)
-    # Quad in XY, +Z faces the camera when the plane sits at camera -Z.
-    verts = [(-w * 0.5, -h * 0.5, 0.0), (w * 0.5, -h * 0.5, 0.0), (w * 0.5, h * 0.5, 0.0), (-w * 0.5, h * 0.5, 0.0)]
-    mesh.from_pydata(verts, [], [(0, 1, 2, 3)])
-    uv = mesh.uv_layers.new(name="UVMap")
-    for i, (u, v) in enumerate(((0, 0), (1, 0), (1, 1), (0, 1))):
-        uv.data[i].uv = (u, v)
+    bm.to_mesh(mesh)
+    bm.free()
+    return mesh
+
+
+def make_lcd(name, col, text, mat, pixel=0.00040):
+    mesh = build_lcd_mesh(name, text, pixel=pixel)
     obj = bpy.data.objects.new(name, mesh)
     col.objects.link(obj)
-    mat = bpy.data.materials.get(f"MAT.{name}") or bpy.data.materials.new(f"MAT.{name}")
-    mat.use_nodes = True
-    mat.diffuse_color = (*mat_rgb, 1.0)
-    try:
-        mat.blend_method = "BLEND"
-    except TypeError:
-        pass
-    nt = mat.node_tree
-    nt.nodes.clear()
-    out = nt.nodes.new("ShaderNodeOutputMaterial")
-    em = nt.nodes.new("ShaderNodeEmission")
-    tex = nt.nodes.new("ShaderNodeTexImage")
-    tex.image = img
-    em.inputs["Strength"].default_value = 4.0
-    nt.links.new(tex.outputs["Color"], em.inputs["Color"])
-    nt.links.new(em.outputs["Emission"], out.inputs["Surface"])
     obj.data.materials.append(mat)
     return obj
+
+
+def set_lcd_text(obj, text, pixel=0.00040):
+    mat = obj.data.materials[0] if obj.data.materials else None
+    old = obj.data
+    mesh = build_lcd_mesh(old.name, text, pixel=pixel)
+    if mat is not None:
+        mesh.materials.append(mat)
+    obj.data = mesh
+    if old.users == 0:
+        bpy.data.meshes.remove(old)
 
 
 def build_osd(col, cam) -> bpy.types.Object:
@@ -473,20 +451,19 @@ def build_osd(col, cam) -> bpy.types.Object:
     rec_dot.data.materials.append(red)
 
     lcd = (0.90, 0.94, 0.78)
-    rec_img = osd_label_image("OSD_REC.IMG", "REC", (0.92, 0.10, 0.06), 7)
-    rec = make_image_plane("OSD_REC", col, rec_img, 0.0088, 0.0033, (0.92, 0.10, 0.06))
+    lcd_mat = emissive("MAT.OSD.LCD", lcd, 4.0)
+    rec_mat = emissive("MAT.OSD.RecText", (0.92, 0.10, 0.06), 6.0)
+    rec = make_lcd("OSD_REC", col, "REC", rec_mat, 0.00042)
     parent_local(rec, osd)
-    rec.location = (hw - 0.0102, hh - 0.0056, 0.0008)
+    rec.location = (hw - 0.0108, hh - 0.0056, 0.0008)
 
-    time_img = osd_label_image("OSD_TIME.IMG", "0:23:51", lcd, 7)
-    time = make_image_plane("OSD_TIME", col, time_img, 0.0185, 0.0046, lcd)
+    time = make_lcd("OSD_TIME", col, "0:23:51", lcd_mat, 0.00040)
     parent_local(time, osd)
-    time.location = (-hw + 0.0145, -hh + 0.0058, 0.0008)
+    time.location = (-hw + 0.0165, -hh + 0.0058, 0.0008)
 
-    mode_img = osd_label_image("OSD_MODE.IMG", "SP  4:3", lcd, 6)
-    mode = make_image_plane("OSD_MODE", col, mode_img, 0.0115, 0.0032, lcd)
+    mode = make_lcd("OSD_MODE", col, "SP  4:3", lcd_mat, 0.00032)
     parent_local(mode, osd)
-    mode.location = (hw - 0.0118, -hh + 0.0058, 0.0008)
+    mode.location = (hw - 0.0125, -hh + 0.0058, 0.0008)
 
     hud = [osd, nip, fill, rec_dot, rec, time, mode]
     for obj in hud:
@@ -511,7 +488,9 @@ def osd_frame_handler(scene):
     text = _clock_text(t)
     if getattr(osd_frame_handler, "_clock", None) != text:
         osd_frame_handler._clock = text
-        osd_label_image("OSD_TIME.IMG", text, (0.90, 0.94, 0.78), 7)
+        time = bpy.data.objects.get("OSD_TIME")
+        if time is not None:
+            set_lcd_text(time, text, pixel=0.00040)
     rec = bpy.data.objects.get("OSD_REC")
     dot = bpy.data.objects.get("OSD_REC_DOT")
     rec_on = (f % 30) < 16
@@ -531,6 +510,7 @@ def register_osd_handler():
         if getattr(h, "__name__", "") == "osd_frame_handler":
             bpy.app.handlers.frame_change_pre.remove(h)
     bpy.app.handlers.frame_change_pre.append(osd_frame_handler)
+    osd_frame_handler._clock = None
 
 
 def build_rig(col):
@@ -657,17 +637,17 @@ LOOK_KEYS = [
     (20.40, 1.0, 42.0, 0.3),
     (21.00, 0.6, 8.0, 0.2),
     (21.50, 0.4, 6.0, 0.2),
-    (22.00, 0.9, 22.0, 0.3),
-    (22.35, 1.1, 52.0, 0.4),
-    (22.70, 0.6, 66.0, 0.5),
-    (22.95, 0.4, 71.0, 0.6),
-    (23.20, 0.5, 64.0, 0.3),
-    (23.60, 0.4, 24.0, 0.2),
-    (24.05, 0.5, 16.0, 0.2),
-    (24.45, 0.8, 44.0, 0.3),
-    (24.90, 0.5, 68.0, 0.4),
-    (25.20, 0.4, 73.0, 0.5),
-    (25.55, 0.5, 66.0, 0.3),
+    (22.00, 0.9, 14.0, 0.3),
+    (22.35, 1.0, 26.0, 0.4),
+    (22.70, 0.5, 34.0, 0.5),
+    (22.95, 0.3, 38.0, 0.6),
+    (23.20, 0.4, 32.0, 0.3),
+    (23.60, 0.4, 16.0, 0.2),
+    (24.05, 0.5, 12.0, 0.2),
+    (24.45, 0.7, 22.0, 0.3),
+    (24.90, 0.4, 26.0, 0.4),
+    (25.20, 0.3, 22.0, 0.5),
+    (25.55, 0.4, 18.0, 0.3),
     (26.10, 0.6, 18.0, 0.2),
     (26.50, 0.8, 8.0, 0.2),
     (27.20, 1.2, 6.0, 0.3),
