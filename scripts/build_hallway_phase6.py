@@ -289,7 +289,7 @@ def build_aging_group() -> bpy.types.NodeTree:
     mid = ramp.color_ramp.elements.new(0.36)
     mid.color = (0.22, 0.22, 0.22, 1.0)
     mid_b = ramp.color_ramp.elements.new(0.62)
-    mid_b.color = (0.58, 0.58, 0.58, 1.0)
+    mid_b.color = (0.70, 0.70, 0.70, 1.0)
     links.new(zone_lin, ramp.inputs["Fac"])
     zone = nodes.new("ShaderNodeSeparateColor")
     zone.location = (-520, 420)
@@ -299,7 +299,7 @@ def build_aging_group() -> bpy.types.NodeTree:
     # Vertical streak coordinates: slow in Z so features drip downward.
     map_streak = nodes.new("ShaderNodeMapping")
     map_streak.location = (-980, 80)
-    map_streak.inputs["Scale"].default_value = (48.0, 7.5, 1.35)
+    map_streak.inputs["Scale"].default_value = (42.0, 9.0, 0.28)
     links.new(geom.outputs["Position"], map_streak.inputs["Vector"])
     streak = nodes.new("ShaderNodeTexNoise")
     streak.location = (-780, 80)
@@ -308,7 +308,7 @@ def build_aging_group() -> bpy.types.NodeTree:
     streak.inputs["Detail"].default_value = 3.0
     streak.inputs["Roughness"].default_value = 0.55
     links.new(map_streak.outputs["Vector"], streak.inputs["Vector"])
-    streak_f = map_range(ng, streak.outputs["Factor"], 0.42, 0.78, 0.0, 1.0, (-560, 80))
+    streak_f = map_range(ng, streak.outputs["Factor"], 0.48, 0.82, 0.0, 1.0, (-560, 80))
 
     drip = None
     for i, (sx, sy, sz, rx, ry, strength) in enumerate(DRIP_SOURCES):
@@ -328,7 +328,7 @@ def build_aging_group() -> bpy.types.NodeTree:
         drip = src if drip is None else math_node(ng, "MAXIMUM", (520, -40 - i * 40), drip, src)
 
     # Irregular wall-floor accumulation, with clean gaps so it is not a stripe.
-    skirt_h = map_range(ng, z_s, 0.0, 0.26, 1.0, 0.0, (-780, 260))
+    skirt_h = map_range(ng, z_s, 0.0, 0.32, 1.0, 0.0, (-780, 260))
     gap_n = nodes.new("ShaderNodeTexNoise")
     gap_n.location = (-780, 320)
     gap_n.inputs["Scale"].default_value = 0.55
@@ -385,15 +385,15 @@ def inject_aging(mats: dict[str, bpy.types.Material], group: bpy.types.NodeTree)
     dust = (0.30, 0.29, 0.26)
     recipes = {
         "MAT_Wall_PaintedConcrete": dict(
-            color_masks=(("Drip", 0.55), ("Skirt", 0.42), ("Subtle", 0.70)),
-            moist=("Drip", 0.28),
+            color_masks=(("Drip", 0.82), ("Skirt", 0.58), ("Subtle", 0.55)),
+            moist=("Drip", 0.34),
             rough_up=("Skirt", 0.08),
             rough_down=("Drip", 0.10),
             oxide_amt=0.0,
             metal_down=0.0,
         ),
         "MAT_Floor_IndustrialConcrete": dict(
-            color_masks=(("Traffic", 0.22), ("EdgeDust", 0.28), ("Drip", 0.32), ("Subtle", 0.40)),
+            color_masks=(("Traffic", 0.30), ("EdgeDust", 0.34), ("Drip", 0.42), ("Subtle", 0.32)),
             moist=("Drip", 0.06),
             rough_up=("EdgeDust", 0.10),
             rough_down=("Traffic", 0.06),
@@ -417,11 +417,11 @@ def inject_aging(mats: dict[str, bpy.types.Material], group: bpy.types.NodeTree)
             metal_down=0.0,
         ),
         "MAT_Pipe_DarkPaintedSteel": dict(
-            color_masks=(("Joint", 0.28), ("Subtle", 0.20), ("Breakup", 0.08)),
+            color_masks=(("Joint", 0.38), ("Subtle", 0.18), ("Breakup", 0.08)),
             moist=None,
             rough_up=("Joint", 0.12),
             rough_down=None,
-            oxide_amt=0.42,
+            oxide_amt=0.55,
             metal_down=0.0,
         ),
         "MAT_Pipe_Secondary": dict(
@@ -532,7 +532,7 @@ def make_decal_mesh(name: str, width: float, height: float, normal: str) -> bpy.
         verts = [(0.0, hw, -hh), (0.0, hw, hh), (0.0, -hw, hh), (0.0, -hw, -hh)]
     mesh.from_pydata(verts, [], [(0, 1, 2, 3)])
     uv = mesh.uv_layers.new(name="UVMap")
-    for loop, uvco in zip(uv.data, ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0))):
+    for loop, uvco in zip(uv.data, ((1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0))):
         loop.uv = uvco
     mesh.update()
     return mesh
