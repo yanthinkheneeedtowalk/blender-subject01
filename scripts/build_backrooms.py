@@ -583,7 +583,7 @@ def setup_render(args: dict, filepath: Path) -> None:
         scene.view_settings.view_transform = "AgX"
     except TypeError:
         pass
-    scene.view_settings.exposure = 0.15
+    scene.view_settings.exposure = 0.35
     scene.view_settings.look = "None"
 
 
