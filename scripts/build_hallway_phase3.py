@@ -324,6 +324,9 @@ def build_mesh_library(materials: dict[str, bpy.types.Material]) -> dict[str, bp
         "clamp_secondary": make_torus_mesh(
             "P3_PIPE_Clamp_Secondary_MESH", 0.075, 0.010, materials["support"]
         ),
+        "clamp_minor": make_torus_mesh(
+            "P3_PIPE_Clamp_Minor_MESH", 0.045, 0.008, materials["support"]
+        ),
         "handwheel": make_torus_mesh(
             "P3_PIPE_Handwheel_MESH", 0.09, 0.014, materials["valve"]
         ),
@@ -492,10 +495,10 @@ def add_secondary_pipes(
 
     # Minor conduits are deliberately sparse and stay off the center path.
     minor = (
-        ("PIPE_Minor_Right_A_01", (0.58, 1.20, 2.05), (0.58, 6.20, 2.05), 0.03, "A"),
-        ("PIPE_Minor_Left_B_01", (-0.58, 9.30, 2.04), (-0.58, 15.10, 2.04), 0.04, "B"),
-        ("PIPE_Minor_Right_B_01", (0.60, 10.00, 2.08), (0.60, 14.40, 2.08), 0.03, "B"),
-        ("PIPE_Minor_Right_C_01", (0.55, 18.50, 2.08), (0.55, 23.00, 2.08), 0.035, "C"),
+        ("PIPE_Minor_Right_A_01", (0.96, 1.20, 2.05), (0.96, 6.20, 2.05), 0.03, "A"),
+        ("PIPE_Minor_Left_B_01", (-0.94, 9.30, 2.04), (-0.94, 15.10, 2.04), 0.04, "B"),
+        ("PIPE_Minor_Right_B_01", (0.94, 10.00, 2.08), (0.94, 14.40, 2.08), 0.03, "B"),
+        ("PIPE_Minor_Right_C_01", (0.96, 18.50, 2.08), (0.96, 23.55, 2.08), 0.035, "C"),
     )
     for name, start, end, diameter, zone in minor:
         straight(name, start, end, diameter, zone)
@@ -616,6 +619,7 @@ def add_supports(
     wall_plate = mesh_library["wall_plate"]
     clamp_primary = mesh_library["clamp_primary"]
     clamp_secondary = mesh_library["clamp_secondary"]
+    clamp_minor = mesh_library["clamp_minor"]
 
     wall_mounts = 0
     hangers = 0
@@ -659,7 +663,7 @@ def add_supports(
             f"CLAMP_{'Secondary' if secondary else 'Primary'}_{'Left' if side == 'L' else 'Right'}_{zone}_{y:04.2f}".replace(
                 ".", "_"
             ),
-            clamp_secondary if secondary else clamp_primary,
+            clamp_minor if radius < 0.05 else (clamp_secondary if secondary else clamp_primary),
             (x_pipe, y, z_pipe),
             collection,
             "PIPE_Clamp",
@@ -723,6 +727,11 @@ def add_supports(
         ("B", 14.40, "L", -0.64, 2.12, 0.03),
         ("C", 18.90, "R", 0.84, 2.18, 0.045),
         ("C", 21.60, "R", 0.84, 2.54, 0.045),
+        ("A", 3.60, "R", 0.96, 2.05, 0.015),
+        ("B", 11.20, "L", -0.94, 2.04, 0.020),
+        ("B", 12.90, "R", 0.94, 2.08, 0.015),
+        ("C", 20.60, "R", 0.96, 2.08, 0.0175),
+        ("C", 22.50, "R", 0.96, 2.08, 0.0175),
     ):
         wall_support(f"Secondary_{zone}", side, x, y, z, r, zone, secondary=True)
 
@@ -738,6 +747,7 @@ def add_flanges(
         ("FLANGE_Primary_Left_B_01", (-0.84, 12.90, 2.46), 0.13, "Y", "B"),
         ("FLANGE_Primary_C_Elbow_01", (-0.84, 17.84, 2.46), 0.13, "Y", "C"),
         ("FLANGE_Primary_B_WallIngress_01", (1.01, 15.09, 2.43), 0.10, "X", "B"),
+        ("FLANGE_Minor_C_Termination", (0.96, 23.55, 2.08), 0.035, "Y", "C"),
     )
     for name, location, radius, axis, zone in entries:
         add_flange(name, location, radius, axis, collection, mesh_library, zone)
@@ -911,12 +921,24 @@ def validate_network(scene: bpy.types.Scene) -> dict[str, object]:
                 beam_conflicts.append((pipe.name, beam.name))
 
     pipe_conflicts = []
+    intentional_junctions = {
+        frozenset(("PIPE_Secondary_Left_B_01", "PIPE_Secondary_B_Cross_01")),
+        frozenset(("PIPE_Secondary_Left_B_02", "PIPE_Secondary_B_Cross_01")),
+        frozenset(("PIPE_Secondary_Right_B_01", "PIPE_Secondary_B_Cross_01")),
+        frozenset(("PIPE_Secondary_C_Cross_01", "PIPE_Secondary_Right_C_01")),
+    }
     for index, first in enumerate(pipe_objects):
         first_bounds = world_bounds(first)
         for second in pipe_objects[index + 1 :]:
             if bounds_overlap(first_bounds, world_bounds(second), epsilon=0.003):
-                # Flange / valve assemblies are intentionally attached to pipes.
-                if first.name.startswith("PIPE_") and second.name.startswith("PIPE_"):
+                # These four overlaps are deliberate branch junctions:
+                # one B cross-connection has three endpoints, and C has one.
+                pair = frozenset((first.name, second.name))
+                if (
+                    first.name.startswith("PIPE_")
+                    and second.name.startswith("PIPE_")
+                    and pair not in intentional_junctions
+                ):
                     pipe_conflicts.append((first.name, second.name))
 
     generic_names = [
@@ -941,6 +963,7 @@ def validate_network(scene: bpy.types.Scene) -> dict[str, object]:
         min_overhead=min_overhead,
         beam_conflicts=beam_conflicts,
         pipe_conflicts=pipe_conflicts,
+        intentional_junctions=len(intentional_junctions),
         generic_names=generic_names,
         unapplied_scales=unapplied_scales,
         below_floor=below_floor,
@@ -1053,6 +1076,7 @@ def write_report(
         f"  camera/pipe hits: {len(validation['camera_pipe_hits'])}",
         f"  pipe/Phase 2 beam AABB conflicts: {len(validation['beam_conflicts'])}",
         f"  pipe/pipe AABB conflicts: {len(validation['pipe_conflicts'])}",
+        f"  intentional pipe junctions: {validation['intentional_junctions']}",
         f"  generic names: {len(validation['generic_names'])}; unapplied scales: {len(validation['unapplied_scales'])}; below floor: {len(validation['below_floor'])}",
         "",
         "PHASE 1 FREEZE STATUS: " + ("PASS" if phase1_pass else "FAIL"),
