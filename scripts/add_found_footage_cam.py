@@ -232,9 +232,9 @@ LOOK_KEYS = [
     (4.05, 0.5, 16.0, 0.6),
     (5.10, 0.3, 7.0, 0.2),
     (6.80, 0.2, 4.0, -0.3),
-    (8.20, 0.5, 12.0, 0.4),  # start looking left at the L-stub
-    (8.85, 0.6, 22.0, 0.8),  # peek the L-corner / behind the jog; eyes first
-    (9.40, 0.3, 10.0, 0.4),
+    (8.20, 0.5, 18.0, 0.4),  # start looking left at the L-stub
+    (8.85, 0.8, 42.0, 0.9),  # peek the L-corner / behind the jog; eyes first
+    (9.40, 0.3, 24.0, 0.4),
     (9.85, 0.4, -52.0, -0.3),  # eyes toward Hall B ~0.35s before body
     (10.55, 0.3, -22.0, 0.1),
     (12.00, 0.4, -4.0, -0.2),
@@ -285,8 +285,8 @@ def exposure_at(t: float) -> float:
         (18.6, 0.09),
         (19.1, 0.26),
         (19.8, 0.14),
-        (22.6, 0.22),
-        (26.0, 0.16),
+        (22.6, 0.24),
+        (26.0, 0.28),
     ]
     if t <= keys[0][0]:
         return keys[0][1]
@@ -507,8 +507,10 @@ def setup_vhs_compositor(scene: bpy.types.Scene) -> None:
         _set_in(lens, "Type", "Horizontal")
     except TypeError:
         _set_in(lens, "Type", "Radial")
-    _set_in(lens, "Distortion", 0.008)
-    _set_in(lens, "Dispersion", 0.006)
+    try:
+        _set_in(lens, "Fit", True)
+    except Exception:
+        pass
 
     scale_dn = ng.nodes.new("CompositorNodeScale")
     scale_dn.location = (400, 80)
@@ -580,7 +582,7 @@ def setup_vhs_compositor(scene: bpy.types.Scene) -> None:
     mix_n = ng.nodes.new("ShaderNodeMixRGB")
     mix_n.blend_type = "OVERLAY"
     mix_n.location = (2200, 0)
-    _set_in(mix_n, "Factor", 0.028)
+    _set_in(mix_n, "Factor", 0.022)
 
     trans = ng.nodes.new("CompositorNodeTranslate")
     trans.location = (2400, 0)
@@ -710,23 +712,14 @@ def print_sanity() -> None:
         )
 
 
-def encode_mp4(frame_dir: Path, pattern: str, out_path: Path, fps: int = FPS) -> Path:
+def encode_mp4(frame_dir: Path, pattern: str, out_path: Path, fps: float = FPS, glob: bool = False) -> Path:
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-framerate",
-        str(fps),
-        "-i",
-        str(frame_dir / pattern),
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        "-crf",
-        "18",
-        str(out_path),
-    ]
+    cmd = ["ffmpeg", "-y", "-framerate", str(fps)]
+    if glob:
+        cmd += ["-pattern_type", "glob", "-i", str(frame_dir / pattern)]
+    else:
+        cmd += ["-i", str(frame_dir / pattern)]
+    cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(out_path)]
     subprocess.check_call(cmd)
     return out_path
 
@@ -744,6 +737,7 @@ def configure_preview(scene: bpy.types.Scene) -> Path:
     scene.render.image_settings.quality = 88
     scene.render.filepath = str(frames / "frame_")
     scene.render.use_compositing = False
+    scene.frame_step = 1
     return frames
 
 
@@ -751,14 +745,16 @@ def configure_stills(scene: bpy.types.Scene) -> None:
     STILLS_DIR.mkdir(parents=True, exist_ok=True)
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
-    scene.cycles.samples = 20
-    scene.cycles.use_denoising = False
+    scene.cycles.samples = 48
+    scene.cycles.use_denoising = True
     scene.render.resolution_x = 1280
     scene.render.resolution_y = 960
     scene.render.use_motion_blur = True
     scene.render.image_settings.file_format = "PNG"
-    scene.render.use_compositing = True
+    scene.render.use_compositing = False
     scene.render.threads_mode = "FIXED"
+    scene.render.threads = 4
+    scene.frame_step = 1
     scene.render.threads = 4
 
 
@@ -787,7 +783,7 @@ def configure_vhs_video(scene: bpy.types.Scene) -> Path:
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
     scene.cycles.samples = 8
-    scene.cycles.use_denoising = False
+    scene.cycles.use_denoising = True
     scene.render.resolution_x = 640
     scene.render.resolution_y = 480
     scene.render.use_motion_blur = True
@@ -798,6 +794,7 @@ def configure_vhs_video(scene: bpy.types.Scene) -> Path:
     scene.render.use_compositing = True
     scene.render.threads_mode = "FIXED"
     scene.render.threads = 4
+    scene.frame_step = 2
     return frames
 
 
@@ -841,7 +838,7 @@ def main() -> None:
     if args["mode"] == "stills":
         configure_stills(scene)
         scene.render.use_compositing = False  # CGI master stills, VHS is a separate pass
-        for t in (0.5, 5.0, 9.2, 13.5, 18.9, 25.4):
+        for t in (0.5, 5.0, 9.85, 13.5, 18.5, 25.4):
             scene.frame_set(frame_at(t))
             scene.render.filepath = str(STILLS_DIR / f"ff_{t:.1f}s.png")
             bpy.ops.render.render(write_still=True)
@@ -858,7 +855,13 @@ def main() -> None:
         frames = configure_vhs_video(scene)
         print("VHS render ->", frames)
         bpy.ops.render.render(animation=True)
-        out = encode_mp4(frames, "frame_%04d.jpg", VHS_DIR / "found_footage_vhs.mp4")
+        out = encode_mp4(
+            frames,
+            "frame_*.jpg",
+            VHS_DIR / "found_footage_vhs.mp4",
+            fps=15,
+            glob=True,
+        )
         print("Wrote", out)
 
 
