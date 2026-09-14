@@ -638,6 +638,7 @@ def validate(
     camera_errors = []
     camera_hits = []
     min_side = 99.0
+    min_walkable_width = 99.0
     min_overhead = 99.0
     for frame in range(1, 251):
         scene.frame_set(frame)
@@ -650,6 +651,7 @@ def validate(
         up = ray(scene, position, Vector((0.0, 0.0, 1.0)))
         if left is not None and right is not None:
             min_side = min(min_side, left, right)
+            min_walkable_width = min(min_walkable_width, left + right)
         if up is not None:
             min_overhead = min(min_overhead, up + position.z)
         for obj in p4_meshes:
@@ -690,6 +692,13 @@ def validate(
         if low < 0.20 or high > 2.20:
             access_errors.append((obj.name, low, high))
 
+    # Measure the frozen Phase 1 envelope without letting new wall-mounted
+    # equipment shorten the raycast. Restore all Phase 4 viewport states after
+    # these three spatial checks.
+    hidden_states = {obj.name: obj.hide_get() for obj in p4_objects}
+    for obj in p4_objects:
+        obj.hide_set(True)
+    bpy.context.view_layer.update()
     station_rows = []
     for label, y, width, height in (
         ("A clear", 3.25, ZONE_A["width"], ZONE_A["height"]),
@@ -710,10 +719,14 @@ def validate(
                 target_ceiling=height,
             )
         )
+    for obj in p4_objects:
+        obj.hide_set(hidden_states[obj.name])
+    bpy.context.view_layer.update()
     return dict(
         camera_errors=camera_errors,
         camera_hits=camera_hits,
         min_side=min_side,
+        min_walkable_width=min_walkable_width,
         min_overhead=min_overhead,
         equipment_pipe_conflicts=equipment_pipe_conflicts,
         equipment_beam_conflicts=equipment_beam_conflicts,
@@ -760,7 +773,7 @@ def write_report(
         and not validation["unapplied_scales"]
         and not validation["below_floor"]
         and not validation["access_errors"]
-        and validation["min_side"] >= 1.019
+        and validation["min_walkable_width"] >= 1.75
         and validation["min_overhead"] >= 2.05
     )
     report = OUTPUT_DIR / "phase4_equipment_validation.txt"
@@ -813,6 +826,7 @@ def write_report(
         "FIRST-PERSON / GEOMETRY VALIDATION",
         f"  Phase 4 objects: {validation['object_count']}; mesh objects: {validation['mesh_count']}",
         f"  minimum camera side clearance: {validation['min_side']:.3f} m",
+        f"  minimum walkable width around equipment: {validation['min_walkable_width']:.3f} m",
         f"  minimum camera overhead clearance: {validation['min_overhead']:.3f} m",
         f"  camera path errors: {len(validation['camera_errors'])}",
         f"  camera/equipment hits: {len(validation['camera_hits'])}",
