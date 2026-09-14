@@ -18,7 +18,6 @@ from pathlib import Path
 
 import bpy
 from mathutils import Vector
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -36,7 +35,6 @@ ZONE_C = p5.ZONE_C
 PHASE2_COUNTS = p5.PHASE2_COUNTS
 PHASE4_COLLECTIONS = p5.PHASE4_COLLECTIONS
 LIBRARY = p5.LIBRARY
-FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 STILLS = (
     (1, "01_entry_aging"),
@@ -234,38 +232,17 @@ def clear_phase6() -> None:
 
 
 def write_stencils() -> dict[str, Path]:
-    ASSET_DIR.mkdir(parents=True, exist_ok=True)
-    font_lg = ImageFont.truetype(FONT, 92)
-    font_sm = ImageFont.truetype(FONT, 36)
-    paths = {}
-    for mark in MARKINGS:
-        img = Image.new("RGBA", (512, 192), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        bbox = draw.textbbox((0, 0), mark["text"], font=font_lg)
-        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        x = (512 - tw) * 0.5
-        y = 38 if mark["subtitle"] else 52
-        draw.text((x, y), mark["text"], font=font_lg, fill=(52, 48, 42, 210))
-        if mark["subtitle"]:
-            sb = draw.textbbox((0, 0), mark["subtitle"], font=font_sm)
-            sx = (512 - (sb[2] - sb[0])) * 0.5
-            draw.text((sx, 128), mark["subtitle"], font=font_sm, fill=(58, 54, 48, 150))
-        # Worn stencil: slight blur + luminance noise in alpha.
-        img = img.filter(ImageFilter.GaussianBlur(radius=0.6))
-        noise = Image.effect_noise((512, 192), 18).convert("L")
-        r, g, b, a = img.split()
-        a = Image.blend(a, Image.eval(a, lambda p: int(p * 0.82)), 0.35)
-        a = ImageChops_multiply(a, noise, 0.22)
-        img = Image.merge("RGBA", (r, g, b, a))
-        path = ASSET_DIR / f"{mark['name'].lower()}.png"
-        img.save(path)
-        paths[mark["name"]] = path
-    return paths
-
-
-def ImageChops_multiply(alpha: Image.Image, noise: Image.Image, amount: float) -> Image.Image:
-    noise = noise.point(lambda p: int(255 - amount * (255 - p)))
-    return Image.composite(alpha, Image.eval(alpha, lambda p: int(p * (1.0 - amount))), noise)
+    names = {
+        "MARK_ID_PN04": ASSET_DIR / "mark_id_pn04.png",
+        "MARK_INSP_B": ASSET_DIR / "mark_insp_b.png",
+        "MARK_PIPE_CW2": ASSET_DIR / "mark_pipe_cw2.png",
+        "MARK_HATCH_C": ASSET_DIR / "mark_hatch_c.png",
+        "MARK_UTIL_C": ASSET_DIR / "mark_util_c.png",
+    }
+    missing = [path for path in names.values() if not path.exists()]
+    if missing:
+        raise FileNotFoundError("Missing Phase 6 stencil images: " + ", ".join(str(p) for p in missing))
+    return names
 
 
 def add_group_socket(ng, name: str, in_out: str, socket_type: str):
