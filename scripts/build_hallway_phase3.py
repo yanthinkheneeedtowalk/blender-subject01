@@ -312,6 +312,9 @@ def build_mesh_library(materials: dict[str, bpy.types.Material]) -> dict[str, bp
         "secondary_flange": make_cylinder_mesh(
             "P3_PIPE_Flange_Secondary_MESH", 0.065, 0.045, materials["secondary"], 12
         ),
+        "connector": make_cylinder_mesh(
+            "P3_PIPE_Connector_MESH", 0.055, 0.10, materials["secondary"], 12
+        ),
         "valve_body": make_cylinder_mesh(
             "P3_PIPE_ValveBody_MESH", 0.11, 0.24, materials["valve"], 16
         ),
@@ -446,6 +449,7 @@ def add_primary_pipes(
 def add_secondary_pipes(
     collections: dict[str, bpy.types.Collection],
     materials: dict[str, bpy.types.Material],
+    mesh_library: dict[str, bpy.types.Mesh],
 ) -> dict[str, object]:
     collection = collections["UTILITY_SECONDARY_PIPES"]
     entries = []
@@ -462,11 +466,38 @@ def add_secondary_pipes(
     straight("PIPE_Secondary_Left_B_01", (-0.84, 9.10, 2.16), (-0.84, 15.30, 2.16), 0.09, "B")
     straight("PIPE_Secondary_Left_B_02", (-0.64, 9.30, 2.12), (-0.64, 14.80, 2.12), 0.06, "B")
     straight("PIPE_Secondary_Right_B_01", (0.84, 9.20, 2.13), (0.84, 14.70, 2.13), 0.08, "B")
+    straight("RISER_Secondary_B_Valve_01", (0.84, 14.70, 2.13), (0.84, 14.70, 2.43), 0.08, "B")
     straight("PIPE_Secondary_B_Cross_01", (-0.84, 12.00, 2.16), (0.84, 12.00, 2.16), 0.07, "B")
+    for name, x in (
+        ("CONNECTOR_Secondary_B_Cross_Left", -0.84),
+        ("CONNECTOR_Secondary_B_Cross_Right", 0.84),
+    ):
+        add_mesh_instance(
+            name,
+            mesh_library["connector"],
+            (x, 12.00, 2.16),
+            collection,
+            "PIPE_BranchConnector",
+            "B",
+            rotation=(0.0, math.pi * 0.5, 0.0),
+        )
 
     # Zone C has fewer companions and one controlled vertical offset around
     # a structural bay, rather than a uniform pipe bundle.
     straight("PIPE_Secondary_C_Cross_01", (-0.74, 18.10, 2.18), (0.84, 18.10, 2.18), 0.07, "C")
+    for name, x in (
+        ("CONNECTOR_Secondary_C_Cross_Left", -0.74),
+        ("CONNECTOR_Secondary_C_Cross_Right", 0.84),
+    ):
+        add_mesh_instance(
+            name,
+            mesh_library["connector"],
+            (x, 18.10, 2.18),
+            collection,
+            "PIPE_BranchConnector",
+            "C",
+            rotation=(0.0, math.pi * 0.5, 0.0),
+        )
     straight("PIPE_Secondary_Right_C_01", (0.84, 18.10, 2.18), (0.84, 19.84, 2.18), 0.09, "C")
     add_elbow(
         "ELBOW_Secondary_C_01",
@@ -507,6 +538,7 @@ def add_secondary_pipes(
         count=len(entries),
         entries=entries,
         diameter_range=(min(item[1] for item in entries), max(item[1] for item in entries)),
+        branch_connectors=4,
     )
 
 
@@ -828,7 +860,7 @@ def build_network() -> dict[str, object]:
     }
     mesh_library = build_mesh_library(materials)
     primary = add_primary_pipes(collections, materials)
-    secondary = add_secondary_pipes(collections, materials)
+    secondary = add_secondary_pipes(collections, materials, mesh_library)
     supports = add_supports(collections, materials, mesh_library)
     flanges = add_flanges(collections["UTILITY_VALVES"], mesh_library)
     valves = add_valves(collections, mesh_library)
@@ -1036,6 +1068,7 @@ def write_report(
         "SECONDARY PIPE SYSTEM",
         f"  secondary/minor curve count: {network['secondary']['count']}",
         f"  diameter range: {network['secondary']['diameter_range'][0]:.3f}–{network['secondary']['diameter_range'][1]:.3f} m",
+        f"  branch connectors: {network['secondary']['branch_connectors']} low-poly collars plus one B valve riser",
         "  distribution: A has two secondary lines plus one minor; B is densest with three secondary lines, one cross-connection, and two minors; C uses one crossover, one offset secondary, and one minor.",
         "",
         "VALVES / FLANGES",
