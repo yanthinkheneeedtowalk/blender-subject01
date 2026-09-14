@@ -541,6 +541,18 @@ def validate(scene: bpy.types.Scene, before: dict[str, tuple], assigned: dict[st
         position = camera.matrix_world.translation.copy()
         if abs(position.x) > 0.01 or abs(position.z - EYE_Z) > 0.01:
             camera_errors.append((frame, tuple(round(v, 3) for v in position)))
+    # Measure the frozen Phase 1 envelope without letting Phase 4 wall-mounted
+    # equipment shorten the raycast. Restore viewport visibility afterwards.
+    p4_objects = [
+        obj
+        for name in PHASE4_COLLECTIONS
+        if bpy.data.collections.get(name)
+        for obj in bpy.data.collections[name].objects
+    ]
+    hidden_states = {obj.name: obj.hide_get() for obj in p4_objects}
+    for obj in p4_objects:
+        obj.hide_set(True)
+    bpy.context.view_layer.update()
     stations = []
     for label, y, width, height in (
         ("A clear", 3.25, ZONE_A["width"], ZONE_A["height"]),
@@ -561,6 +573,9 @@ def validate(scene: bpy.types.Scene, before: dict[str, tuple], assigned: dict[st
                 target_ceiling=height,
             )
         )
+    for obj in p4_objects:
+        obj.hide_set(hidden_states[obj.name])
+    bpy.context.view_layer.update()
     image_textures = [
         mat.name
         for mat in bpy.data.materials
@@ -665,7 +680,7 @@ def write_report(assigned: dict[str, list[str]], validation: dict) -> Path:
         "色彩配置",
         "  主色：低飽和汙灰牆、炭色地坪、中暗天花混凝土。",
         "  次色：暗綠灰塗裝主管、略暖的次要管、鍍鋅冷灰、米灰／綠灰控制櫃。",
-        "  點綴：極少量Muted 氧化紅閥輪，佔畫面比例很低。",
+        "  點綴：極少量氧化紅閥輪，佔畫面比例很低。",
         "  未使用純白、純黑或高飽和工廠色。",
         "",
         "粗糙度層次",
