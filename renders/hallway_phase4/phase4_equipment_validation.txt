@@ -1,0 +1,64 @@
+PHASE 4 FUNCTIONAL EQUIPMENT / MAINTENANCE INFRASTRUCTURE
+Additive equipment pass; Phase 1, Phase 2, and Phase 3 objects were not moved.
+
+ELECTRICAL
+  4 meaningful cabinet/box assemblies:
+  BOX_Junction_A_01 at right wall y=3.20
+  CABINET_Control_B_01 at right wall y=10.70
+  CABINET_Service_B_02 at right wall y=13.25
+  CABINET_Control_C_01 at right wall y=19.35
+  Each includes body, door panel/seam, hinges, handle, indicator, and cable entry.
+
+PIPE INTERFACES
+  A minor right utility line enters BOX_Junction_A_01 through a short vertical conduit.
+  B minor right utility line enters CABINET_Control_B_01; B service cabinet has a parallel cable entry.
+  C minor right utility line enters CABINET_Control_C_01.
+  The C pressure gauge is mounted below the existing offset primary pipe and valve region.
+
+GAUGES / METERS
+  pressure gauges: 3 — A right y=3.78, B right y=14.25, C pipe-mounted y=20.55
+
+VENTILATION
+  1 restrained B-zone left wall ventilation grille with three slats at y=12.05, z=1.68.
+
+CABLE SYSTEM
+  4 short conduit entries reuse the Phase 3 right-side cable-tray/service region; no wire bundle network was added.
+
+SERVICE HATCHES
+  2 subordinate access hatches: B left wall y=10.20 and C right wall y=22.20, both low and human-accessible.
+
+ZONE CHARACTER
+  A: one small junction box, one gauge, and a clean short conduit entry.
+  B: two cabinets, one gauge, one ventilation grille, two hatches, and the densest functional interfaces.
+  C: one isolated cabinet, one pipe-mounted gauge, and one low service hatch with reduced regularity.
+
+PHASE 1 CLEAR STATIONS
+  label       y       measured width   measured ceiling   target width   target ceiling
+  A clear     3.25    2.200 m          3.000 m          2.200 m       3.000 m
+  B clear    11.75    2.050 m          2.740 m          2.050 m       2.740 m
+  C clear    21.55    2.200 m          2.930 m          2.200 m       2.930 m
+
+FIRST-PERSON / GEOMETRY VALIDATION
+  Phase 4 objects: 68; mesh objects: 64
+  minimum camera side clearance: 0.829 m
+  minimum walkable width around equipment: 1.854 m
+  minimum camera overhead clearance: 2.125 m
+  camera path errors: 0
+  camera/equipment hits: 0
+  equipment/Phase 3 pipe conflicts: 0 unexpected
+  equipment/Phase 2 beam conflicts: 0 unexpected
+  access-height errors: 0
+  generic names: 0; unapplied scales: 0; below floor: 0
+
+PERFORMANCE
+  Reused linked meshes for cabinet sizes, doors, hinges, handles, vents, gauges, hatches, and conduit entries.
+  Medium-detail silhouettes only; no final textures, lighting, wires, debris, or destruction.
+
+PHASE 1 FREEZE STATUS: PASS
+PHASE 2 FREEZE STATUS: PASS
+PHASE 3 FREEZE STATUS: PASS
+PHASE 4 EQUIPMENT VALIDATION: PASS
+  Phase 1 dimensions modified: NO
+  Phase 2 structural skeleton modified: NO
+  Phase 3 primary pipe routing modified: NO
+  Phase 5 not started.
