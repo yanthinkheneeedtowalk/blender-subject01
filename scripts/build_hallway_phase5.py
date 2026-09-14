@@ -96,6 +96,8 @@ def link(nt: bpy.types.NodeTree, src, dst) -> None:
 def snapshot() -> dict[str, tuple]:
     rows = {}
     for obj in bpy.data.objects:
+        if obj.type not in {"MESH", "CURVE"}:
+            continue
         data_name = obj.data.name if obj.data else ""
         verts = len(obj.data.vertices) if obj.type == "MESH" else -1
         splines = len(obj.data.splines) if obj.type == "CURVE" else -1
@@ -109,6 +111,36 @@ def snapshot() -> dict[str, tuple]:
             splines,
         )
     return rows
+
+
+def light_positions() -> dict[str, tuple]:
+    return {
+        obj.name: tuple(round(v, 5) for v in obj.location)
+        for obj in bpy.data.objects
+        if obj.type == "LIGHT"
+    }
+
+
+def configure_inspection_lighting() -> None:
+    """Neutral evaluation lighting. Existing fixture positions stay frozen.
+
+    Phase 1 area lights originally faced the ceiling (X=180 deg).  That was
+    invisible under Workbench studio lighting, but in EEVEE it blew out the
+    ceiling and left walls/floor too dark to judge PBR response.  This pass
+    aims the same six fixtures downward and adds world fill only.
+    """
+    for obj in bpy.data.objects:
+        if obj.type != "LIGHT" or not obj.name.startswith("LIGHT.Utility"):
+            continue
+        obj.rotation_euler = (0.0, 0.0, 0.0)
+        obj.data.energy = 55.0
+        obj.data.color = (1.0, 0.97, 0.92)
+    world = bpy.context.scene.world
+    if world is not None and world.use_nodes and world.node_tree is not None:
+        background = world.node_tree.nodes.get("Background")
+        if background is not None:
+            background.inputs[0].default_value = (0.16, 0.16, 0.17, 1.0)
+            background.inputs[1].default_value = 1.15
 
 
 def clear_phase5() -> None:
@@ -258,8 +290,8 @@ def build_library() -> dict[str, bpy.types.Material]:
     mats = {
         "MAT_Wall_PaintedConcrete": build_surface(
             "MAT_Wall_PaintedConcrete",
-            (0.44, 0.43, 0.39),
-            (0.37, 0.36, 0.33),
+            (0.48, 0.46, 0.42),
+            (0.40, 0.385, 0.355),
             0.80,
             0.90,
             0.0,
@@ -524,7 +556,12 @@ def ray(scene: bpy.types.Scene, origin: Vector, direction: Vector) -> float | No
     return (location - origin).length if hit else None
 
 
-def validate(scene: bpy.types.Scene, before: dict[str, tuple], assigned: dict[str, list[str]]) -> dict:
+def validate(
+    scene: bpy.types.Scene,
+    before: dict[str, tuple],
+    lights_before: dict[str, tuple],
+    assigned: dict[str, list[str]],
+) -> dict:
     after = snapshot()
     moved = [
         name
@@ -602,9 +639,7 @@ def validate(scene: bpy.types.Scene, before: dict[str, tuple], assigned: dict[st
         for name in ("UTILITY_PRIMARY_PIPES", "UTILITY_SECONDARY_PIPES", "UTILITY_SUPPORTS")
     )
     light_moved = [
-        obj.name
-        for obj in bpy.data.objects
-        if obj.type == "LIGHT" and before.get(obj.name) != after.get(obj.name)
+        name for name, loc in light_positions().items() if lights_before.get(name) != loc
     ]
     return dict(
         moved=moved,
@@ -721,6 +756,7 @@ def write_report(assigned: dict[str, list[str]], validation: dict) -> Path:
         f"  節點總數約：{validation['node_count']}；每材質約 2 個 Noise（Detail 2–4）+ 1 個 Bump。",
         "  未使用 Displacement、體積、影像貼圖或超高頻 shader。",
         "  以既有 6 盞巡檢 Area 燈 + EEVEE 評估材質；未做最終燈光、閃爍或體積霧。",
+        "  燈具位置未改。原朝向天花，EEVEE 下無法判斷 PBR，故改為朝下並降至 55 W，世界填光強度 1.15。",
         "",
         "PHASE 1 空間凍結量測點",
         "  標籤       y       實測寬度       實測天花高度       目標寬度       目標天花高度",
@@ -771,6 +807,9 @@ def configure_inspect_render(scene: bpy.types.Scene, samples: int) -> None:
     scene.eevee.use_shadows = True
     scene.eevee.use_raytracing = False
     scene.eevee.use_fast_gi = True
+    scene.eevee.fast_gi_method = "GLOBAL_ILLUMINATION"
+    scene.eevee.fast_gi_quality = 0.45
+    scene.eevee.fast_gi_ray_count = 8
     try:
         scene.view_settings.view_transform = "Standard"
     except TypeError:
@@ -793,7 +832,7 @@ def render_playblast(scene: bpy.types.Scene) -> Path:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     frames = OUTPUT_DIR / "frames"
     frames.mkdir(parents=True, exist_ok=True)
-    configure_inspect_render(scene, 16)
+    configure_inspect_render(scene, 8)
     scene.render.image_settings.file_format = "JPEG"
     scene.render.image_settings.quality = 88
     scene.frame_start = 1
@@ -827,11 +866,13 @@ def main() -> None:
     if bpy.data.filepath and Path(bpy.data.filepath).resolve() != BLEND_PATH.resolve():
         print("Warning: expected", BLEND_PATH, "but loaded", bpy.data.filepath)
     before = snapshot()
+    lights_before = light_positions()
     clear_phase5()
     mats = build_library()
     assigned = assign_materials(mats)
+    configure_inspection_lighting()
     scene = bpy.context.scene
-    validation = validate(scene, before, assigned)
+    validation = validate(scene, before, lights_before, assigned)
     write_report(assigned, validation)
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
     print("Saved", BLEND_PATH)
