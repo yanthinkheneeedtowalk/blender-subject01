@@ -1,0 +1,96 @@
+PHASE 5 材質身份建立
+僅指派 PBR 材質庫；未移動 Phase 1–4 幾何、設備或相機路徑。未開始風化、最終燈光或 Phase 6。
+
+材質庫
+  MAT_Wall_PaintedConcrete  ×6  — 牆體殼層與 Zone B 內縮牆面
+    例：WALL.East.InsetB, WALL.East.Shell, WALL.End, WALL.Start …
+  MAT_Floor_IndustrialConcrete  ×1  — 走廊地坪
+    例：FLOOR
+  MAT_Ceiling_AgedConcrete  ×3  — 天花殼層與 Zone B/C soffit
+    例：CEIL.Shell, CEIL.SoffitB, CEIL.SoffitC
+  MAT_Structure_PaintedSteel  ×48  — 結構樑、墩柱、牆撐、閥體／閥桿
+    例：BEAM.A.01, BEAM.A.02, BEAM.AB, BEAM.B.01 …
+  MAT_Pipe_DarkPaintedSteel  ×17  — 主管線、主管彎頭與主管法蘭
+    例：ELBOW_Primary_B_WallIngress_01, ELBOW_Primary_C_01, ELBOW_Primary_C_02, FLANGE_Primary_B_WallIngress_01 …
+  MAT_Pipe_Secondary  ×22  — 次要／小型管線、跨接、立管、連接環與小型法蘭
+    例：CONNECTOR_Secondary_B_Cross_Left, CONNECTOR_Secondary_B_Cross_Right, CONNECTOR_Secondary_C_Cross_Left, CONNECTOR_Secondary_C_Cross_Right …
+  MAT_Metal_Galvanized  ×142  — 支架、管夾、吊架、牆板、cable tray、鉸鏈／把手／艙門框、壓力表殼
+    例：BOX_Junction_A_01_Handle, BOX_Junction_A_01_Hinge_01, BOX_Junction_A_01_Hinge_02, BRACE_CeilingSide_L_A_3_55 …
+  MAT_Cabinet_PaintedMetal  ×18  — 電氣箱、控制櫃、門板、指示區與維修艙門板
+    例：BOX_Junction_A_01, BOX_Junction_A_01_DoorPanel, BOX_Junction_A_01_DoorSeam, BOX_Junction_A_01_Indicator …
+  MAT_Vent_GalvanizedMetal  ×4  — Zone B 壁面通風格柵與格柵片
+    例：VENT_Wall_B_01, VENT_Wall_B_01_Slat_01, VENT_Wall_B_01_Slat_02, VENT_Wall_B_01_Slat_03
+  MAT_Rubber_Dark  ×18  — conduit、電纜入口、表盤與指針
+    例：BOX_Junction_A_01_CableEntry, CABINET_Control_B_01_CableEntry, CABINET_Control_C_01_CableEntry, CABINET_Service_B_02_CableEntry …
+  MAT_Valve_IndustrialAccent  ×2  — 僅兩顆閥輪，作為極少量工業警示色
+    例：VALVE_Handwheel_B_01, VALVE_Handwheel_C_01
+
+色彩配置
+  主色：低飽和汙灰牆、炭色地坪、中暗天花混凝土。
+  次色：暗綠灰塗裝主管、略暖的次要管、鍍鋅冷灰、米灰／綠灰控制櫃。
+  點綴：極少量氧化紅閥輪，佔畫面比例很低。
+  未使用純白、純黑或高飽和工廠色。
+
+粗糙度層次
+  牆面混凝土：0.80–0.90（高）
+  地坪混凝土：0.66–0.82（中高，局部略較牆面平滑）
+  天花混凝土：0.78–0.88（高，但微結構頻率較低）
+  結構塗裝鋼：0.62–0.74（中高）
+  主管塗裝：0.48–0.62（中，保留可讀高光）
+  次要管塗裝：0.52–0.66（中）
+  鍍鋅金屬：0.44–0.58（中，非鏡面）
+  橡膠：0.86–0.95（高）
+  閥輪點綴：0.54–0.66（中）
+
+金屬響應
+  金屬：MAT_Metal_Galvanized、MAT_Vent_GalvanizedMetal（metallic 約 0.58–0.78，高粗糙，非鉻）。
+  非金屬塗裝：牆、地、天花、結構樑、主管、次要管、控制櫃、閥輪、橡膠。
+  塗裝金屬不以 metallic 1.0 冒充裸金屬。
+
+微表面
+  全部使用世界座標程序化 Noise + 低強度 Bump，無點陣貼圖、無 Displacement。
+  大尺度 noise 約 3–28（公尺級明度變化極弱），細尺度 28–92（公分／毫米級粒面）。
+  目的是打斷完美 CGI 光滑，而不是讓每個表面看起來像程序化地形。
+
+UV／對應
+  發現 67 個 mesh 缺少 UV。
+  未改幾何、未展開 UV。改以 Geometry Position 世界空間映射，避免 24 m 牆面與 curve 管線被拉伸成地形紋理。
+  管線與重複模組因此維持一致的物理紋理尺度。
+
+ZONE A
+  同一材質家族；牆面與櫃體較均勻，櫃體偏米灰／工業米色，對比較克制。
+ZONE B
+  同一材質家族；沿 Y 軸提高明度混合，控制櫃偏綠灰，管線層次與鍍鋅支架對比較清楚。
+ZONE C
+  同一材質家族；略更暗、略不均勻，沒有鏽蝕、裂縫或破壞。
+
+效能
+  材質數：11（可重用，無 4K 貼圖）。
+  節點總數約：133；每材質約 2 個 Noise（Detail 2–4）+ 1 個 Bump。
+  未使用 Displacement、體積、影像貼圖或超高頻 shader。
+  以既有 6 盞巡檢 Area 燈 + EEVEE 評估材質；未做最終燈光、閃爍或體積霧。
+  燈具位置未改。原朝向天花，EEVEE 下無法判斷 PBR，故改為朝下並降至 55 W，世界填光強度 1.15。
+
+PHASE 1 空間凍結量測點
+  標籤       y       實測寬度       實測天花高度       目標寬度       目標天花高度
+  A clear     3.25    2.200 m       3.000 m          2.200 m       3.000 m
+  B clear    11.75    2.050 m       2.740 m          2.050 m       2.740 m
+  C clear    21.55    2.200 m       2.930 m          2.200 m       2.930 m
+
+凍結／驗證細節
+  變換被改動的物件：0
+  新增物件：0；刪除物件：0
+  相機路徑錯誤：0
+  燈具變換改動：0
+  影像貼圖：0
+
+PHASE 1 空間凍結狀態： PASS
+PHASE 2 結構凍結狀態： PASS
+PHASE 3 管線凍結狀態： PASS
+PHASE 4 設備凍結狀態： PASS
+PHASE 5 材質驗證： PASS
+  Phase 1 尺寸是否修改：否
+  Phase 2 結構骨架是否修改：否
+  Phase 3 管線路由是否修改：否
+  Phase 4 設備位置是否修改：否
+  尚未開始 Phase 6。
