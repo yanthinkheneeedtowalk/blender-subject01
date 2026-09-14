@@ -188,23 +188,19 @@ def make_wallpaper_image() -> bpy.types.Image:
     n = 1024
     img = bpy.data.images.new("WallpaperTile", n, n, alpha=False)
     pixels = [0.0] * (n * n * 4)
-    tiles = 4
     for y in range(n):
         for x in range(n):
-            u = (x / n) * tiles
-            v = (y / n) * tiles
-            fu, fv = u - math.floor(u), v - math.floor(v)
-            # Tileable trig damask.
+            fu = x / n
+            fv = y / n
             d1 = abs(math.sin(fu * math.pi * 2) * math.sin(fv * math.pi * 2))
             d2 = abs(math.sin((fu + fv) * math.pi * 2) * math.sin((fu - fv) * math.pi * 2))
             cx, cy = fu - 0.5, fv - 0.5
             diamond = abs(cx) + abs(cy)
-            motif = 0.55 * d1 + 0.25 * d2 + 0.20 * (1.0 if diamond < 0.18 else 0.0)
+            motif = 0.50 * d1 + 0.22 * d2 + 0.18 * max(0.0, 1.0 - diamond / 0.22)
             motif = max(0.0, min(1.0, motif))
-            # Paper yellow / printed ochre.
-            r = 0.78 - 0.16 * motif
-            g = 0.68 - 0.18 * motif
-            b = 0.40 - 0.10 * motif
+            r = 0.82 - 0.11 * motif
+            g = 0.72 - 0.13 * motif
+            b = 0.44 - 0.08 * motif
             i = (y * n + x) * 4
             pixels[i : i + 4] = [r, g, b, 1.0]
     img.pixels = pixels
@@ -243,7 +239,7 @@ def mat_wallpaper(tile: bpy.types.Image, space: bpy.types.Object) -> bpy.types.M
     coord.object = space
     mapn = nodes.new("ShaderNodeMapping")
     mapn.location = (-300, 80)
-    mapn.inputs["Scale"].default_value = (1.0 / 0.45, 1.0 / 0.45, 1.0 / 0.45)
+    mapn.inputs["Scale"].default_value = (1.0 / 0.52, 1.0 / 0.52, 1.0 / 0.52)
     dirt = nodes.new("ShaderNodeTexNoise")
     dirt.location = (-40, -220)
     dirt.inputs["Scale"].default_value = 3.4
@@ -380,7 +376,7 @@ def mat_emitter() -> bpy.types.Material:
     emit = nodes.new("ShaderNodeEmission")
     # Cool white. Yellow walls bounce it into a sickly yellow-green.
     emit.inputs["Color"].default_value = srgb(0.86, 0.94, 1.0)
-    emit.inputs["Strength"].default_value = 28.0
+    emit.inputs["Strength"].default_value = 48.0
     nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
     return mat
 
@@ -549,18 +545,18 @@ def add_cameras() -> None:
         bpy.context.scene.collection.objects.link(obj)
         return obj
 
-    # Standing in Main, looking at the L-stub, north opening and lights.
+    # Standing in Main, looking across the L-stub toward the north opening.
     c1 = cam(
         "CameraMain",
-        W(9.55, 1.05, 1.55),
-        W(7.40, 3.40, 1.45),
-        24,
+        W(9.85, 0.55, 1.58),
+        W(6.70, 3.35, 1.25),
+        22,
     )
     bpy.context.scene.camera = c1
-    # Just inside the entrance, first corner: hall dead-end + opening into Main.
-    cam("CameraEntrance", W(11.20, 0.85, 1.55), W(11.20, 3.60, 1.45), 28)
-    # Second corner: Corr A jog, Room A opening to the north-west.
-    cam("CameraCorner", W(5.20, 6.35, 1.55), W(5.50, 8.80, 1.40), 28)
+    # Just inside the entrance, first corner: opening west into Main.
+    cam("CameraEntrance", W(11.22, 0.48, 1.58), W(10.45, 2.85, 1.35), 24)
+    # Second corner: Hall B looking north into Corr A / Room A.
+    cam("CameraCorner", W(5.55, 5.15, 1.58), W(5.10, 8.55, 1.35), 24)
     plan = cam("CameraPlan", W(6.0, 5.0, 12.0), W(6.0, 5.0, 0.0), 35, ortho=True)
     plan.rotation_euler = (0.0, 0.0, 0.0)
 
