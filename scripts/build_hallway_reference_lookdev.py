@@ -88,38 +88,41 @@ def rebuild_reference_materials() -> None:
 
 
 def make_damp_materials():
-    damp = final_pass.make_principled("MAT_FINAL_DampConcrete", (0.030, 0.034, 0.032), 0.52, coat=0.02)
+    damp = final_pass.make_principled("MAT_FINAL_DampConcrete", (0.052, 0.058, 0.055), 0.66, coat=0.02)
+    transition = final_pass.make_principled("MAT_FINAL_DampTransition", (0.047, 0.053, 0.050), 0.42, coat=0.04)
     water = final_pass.make_principled("MAT_FINAL_ShallowWater", (0.050, 0.060, 0.057), 0.12, coat=0.22)
     bsdf = next(n for n in water.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
     if "Specular IOR Level" in bsdf.inputs:
         bsdf.inputs["Specular IOR Level"].default_value = 0.66
-    return damp, water
+    return damp, transition, water
 
 
 def create_blended_puddles() -> None:
     final_pass.clear_collection(final_pass.PUDDLE_COLLECTION)
     col = final_pass.ensure_collection(final_pass.PUDDLE_COLLECTION)
-    damp, water = make_damp_materials()
+    damp, transition, water = make_damp_materials()
     puddles = (
         ("FINAL_PUDDLE_A", -0.42, 17.9, 0.38, 0.84),
         ("FINAL_PUDDLE_B", 0.36, 20.55, 0.28, 0.58),
         ("FINAL_PUDDLE_C", -0.18, 22.55, 0.36, 0.70),
     )
     for name, x, y, rx, ry in puddles:
-        count = 28
+        count = 40
         verts = [(x, y, 0.006)]
-        for ring_scale, z in ((0.62, 0.006), (1.0, 0.004)):
+        for ring_scale, z in ((0.52, 0.006), (0.76, 0.005), (1.0, 0.004)):
             for i in range(count):
                 a = (2.0 * math.pi * i) / count
-                wobble = 1.0 + 0.10 * math.sin(i * 2.31 + y)
+                wobble = 1.0 + 0.055 * math.sin(i * 1.73 + y) + 0.025 * math.sin(i * 3.11 + x)
                 verts.append((x + rx * ring_scale * wobble * math.cos(a), y + ry * ring_scale * wobble * math.sin(a), z))
         faces = []
         mats = []
         for i in range(count):
             j = (i + 1) % count
             faces.append((0, 1 + i, 1 + j))
-            mats.append(1)
+            mats.append(2)
             faces.append((1 + i, 1 + count + i, 1 + count + j, 1 + j))
+            mats.append(1)
+            faces.append((1 + count + i, 1 + 2 * count + i, 1 + 2 * count + j, 1 + count + j))
             mats.append(0)
         mesh = bpy.data.meshes.new(f"{name}_MESH")
         mesh.from_pydata(verts, [], faces)
@@ -127,6 +130,7 @@ def create_blended_puddles() -> None:
         obj = bpy.data.objects.new(name, mesh)
         col.objects.link(obj)
         mesh.materials.append(damp)
+        mesh.materials.append(transition)
         mesh.materials.append(water)
         for poly, mat_index in zip(mesh.polygons, mats):
             poly.material_index = mat_index
