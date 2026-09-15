@@ -59,3 +59,9 @@ PHASE 9 標誌凍結狀態： PASS
 PHASE 10.5 無盡預覽驗證： PASS
   未開始 Hero Material Rebuild / Look Development。
   未開始 Phase 11。
+
+PREVIEW VIDEO
+  renders/hallway_phase10_5/phase10_5_endless_walk.mp4
+  9.00 s, 1280×720, 24 fps, H.264 yuv420p。
+  Playblast TAA 4（僅預覽）；場景存檔恢復 TAA 48、volumetric_samples 32。
+  盡頭牆不可見；遠端為燈具消失點。材料／調色未改。

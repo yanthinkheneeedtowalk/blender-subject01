@@ -70,9 +70,13 @@ PITCH_DEG = 1.2
 LENS_MM = 32.0
 CLIP_END = 130.0
 VOLUMETRIC_END = 120.0
-PLAYBLAST_SAMPLES = 10
-STILL_SAMPLES = 16
+PLAYBLAST_SAMPLES = 4
+STILL_SAMPLES = 10
 HERO_SAMPLES = 48
+PLAYBLAST_VOL_SAMPLES = 8
+HERO_VOL_SAMPLES = 32
+PLAYBLAST_VOL_TILE = "16"
+HERO_VOL_TILE = "8"
 
 # Zone C fixture offsets relative to zone start (16.70).
 C_LIGHT_OFFSETS = (
@@ -493,12 +497,16 @@ def configure_preview_eevee(scene: bpy.types.Scene, samples: int) -> None:
     scene.eevee.taa_render_samples = samples
     scene.eevee.use_raytracing = False
     scene.eevee.volumetric_end = VOLUMETRIC_END
+    scene.eevee.volumetric_samples = PLAYBLAST_VOL_SAMPLES
+    scene.eevee.volumetric_tile_size = PLAYBLAST_VOL_TILE
 
 
 def restore_hero_eevee(scene: bpy.types.Scene) -> None:
     scene.eevee.taa_render_samples = HERO_SAMPLES
     scene.eevee.use_raytracing = False
     scene.eevee.volumetric_end = VOLUMETRIC_END
+    scene.eevee.volumetric_samples = HERO_VOL_SAMPLES
+    scene.eevee.volumetric_tile_size = HERO_VOL_TILE
     scene.render.resolution_x = 1280
     scene.render.resolution_y = 720
 
