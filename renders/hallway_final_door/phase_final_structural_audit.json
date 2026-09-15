@@ -1,7 +1,7 @@
 {
   "extension_cleanup": {
-    "p105_objects_before": 0,
-    "p105_objects_removed": 0,
+    "p105_objects_before": 557,
+    "p105_objects_removed": 557,
     "orphan_datablocks_removed": {
       "meshes": 0,
       "curves": 0,
@@ -10,7 +10,7 @@
     "end_wall_restored": true
   },
   "material_remap": {
-    "legacy_slots_remapped": 0,
+    "legacy_slots_remapped": 100,
     "legacy_slot_examples": []
   },
   "door": {
