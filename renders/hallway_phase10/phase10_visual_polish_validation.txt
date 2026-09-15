@@ -1,0 +1,85 @@
+PHASE 10 氣氛／照明／材質反應打磨
+未新增管、櫃、閥、風口、標誌、結構或房間。燈具位置與開關狀態不變。
+光度參數（面積、擴散、功率、陰影濾波）與 EEVEE GI／陰影為本階段工作。
+
+LIGHT AUDIT
+  天花 RECTANGLE Area Light 寬度 0.09 m → 約 0.16–0.19 m，對應燈槽擴散片。
+  spread 提到約 2.7–2.95 rad，陰影濾波 3.2–4.4，避免銳利圖形陰影。
+  Zone A 功率略降，避免牆面過曝；Zone C 末端 WEAK 16→20 W，保留遠端資訊。
+  OFF 燈仍為 0 W。燈具位置／旋轉未改。
+  specular_factor 降至 0.46–0.58，減少櫃緣過曝。
+
+SHADOWS
+  shadow_ray_count 2→6，step 8→12，filter radius 加大。
+  接觸陰影仍由近距遮擋保留；遠處管影改為半影。
+
+DARK REGIONS
+  Fast GI quality 0.50→0.72，rays 12→24，indirect 1.05→1.32，
+  clamp_indirect 1.80→2.45，讓牆／地回光進入天花與管底。
+  World 0.30→0.36，僅作黑暗底板，不是主光。
+
+INDIRECT LIGHT
+  EEVEE Fast GI GLOBAL_ILLUMINATION，resolution 1。
+  開啟螢幕空間 ray tracing，trace_max_roughness 0.48，
+  只給中粗糙金屬／烤漆，混凝土仍以漫射為主。
+
+MATERIAL RESPONSE
+  牆：略暖、Specular 0.32→0.18。
+  地：Specular 0.28→0.34，仍高粗糙，無鏡面水窪。
+  管：Specular 0.44→0.56，微量 metallic 0.07，保留柱面高光。
+  櫃：略冷灰、Specular 0.40→0.52，Coat 0.055。
+  鍍鋅五金：Specular 略升。Phase 6 老化節點未重建。
+
+TONAL SEPARATION
+  牆暖灰 vs 櫃冷灰；管靠更暗與柱面高光；地比牆暗。
+
+DECAL INTEGRATION
+  Phase 9 11 張 decal 與 5 張 Phase 6 鋼印保留。
+  銘牌／油漆 decal 粗糙度略升，無自發光。
+
+ATMOSPHERE
+  Principled Volume density 0.0036，anisotropy 0.16。
+  volumetric_end 26 m，無 volumetric shadows（避免神光）。
+  設計為長距空氣衰減，不是可見霧帶。
+
+DEPTH
+  前景：Zone A 可讀；中景：Zone B 光影最密；背景：Zone C 更暗但仍有幾何。
+  遠端靠 C_04 WEAK 與 GI，不是 RGB 0 黑塊。
+
+RENDER QUALITY
+  引擎 EEVEE。靜幀 TAA 48。Fast GI；螢幕空間 ray tracing 關閉以保持實用取樣時間。
+  無合成器對比／暗角／CA／顆粒。
+
+HERO TEST
+  SHOT A：長廊／Zone A 建立。
+  SHOT B：Zone B 設備與管。
+  SHOT C：Zone C 隔離。
+  SHOT D：櫃／銘牌／管近景。
+
+既有缺陷（未改）：Phase 7 多數 Diffuser 共用 MAT_P7_Diffuser_Weak；
+  Phase 8 燈管皆為 MAT_P8_TubeWeak。僅調發射／粗糙，未重指定材質。
+
+PHASE 1 空間凍結量測點
+  標籤       y       實測寬度       實測天花高度       目標寬度       目標天花高度
+  A clear     3.25    2.200 m       3.000 m          2.200 m       3.000 m
+  B clear    11.75    2.050 m       2.740 m          2.050 m       2.740 m
+  C clear    21.55    2.200 m       2.930 m          2.200 m       2.930 m
+
+凍結／驗證細節
+  核心物件變換改動：0
+  核心物件刪除：0；非打磨新增：0
+  燈具位置／旋轉改動：0
+  FIX_ 變換改動：0
+  相機路徑錯誤：0
+
+PHASE 1 空間凍結狀態： PASS
+PHASE 2 結構凍結狀態： PASS
+PHASE 3 管線凍結狀態： PASS
+PHASE 4 設備凍結狀態： PASS
+PHASE 5 材質凍結狀態： PASS
+PHASE 6 老化凍結狀態： PASS
+PHASE 7 照明佈局凍結狀態： PASS
+PHASE 8 英雄打磨凍結狀態： PASS
+PHASE 9 標誌凍結狀態： PASS
+PHASE 10 視覺打磨驗證： PASS
+  尚未開始 Phase 11。
