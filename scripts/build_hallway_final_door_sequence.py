@@ -664,6 +664,12 @@ def configure_eevee(scene: bpy.types.Scene, frame_dir: Path) -> None:
     scene.eevee.volumetric_end = 35.0
     scene.eevee.volumetric_samples = 8
     scene.eevee.volumetric_tile_size = "16"
+    scene.eevee.use_raytracing = True
+    if scene.world and scene.world.node_tree:
+        volume = scene.world.node_tree.nodes.get("P10_Volume")
+        if volume is not None and "Density" in volume.inputs:
+            volume.inputs["Density"].default_value = 0.0
+    scene.eevee.use_volumetric_shadows = False
     scene.render.resolution_x = RES_X
     scene.render.resolution_y = RES_Y
     scene.render.resolution_percentage = 100
