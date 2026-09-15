@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 import bpy
+from mathutils import Vector
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -29,6 +30,22 @@ OUTPUT_DIR = ROOT / "renders" / "hallway_reference_lookdev"
 STILL_DIR = OUTPUT_DIR / "stills"
 
 LIGHT_SCALE = 0.55
+
+
+def make_camera(name, loc, target, lens=38.0):
+    old = bpy.data.objects.get(name)
+    if old is not None:
+        bpy.data.objects.remove(old, do_unlink=True)
+    data = bpy.data.cameras.new(name)
+    data.lens = lens
+    data.sensor_width = 36.0
+    data.clip_start = 0.04
+    data.clip_end = 40.0
+    cam = bpy.data.objects.new(name, data)
+    cam.location = loc
+    cam.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
+    bpy.context.scene.collection.objects.link(cam)
+    return cam
 
 
 def link(nt, src, dst):
@@ -178,7 +195,7 @@ def render_stills():
     temp = []
     paths = []
     for name, loc, target, frame in cams:
-        cam = bpy.data.objects.get("CAM_P105_WALK") if name == "REFERENCE_DOOR_LIGHT_ON" else final_pass.make_camera(name, loc, target, 40.0)
+        cam = bpy.data.objects.get("CAM_P105_WALK") if name == "REFERENCE_DOOR_LIGHT_ON" else make_camera(name, loc, target, 40.0)
         temp.append(cam)
         scene.camera = cam
         scene.frame_set(frame)
