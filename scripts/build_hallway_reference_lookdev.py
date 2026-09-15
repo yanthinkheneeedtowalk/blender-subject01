@@ -88,9 +88,11 @@ def rebuild_reference_materials() -> None:
 
 
 def make_damp_materials():
-    damp = final_pass.make_principled("MAT_FINAL_DampConcrete", (0.052, 0.058, 0.055), 0.66, coat=0.02)
-    transition = final_pass.make_principled("MAT_FINAL_DampTransition", (0.047, 0.053, 0.050), 0.42, coat=0.04)
-    water = final_pass.make_principled("MAT_FINAL_ShallowWater", (0.050, 0.060, 0.057), 0.12, coat=0.22)
+    # The outer ring uses the actual floor shader, so the damp boundary is
+    # carried primarily by roughness rather than a visible color band.
+    damp = bpy.data.materials["MAT_Floor_IndustrialConcrete"]
+    transition = final_pass.make_principled("MAT_FINAL_DampTransition", (0.090, 0.096, 0.091), 0.38, coat=0.04)
+    water = final_pass.make_principled("MAT_FINAL_ShallowWater", (0.060, 0.070, 0.067), 0.12, coat=0.22)
     bsdf = next(n for n in water.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
     if "Specular IOR Level" in bsdf.inputs:
         bsdf.inputs["Specular IOR Level"].default_value = 0.66
