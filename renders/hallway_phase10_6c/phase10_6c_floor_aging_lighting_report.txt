@@ -1,0 +1,25 @@
+PHASE 10.6C 地坪、老化與燈光一致性校正
+承接 Phase 10.6B；未重做場景，未改走廊尺度、無盡延伸、主設備、主管線或 9 秒相機。
+未渲染 9 秒成片，未進入 Phase 11。
+
+TEST_A：既有 CAM_P105_WALK 第 108 幀，最終 NORMAL／WEAK／OFF 實用螢光照明。
+TEST_B：低位地坪診斷，包含約 2–5 m 地坪與牆腳接觸。
+TEST_C：同一材質在較明亮實用燈光下的壓力測試；只暫時提高既有燈源，未改材質。
+
+FLOOR READS AS POURED CONCRETE: PASS
+FLOOR PANEL/TILE APPEARANCE REMOVED: PASS
+WALL-TO-FLOOR CONTACT: PASS
+WALL AGING UNDER NORMAL LIGHT: PASS
+CABINET MATERIAL: PASS
+PIPE COLOR / MATERIAL IDENTITY: PASS
+LIGHTING CONSISTENCY: PASS
+DARK AREA READABILITY: PASS
+LEVEL 2 IDENTITY UNDER NORMAL LIGHT: PASS
+ENDLESS CORRIDOR: PASS
+CAMERA FREEZE: PASS
+
+材質策略：宏觀澆置色差、 中觀交通／修補／濕度 MASK、微觀各向同性孔隙；地坪不使用拉伸木紋式 bump。
+牆面保留安靜區，只在低牆腳、垂直濕度路徑與維修差異處增加老化。
+燈具位置與 NORMAL／WEAK／OFF 狀態保留；面光源尺寸放大以降低硬邊管影。
+凍結檢查：非允許幾何變更 0，燈光位置變更 0，CAM_P105 路徑錯誤 0。
+等待使用者審核；停止於 Phase 10.6C。
