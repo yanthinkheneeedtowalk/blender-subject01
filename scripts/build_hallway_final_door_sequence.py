@@ -826,7 +826,16 @@ def main():
         publish(path)
         print("setup complete", audit)
         return
-    stills = render_stills() if mode in {"stills", "short", "final"} else []
+    expected_stills = [
+        STILL_DIR / "FINAL_DARK_WALK.jpg",
+        STILL_DIR / "FINAL_PUDDLE_REFLECTION.jpg",
+        STILL_DIR / "FINAL_DOOR_LIGHT_ON.jpg",
+        STILL_DIR / "FINAL_DOOR_HALF_OPEN.jpg",
+    ]
+    if mode in {"stills", "short", "final"}:
+        stills = expected_stills if all(path.exists() for path in expected_stills) else render_stills()
+    else:
+        stills = []
     short_count = render_short_temporal() if mode in {"short", "final"} else None
     video = encode_final() if mode == "final" else None
     path = report(audit, stills, video, short_count)
