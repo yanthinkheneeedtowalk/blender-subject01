@@ -91,7 +91,7 @@ def make_damp_materials():
     # The outer ring uses the actual floor shader, so the damp boundary is
     # carried primarily by roughness rather than a visible color band.
     damp = bpy.data.materials["MAT_Floor_IndustrialConcrete"]
-    transition = final_pass.make_principled("MAT_FINAL_DampTransition", (0.090, 0.096, 0.091), 0.38, coat=0.04)
+    transition = damp
     water = final_pass.make_principled("MAT_FINAL_ShallowWater", (0.060, 0.070, 0.067), 0.12, coat=0.22)
     bsdf = next(n for n in water.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
     if "Specular IOR Level" in bsdf.inputs:
