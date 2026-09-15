@@ -1,0 +1,12 @@
+REFERENCE-DIRECTED LOOKDEV STILL REALITY AUDIT
+使用 provided reference 的材質語言方向：髒舊澆置混凝土、局部濕潤、深暗走廊、局部門燈主光。
+本輪未改 corridor geometry、door/camera timing、beam cleanup、pipes/equipment placement。
+
+THREE LARGEST PREVIOUS CG GIVEAWAYS CORRECTED:
+1. Hero floor legacy material slot was remapped and received non-uniform grime/roughness history.
+2. Polygon puddle edges were replaced with damp-concrete transition rings and shadowless shallow water.
+3. Corridor practicals were reduced to weak localized light; only the door practical remains dominant after ignition.
+
+STILL OUTPUTS: PASS
+Rendered: REFERENCE_DRY_FLOOR.jpg, REFERENCE_DAMP_TRANSITION.jpg, REFERENCE_PUDDLE_REFLECTION.jpg, REFERENCE_DOOR_LIGHT_ON.jpg
+Waiting for visual review before validation video.
