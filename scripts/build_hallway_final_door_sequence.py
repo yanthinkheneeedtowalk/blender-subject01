@@ -246,14 +246,14 @@ def build_door_materials() -> dict[str, bpy.types.Material]:
     noise.inputs["Scale"].default_value = 18.0
     noise.inputs["Detail"].default_value = 3.0
     ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = (0.30, 0.28, 0.23, 1.0)
-    ramp.color_ramp.elements[1].color = (0.58, 0.55, 0.47, 1.0)
+    ramp.color_ramp.elements[0].color = (0.40, 0.38, 0.32, 1.0)
+    ramp.color_ramp.elements[1].color = (0.72, 0.68, 0.58, 1.0)
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     nt.links.new(tex.outputs["Generated"], noise.inputs["Vector"])
     nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
-    bsdf.inputs["Roughness"].default_value = 0.58
+    bsdf.inputs["Roughness"].default_value = 0.54
     if "Coat Weight" in bsdf.inputs:
         bsdf.inputs["Coat Weight"].default_value = 0.04
     nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
@@ -353,11 +353,11 @@ def create_door() -> dict:
 def create_puddles() -> dict:
     clear_collection(PUDDLE_COLLECTION)
     col = ensure_collection(PUDDLE_COLLECTION)
-    water = make_principled("MAT_FINAL_ShallowWater", (0.022, 0.030, 0.029), 0.20, coat=0.18)
+    water = make_principled("MAT_FINAL_ShallowWater", (0.045, 0.055, 0.052), 0.14, coat=0.26)
     nt = water.node_tree
     bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
     if "Specular IOR Level" in bsdf.inputs:
-        bsdf.inputs["Specular IOR Level"].default_value = 0.52
+        bsdf.inputs["Specular IOR Level"].default_value = 0.62
 
     puddles = (
         ("FINAL_PUDDLE_A", -0.42, 17.9, 0.31, 0.72, 0.006),
@@ -480,7 +480,7 @@ def create_door_fixture() -> None:
     light = bpy.data.objects.new(DOOR_LIGHT, light_data)
     light.location = (0.0, 23.66, 2.70)
     col.objects.link(light)
-    events = [(1, 0.0), (191, 0.0), (193, 42.0), (195, 0.0), (200, 34.0), (204, 0.0), (240, 0.0), (241, 48.0), (FINAL_END, 48.0)]
+    events = [(1, 0.0), (191, 0.0), (193, 52.0), (195, 0.0), (200, 42.0), (204, 0.0), (240, 0.0), (241, 62.0), (FINAL_END, 62.0)]
     set_fixture_event(DOOR_LIGHT, events, 0.0)
     # Door fixture has its own tube materials; key them in sync with the Area.
     for frame, energy in events:
@@ -490,7 +490,7 @@ def create_door_fixture() -> None:
             mat = obj.data.materials[0]
             inp = emission_input(mat)
             if inp is not None:
-                inp.default_value = 1.9 if energy > 0.0 else 0.0
+                inp.default_value = 2.2 if energy > 0.0 else 0.0
                 inp.keyframe_insert(data_path="default_value", frame=frame)
     return {"door_light": DOOR_LIGHT, "events": events, "stable_on_frame": 241}
 
@@ -589,6 +589,13 @@ def audit_scene(before: dict | None = None) -> dict:
 
 def setup_scene() -> dict:
     # Capture audit before mutation.
+    audit_path = OUTPUT_DIR / "phase_final_structural_audit.json"
+    previous_audit = {}
+    if audit_path.exists():
+        try:
+            previous_audit = json.loads(audit_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            previous_audit = {}
     before = audit_scene()
     cleanup = remove_fake_extension()
     rebuild_validated_materials()
@@ -603,6 +610,16 @@ def setup_scene() -> dict:
     scene.camera = bpy.data.objects[WALK_CAM]
     scene.frame_set(1)
     after = audit_scene(before)
+    if previous_audit:
+        old_cleanup = previous_audit.get("extension_cleanup", {})
+        old_remap = previous_audit.get("material_remap", {})
+        for key in ("p105_objects_before", "p105_objects_removed"):
+            after_cleanup_value = cleanup.get(key, 0)
+            cleanup[key] = max(after_cleanup_value, old_cleanup.get(key, 0))
+        remap["legacy_slots_remapped"] = max(
+            remap.get("legacy_slots_remapped", 0),
+            old_remap.get("legacy_slots_remapped", 0),
+        )
     audit = {
         "extension_cleanup": cleanup,
         "material_remap": remap,
@@ -619,7 +636,7 @@ def setup_scene() -> dict:
         ),
     }
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    (OUTPUT_DIR / "phase_final_structural_audit.json").write_text(
+    audit_path.write_text(
         json.dumps(audit, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
