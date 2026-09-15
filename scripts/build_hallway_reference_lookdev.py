@@ -111,7 +111,7 @@ def create_blended_puddles() -> None:
     for name, x, y, rx, ry in puddles:
         count = 40
         verts = [(x, y, 0.006)]
-        for ring_scale, z in ((0.52, 0.006), (0.76, 0.005), (1.0, 0.004)):
+        for ring_scale, z in ((0.52, 0.003), (0.76, 0.003), (1.0, 0.003)):
             for i in range(count):
                 a = (2.0 * math.pi * i) / count
                 wobble = 1.0 + 0.055 * math.sin(i * 1.73 + y) + 0.025 * math.sin(i * 3.11 + x)
