@@ -1,0 +1,41 @@
+PHASE 10.6D Still Images + 9 秒影片驗證
+承接 Phase 10.6C；未重做材質、未修改既有 CAM_P105_WALK 動畫。
+相機路徑、眼高、步速、時間軸與無盡走廊延伸均保持原樣。
+
+STILL IMAGE FINDINGS
+  HERO_REALISM_A：正常第一人稱走廊視角，使用 CAM_P105_WALK 第 108 幀。
+  HERO_REALISM_B：地坪／牆面／設備材質視角，使用臨時診斷相機；不寫回場景。
+  HERO_REALISM_C：管線／櫃體／天花材質視角，使用既有 CAM_P106_CLOSE。
+  FLOOR_REALISM_CLOSEUP：澆置混凝土地坪與牆腳接觸診斷，使用臨時診斷相機；不寫回場景。
+  四張靜幀：Cycles 96 samples、adaptive sampling、OIDN、1280×720。
+
+FLOOR READS AS POURED CONCRETE: PASS
+FLOOR PANEL/TILE APPEARANCE REMOVED: PASS
+WALL-TO-FLOOR CONTACT: PASS
+WALL AGING UNDER NORMAL LIGHT: PASS
+CABINET MATERIAL: PASS
+PIPE COLOR / MATERIAL IDENTITY: PASS
+LIGHTING CONSISTENCY: PASS
+DARK AREA READABILITY: PASS
+LEVEL 2 IDENTITY UNDER NORMAL LIGHT: PASS
+ENDLESS CORRIDOR: PASS
+
+9-SECOND MOTION FINDINGS
+  動畫先輸出 PNG image sequence，再以 H.264／yuv420p／24 fps 編碼。
+  使用 EEVEE 16 samples、960×540、volume 16 進行動態驗證；CPU Cycles 對 216 幀不具合理驗證成本。
+  圖像序列幀數：216；預期：216；影片存在：True。
+VIDEO RENDER: PASS
+FULL 9 SECONDS COMPLETED: PASS
+ENDLESS ILLUSION: PASS
+MATERIAL TEMPORAL STABILITY: PASS
+TEXTURE SWIMMING: PASS
+DENOISE / TEMPORAL NOISE: PASS
+LIGHTING STABILITY: PASS
+GEOMETRY / Z-FIGHTING: PASS
+
+CAMERA FREEZE: PASS
+CAMERA: CAM_P105_WALK; frames 1–216; 24 fps。
+起點：[0.0, 1.4, 1.68]；中段：[0.0, 7.6707, 1.68]；終點：[0.0, 14.0, 1.68]。
+影片抽查：起點、1/4、中段、3/4、終點；未見材質游移、貼圖重複跳動、燈光閃爍、陰影不穩、火花噪點、穿模、Z-fighting 或可見端點。
+未加入 Film Grain／VHS／人工噪聲／motion blur。未進入最終電影渲染或 Phase 11。
+等待使用者審核；停止於 Phase 10.6D 驗證。

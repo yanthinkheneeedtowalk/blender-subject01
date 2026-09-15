@@ -1,0 +1,27 @@
+{
+  "camera_keys_unchanged": true,
+  "camera": "CAM_P105_WALK",
+  "frame_start": 1,
+  "frame_end": 216,
+  "fps": 24,
+  "start": [
+    0.0,
+    1.4,
+    1.68
+  ],
+  "middle": [
+    0.0,
+    7.6707,
+    1.68
+  ],
+  "end": [
+    0.0,
+    14.0,
+    1.68
+  ],
+  "camera_layout_unchanged": true,
+  "walk_height": true,
+  "walk_axis": true,
+  "frame_count": 216,
+  "video": "/workspace/renders/hallway_phase10_6d/phase10_6d_realism_validation.mp4"
+}
