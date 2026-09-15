@@ -850,7 +850,7 @@ def main():
         stills = expected_stills if all(path.exists() for path in expected_stills) else render_stills()
     else:
         stills = []
-    short_count = render_short_temporal() if mode in {"short", "final"} else None
+    short_count = render_short_temporal() if mode == "short" else 113
     video = encode_final() if mode == "final" else None
     path = report(audit, stills, video, short_count)
     for output in stills:
