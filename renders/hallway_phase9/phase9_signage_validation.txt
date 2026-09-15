@@ -1,0 +1,85 @@
+PHASE 9 標誌／識別／表面敘事
+未移動牆、管、主設備、走廊尺寸、燈光或 Phase 8 英雄幾何。
+既有 Phase 6 鋼印（PN-04、INSP 03-98、CW-2、ACCESS、U-17）保留不改。
+
+SIGNAGE SYSTEM
+  命名慣例：Plant Utility Corridor 的英文工業代碼。
+  ELEC-A## / ELEC-B## / ELEC-C##＝電氣櫃；SVC-B##＝維修櫃；
+  PN-##＝接線盒（沿用 PN-04）；P-##＝左主管；CW-#＝右伴管（沿用 CW-2）；
+  V-2B＝2 號線 Zone B 閥；VENT-##＝通風；U-##＝孤立回路（沿用 U-17）。
+  字體：Liberation Sans Bold 設備碼、Liberation Sans 警告副標、
+  DejaVu Sans Mono 巡檢日期。無裝飾／恐怖／科幻字體。全英語。
+
+EQUIPMENT LABELS
+  P9_ELEC_A04：Zone A 接線盒銘牌 y=3.20，ELEC-A04。
+  P9_ELEC_B12：Zone B 控制櫃銘牌 y=10.70，ELEC-B12。
+  P9_SVC_B04：Zone B 維修／電氣櫃銘牌 y=13.25，SVC-B04。
+  P9_ELEC_C07：Zone C 孤立櫃銘牌 y=19.42，褪色 ELEC-C07。
+  P9_VENT_03：Zone B 左牆通風 y=12.05，VENT-03。
+  P9_VALVE_V2B：Zone B 閥前 y=14.38，V-2B。
+
+PIPE IDENTIFICATION
+  P9_PIPE_P02：Zone A 左主管 y=3.10，P-02 加流向箭頭（朝 Zone C／+Y）。
+  既有 MARK_PIPE_CW2：Zone B 右牆 CW-2，不重複上色。
+  未替每根管子上色帶；沿用 Phase 8 幾何識別環。
+
+WARNING SIGNAGE
+  P9_WARN_HV_B：HIGH VOLTAGE + AUTHORIZED PERSONNEL，貼在 SVC-B04 電氣櫃門。
+    理由：該櫃屬 EQUIPMENT_ELECTRICAL。
+  P9_WARN_HOT_B：HOT SURFACE，閥件下方牆面。
+    理由：鄰近 y=14.62 熱製程閥／主管。
+  無空白牆警告、無遊戲 UI 箭頭。
+
+MAINTENANCE HISTORY
+  既有 MARK_INSP_B：控制櫃 INSP 03-98。
+  P9_INSP_B_SVC：SVC-B04 門下角貼紙 INSP 11-02／OK／M.H.，一角剝落。
+  日期只暗示曾有人巡檢，不建立劇情年表。
+
+ZONE A
+  最清楚、最程序化：ELEC-A04 銘牌、P-02 流向、既有 PN-04。
+
+ZONE B
+  資訊最密但不堆字：ELEC-B12、SVC-B04、HIGH VOLTAGE、V-2B、VENT-03、
+  HOT SURFACE、INSP 11-02、地坪定位框，加上既有 INSP 03-98 與 CW-2。
+
+ZONE C
+  刻意安靜：僅褪色 ELEC-C07，加上既有 ACCESS 與 U-17。無恐怖字句。
+
+DECAL IMPLEMENTATION
+  薄平面 overlay，hashed-alpha 圖集，無自發光。
+  銘牌前約 3 mm、櫃門／牆約 6–7 mm、管面約 5 mm、地坪 +3.5 mm。
+  visible_shadow=False。一張 1024 圖集，四種粗糙度材質共用。
+
+PERFORMANCE
+  新增 decal 11（主標 6、次標 5）。
+  材質 4，圖集 1。Phase 6 鋼印仍為 5。
+  Phase 8 物件維持 209。
+
+SCREENSHOT TEST
+  SHOT A：Zone A 建立可讀識別，不變成牆面文字。
+  SHOT B：Zone B 密度最高，設備碼與警告可讀。
+  SHOT C：Zone C 仍隔離，只有褪色銘牌。
+
+PHASE 1 空間凍結量測點
+  標籤       y       實測寬度       實測天花高度       目標寬度       目標天花高度
+  A clear     3.25    2.200 m       3.000 m          2.200 m       3.000 m
+  B clear    11.75    2.050 m       2.740 m          2.050 m       2.740 m
+  C clear    21.55    2.200 m       2.930 m          2.200 m       2.930 m
+
+凍結／驗證細節
+  核心物件變換改動：0
+  核心物件刪除：0；非標誌新增：0
+  相機路徑錯誤：0
+  Phase 7 燈光改動：0
+  Phase 7 燈具變換改動：0
+
+PHASE 1 空間凍結狀態： PASS
+PHASE 2 結構凍結狀態： PASS
+PHASE 3 管線凍結狀態： PASS
+PHASE 4 設備凍結狀態： PASS
+PHASE 5 材質凍結狀態： PASS
+PHASE 6 老化凍結狀態： PASS
+PHASE 7 照明凍結狀態： PASS
+PHASE 8 英雄打磨凍結狀態： PASS
+PHASE 9 敘事驗證： PASS
+  尚未開始 Phase 10。
