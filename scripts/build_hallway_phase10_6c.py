@@ -83,6 +83,11 @@ def sep_xyz(nt, vector, loc):
     return node.outputs["X"], node.outputs["Y"], node.outputs["Z"]
 
 
+def generated_pos(nt, loc=(-980, 40)):
+    tex = p106.tex_coord(nt, loc)
+    return tex.outputs["Generated"]
+
+
 def broad_color(nt, fac, dark, light, loc):
     ramp = nt.nodes.new("ShaderNodeValToRGB")
     ramp.location = loc
@@ -98,7 +103,7 @@ def broad_color(nt, fac, dark, light, loc):
 def rebuild_wall(mat: bpy.types.Material) -> None:
     """Keep broad quiet areas, but retain age when the wall is well lit."""
     nt = p106b.reset_tree(mat)
-    pos = geom_pos(nt)
+    pos = generated_pos(nt, (-980, 40))
     _x, _y, z = sep_xyz(nt, pos, (-820, 40))
     macro = p106.noise(nt, pos, 0.22, 1.2, (-620, 300), 0.30)
     meso = p106.noise(nt, pos, 1.45, 4.0, (-620, 100), 0.46, 0.05)
@@ -149,8 +154,8 @@ def rebuild_wall(mat: bpy.types.Material) -> None:
 def rebuild_floor(mat: bpy.types.Material) -> None:
     """Build isotropic, multi-scale concrete without panel-like repetition."""
     nt = p106b.reset_tree(mat)
-    pos = geom_pos(nt)
-    x, _y, _z = sep_xyz(nt, pos, (-860, 40))
+    pos = generated_pos(nt, (-980, 40))
+    generated_x, _generated_y, _generated_z = sep_xyz(nt, pos, (-860, 40))
     macro = p106.noise(nt, pos, 0.16, 1.0, (-660, 360), 0.26)
     medium = p106.noise(nt, pos, 1.15, 3.0, (-660, 160), 0.42, 0.06)
     traffic = p106.noise(nt, pos, 3.8, 3.0, (-660, -20), 0.44, 0.08)
@@ -176,8 +181,9 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
         nt, p106.mathn(nt, "MULTIPLY", (-160, -20), traffic_m, 0.22),
         aged, dust, (280, 220),
     )
-    abs_x = p106.mathn(nt, "ABSOLUTE", (-420, -180), x, 0.0)
-    edge_m = p106.map_range(nt, abs_x, 0.52, 1.08, 0.0, 0.28, (-160, -180))
+    centered_x = p106.mathn(nt, "SUBTRACT", (-420, -180), generated_x, 0.5)
+    abs_x = p106.mathn(nt, "ABSOLUTE", (-240, -180), centered_x, 0.0)
+    edge_m = p106.map_range(nt, abs_x, 0.38, 0.50, 0.0, 0.28, (-40, -180))
     edge_dirt = p106.mix_col(
         nt, edge_m, worn, dust, (280, 80),
     )
@@ -213,11 +219,12 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
 def rebuild_cabinet(mat: bpy.types.Material) -> None:
     """Retain 10.6B painted steel, with a little more operational dulling."""
     nt = p106b.reset_tree(mat)
-    pos = geom_pos(nt)
-    _x, y, _z = sep_xyz(nt, pos, (-820, 80))
+    pos = generated_pos(nt, (-980, 40))
+    info = nt.nodes.new("ShaderNodeObjectInfo")
+    info.location = (-820, 360)
+    newer = info.outputs["Random"]
     peel = p106.noise(nt, pos, 94.0, 6.0, (-620, 40), 0.46)
     wear = p106.noise(nt, pos, 6.0, 2.0, (-620, 240), 0.40)
-    newer = p106.map_range(nt, y, 0.5, 20.0, 0.0, 1.0, (-360, 360))
     a_new, a_old = (0.158, 0.172, 0.164), (0.090, 0.108, 0.101)
     b_new, b_old = (0.126, 0.144, 0.136), (0.070, 0.086, 0.080)
     new_col = p106.mix_col(nt, p106.map_range(nt, peel.outputs["Fac"], 0.3, 0.7, 0.0, 0.14, (-360, 160)), a_new, b_new, (-80, 220))
