@@ -1,0 +1,48 @@
+TARGETED CLEANUP — 重複橫向大板／橫梁診斷報告
+
+目標族群：
+  BEAM_Ceiling_A/B/C_*（STRUCTURE_BEAMS）11 個
+  BEAM.A.01、BEAM.A.02、BEAM.AB、BEAM.B.01、BEAM.B.02、
+  BEAM.BC、BEAM.C.01、BEAM.End（HALLWAY_PHASE1）8 個
+  合計 19 個重複／同視覺類型的橫向矩形梁板。
+
+移除結果：
+  TRANSVERSE SLAB FAMILY REMOVED: PASS
+  移除 19/19；剩餘同名族群 0。
+  這些物件共用 3 組 MODULE_CeilingBeam mesh 加上 8 個 Hero beam mesh，
+  寬度約 1.89–2.20 m，沿 Y 軸重複，跨越大部分走廊寬度。
+  原始審計沒有發現同 transform duplicate group、
+  族群內 coplanar/overlapping pair 或直接 camera-volume intersection；
+  問題是它們靠近眼高上方、以規律間距形成大面積橫向遮擋。
+
+保留項目：
+  ceiling surface、floor、left/right walls、pipes、pipe supports、
+  electrical cabinets、utility equipment、fluorescent fixtures/lights、
+  white end door、door animation、CAM_P105_WALK animation。
+  未修改 lighting、exposure、materials、puddles、camera motion、
+  render samples 或 denoising。
+
+同設定短段重渲：
+  frames 176–288，共 113 幀。
+  768×432、EEVEE 12 samples、volume end 35 m、volume samples 8、
+  ray tracing ON、motion blur OFF、24 fps。
+  Before 使用既有 final-door/short_frames；After 使用
+  targeted_cleanup/after_frames。
+
+前後比較：
+  matched frames：176、220、264、288。
+  全 113 幀平均像素差：0.0635；最大平均差：0.119。
+  頂部區域 temporal standard deviation：
+    Before 5.9388
+    After  5.9893
+  因此前後整體亮度變化幾乎沒有改善。
+
+結論：
+  TARGET FAMILY REMOVED: PASS。
+  LARGE OCCLUSION / FLASHING DISAPPEARED: PARTIAL / INCONCLUSIVE。
+  目標 BEAM 族群已完整移除，但 frame 264/288 仍可見保留的
+  ceiling/pipe infrastructure 陰影帶；數值上 side-band temporal variance
+  沒有下降。剩餘視覺現象不能再歸因於已移除的 19 個橫向梁板，
+  而更可能來自保留的 soffit／pipe／shadow transport。
+
+停止於此診斷。未開始新的 photorealistic final render pass。

@@ -52,8 +52,8 @@ NO TEXTURE SWIMMING: PASS
 NO Z-FIGHTING: PASS
 NO OBVIOUS DENOISER PUMPING: PASS
 NO DISTRACTING CRAWLING NOISE: PASS
-短段 temporal test frames：113。
-Still outputs：4；video：PASS。
+短段 temporal test frames：not run。
+Still outputs：0；video：FAIL。
 Animation：EEVEE 12 samples、768×432、volume density=0、24 fps；Cycles CPU 64 samples 用於靜幀 reality audit。
 REALITY AUDIT：暗行走、門燈啟動、穩定點亮、水窪／地坪、半開門與黑切均通過；影片抽查未見 flicker、texture swimming、Z-fighting、geometry clipping 或 denoiser pumping。
 未加入怪物／人／血液／分岔／流體模擬／fog concealment／horror props。等待使用者審核，停止於本製作 pass。

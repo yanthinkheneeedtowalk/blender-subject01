@@ -378,9 +378,10 @@ def create_puddles() -> dict:
         obj = bpy.data.objects.new(name, mesh)
         col.objects.link(obj)
         mesh.materials.append(water)
-        bevel = obj.modifiers.new("FINAL shallow water edge", "BEVEL")
-        bevel.width = 0.008
-        bevel.segments = 2
+        # A zero-thickness water surface must not cast a black raised edge.
+        # Keep the boundary irregular, but let concrete own the contact edge.
+        if hasattr(obj, "visible_shadow"):
+            obj.visible_shadow = False
         created.append(name)
     return {"puddles": created, "wet_area_fraction_estimate": 0.055}
 

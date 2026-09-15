@@ -1,0 +1,210 @@
+{
+  "family": "BEAM.* + BEAM_Ceiling_A/B/C_*",
+  "collections": [
+    "HALLWAY_PHASE1",
+    "STRUCTURE_BEAMS"
+  ],
+  "count_before": 8,
+  "objects": [
+    {
+      "name": "BEAM.A.01",
+      "mesh": "BEAM.A.01",
+      "location": [
+        0.0,
+        2.665,
+        2.94
+      ],
+      "dimensions": [
+        2.2,
+        0.23,
+        0.12
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "HALLWAY_PHASE1"
+      ]
+    },
+    {
+      "name": "BEAM.A.02",
+      "mesh": "BEAM.A.02",
+      "location": [
+        0.0,
+        5.465,
+        2.94
+      ],
+      "dimensions": [
+        2.2,
+        0.23,
+        0.12
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "HALLWAY_PHASE1"
+      ]
+    },
+    {
+      "name": "BEAM.AB",
+      "mesh": "BEAM.AB",
+      "location": [
+        0.0,
+        8.35,
+        2.87
+      ],
+      "dimensions": [
+        2.2,
+        0.8,
+        0.26
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "HALLWAY_PHASE1"
+      ]
+    },
+    {
+      "name": "BEAM.B.01",
+      "mesh": "BEAM.B.01",
+      "location": [
+        0.0,
+        11.265,
+        2.82
+      ],
+      "dimensions": [
+        2.05,
+        0.23,
+        0.36
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "HALLWAY_PHASE1"
+      ]
+    },
+    {
+      "name": "BEAM.B.02",
+      "mesh": "BEAM.B.02",
+      "location": [
+        0.0,
+        13.665,
+        2.82
+      ],
+      "dimensions": [
+        2.05,
+        0.23,
+        0.36
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "HALLWAY_PHASE1"
+      ]
+    },
+    {
+      "name": "BEAM.BC",
+      "mesh": "BEAM.BC",
+      "location": [
+        0.0,
+        16.1,
+        2.935
+      ],
+      "dimensions": [
+        2.2,
+        0.8,
+        0.13
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "HALLWAY_PHASE1"
+      ]
+    },
+    {
+      "name": "BEAM.C.01",
+      "mesh": "BEAM.C.01",
+      "location": [
+        0.0,
+        19.265,
+        2.915
+      ],
+      "dimensions": [
+        2.2,
+        0.23,
+        0.17
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "HALLWAY_PHASE1"
+      ]
+    },
+    {
+      "name": "BEAM.End",
+      "mesh": "BEAM.End",
+      "location": [
+        0.0,
+        23.615,
+        2.94
+      ],
+      "dimensions": [
+        2.2,
+        0.33,
+        0.12
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "HALLWAY_PHASE1"
+      ]
+    }
+  ],
+  "duplicate_transform_groups": [],
+  "duplicate_transform_group_count": 0,
+  "coplanar_or_overlapping_family_pairs": 0,
+  "camera_path_intersections": 0,
+  "finding": "Repeated transverse ceiling beam family; no camera-volume intersection, but each member spans most of the ceiling width and passes close above the eye line, creating the moving dark bands.",
+  "removed": [
+    "BEAM.A.01",
+    "BEAM.A.02",
+    "BEAM.AB",
+    "BEAM.B.01",
+    "BEAM.B.02",
+    "BEAM.BC",
+    "BEAM.C.01",
+    "BEAM.End"
+  ],
+  "count_after": 0,
+  "preserved": {
+    "floor": true,
+    "walls": true,
+    "ceiling": true,
+    "pipes": true,
+    "door": true,
+    "walk_camera": true
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "before_frame_count": 113,
+  "after_frame_count": 113,
+  "same_settings": {
+    "resolution": [
+      768,
+      432
+    ],
+    "eevee_samples": 12,
+    "volume_end": 35.0,
+    "volume_samples": 8,
+    "raytracing": true,
+    "motion_blur": false,
+    "fps": 24,
+    "range": [
+      176,
+      288
+    ]
+  },
+  "comparison": "Before/after short sections use the same 113 frames and saved final-door EEVEE settings; inspect matched frames 176, 220, 264, 288.",
+  "target_family_remaining": 0
+}
