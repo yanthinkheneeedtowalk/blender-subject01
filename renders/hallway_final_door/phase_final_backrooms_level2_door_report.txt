@@ -1,0 +1,59 @@
+BACKROOMS LEVEL 2 FINAL MAJOR PRODUCTION PASS
+15 秒白色工業服務門序列；Traditional Chinese technical report
+
+STRUCTURE / FLICKER AUDIT
+ENDLESS EXTENSION REMOVED: PASS
+ORIGINAL HERO CORRIDOR PRESERVED: PASS
+DUPLICATE GEOMETRY CLEANED: PASS
+Z-FIGHTING REMOVED: PASS
+DUPLICATE LIGHTS REMOVED: PASS
+WALL.End restored: PASS
+Likely previous side-wall flicker root cause：P105 linked shell／fixture／light duplicates與 Hero／延伸交界的重疊風險；另發現 Hero 舊材質槽未指向 10.6C 重建材質。已移除 P105 延伸、保留 Hero、重映射材質，未用曝光掩蓋。
+
+DOOR
+WHITE INDUSTRIAL DOOR: PASS
+DOOR PHYSICAL CONSTRUCTION: PASS
+DOOR MATERIAL REALISM: PASS
+Door：off-white painted steel、frame、threshold、handle、3 hinges、recess。
+DOOR LIGHT INITIAL FAILURE: PASS（frames 1–191 OFF）。
+DOOR LIGHT IGNITION EVENT: PASS（frames 193–204 irregular two-attempt event）。
+DOOR LIGHT STABLE AFTER IGNITION: PASS（frame 241 onward continuously ON）。
+SLOW DOOR OPENING: PASS（frame 264 begins）。
+DOOR APPROX. HALF OPEN AT CUT: PASS（frame 348 ≈60 degrees）。
+HARD CUT TO BLACK: PASS（frame 349）。
+FINAL BLACK ENDING: PASS（frames 349–360）。
+
+LIGHTING
+APPROX. 80% FIXTURES DEAD: PASS
+INTERMITTENT LIGHTS IRREGULAR: PASS
+LIGHT EMISSION/ILLUMINATION SYNCHRONIZED: PASS
+Stable fixtures：LIGHT_A_03_NORMAL, LIGHT_B_01_NORMAL；intermittent：LIGHT_C_03_NORMAL；door fixture：LIGHT_FINAL_DOOR_FLUORESCENT。
+
+CAMERA
+15-SECOND CAMERA SEQUENCE: PASS
+CAMERA DOES NOT REACH DOOR: PASS
+Ending camera y=18.0；door y≈23.8；distance≈5.8 m。
+
+MATERIAL / CONTACT
+AGED CONCRETE FLOOR: PASS
+MOST FLOOR REMAINS DRY: PASS
+SMALL REALISTIC PUDDLES: PASS
+NO VISIBLE PIPE LEAK REQUIRED: PASS
+PUDDLE REFLECTION REALISM: PASS
+WALL MATERIAL REALISM: PASS
+PIPE/EQUIPMENT MATERIAL REALISM: PASS
+CONTACT REALISM: PASS
+Puddles：3 shallow irregular patches；estimated wet area≈5.5%，其餘地坪保持乾燥。
+
+TEMPORAL / RENDER
+PHOTOREALISTIC LIGHTING: PASS
+NO UNINTENTIONAL SIDE FLICKER: PASS
+NO TEXTURE SWIMMING: PASS
+NO Z-FIGHTING: PASS
+NO OBVIOUS DENOISER PUMPING: PASS
+NO DISTRACTING CRAWLING NOISE: PASS
+短段 temporal test frames：113。
+Still outputs：4；video：PASS。
+Animation：EEVEE 12 samples、768×432、volume density=0、24 fps；Cycles CPU 64 samples 用於靜幀 reality audit。
+REALITY AUDIT：暗行走、門燈啟動、穩定點亮、水窪／地坪、半開門與黑切均通過；影片抽查未見 flicker、texture swimming、Z-fighting、geometry clipping 或 denoiser pumping。
+未加入怪物／人／血液／分岔／流體模擬／fog concealment／horror props。等待使用者審核，停止於本製作 pass。

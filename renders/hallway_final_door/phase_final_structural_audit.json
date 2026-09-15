@@ -1,0 +1,155 @@
+{
+  "extension_cleanup": {
+    "p105_objects_before": 557,
+    "p105_objects_removed": 557,
+    "orphan_datablocks_removed": {
+      "meshes": 0,
+      "curves": 0,
+      "lights": 0
+    },
+    "end_wall_restored": true
+  },
+  "material_remap": {
+    "legacy_slots_remapped": 100,
+    "legacy_slot_examples": []
+  },
+  "door": {
+    "collection": "FINAL_DOOR_SEQUENCE",
+    "pivot": "FINAL_DOOR_HINGE",
+    "cut_angle_deg": -60.16
+  },
+  "puddles": {
+    "puddles": [
+      "FINAL_PUDDLE_A",
+      "FINAL_PUDDLE_B",
+      "FINAL_PUDDLE_C"
+    ],
+    "wet_area_fraction_estimate": 0.055
+  },
+  "lighting": {
+    "original_fixture_count": 15,
+    "dead_original_fixture_count": 12,
+    "stable": {
+      "LIGHT_A_03_NORMAL": 48.0,
+      "LIGHT_B_01_NORMAL": 44.0
+    },
+    "intermittent": {
+      "LIGHT_C_03_NORMAL": [
+        [
+          1,
+          0.0
+        ],
+        [
+          70,
+          0.0
+        ],
+        [
+          73,
+          36.0
+        ],
+        [
+          76,
+          0.0
+        ],
+        [
+          112,
+          0.0
+        ],
+        [
+          115,
+          30.0
+        ],
+        [
+          119,
+          0.0
+        ],
+        [
+          180,
+          0.0
+        ],
+        [
+          191,
+          34.0
+        ],
+        [
+          196,
+          0.0
+        ],
+        [
+          360,
+          0.0
+        ]
+      ]
+    }
+  },
+  "camera": {
+    "camera": "CAM_P105_WALK",
+    "start_y": 1.4,
+    "old_end_y": 14.0,
+    "final_end_y": 18.0,
+    "door_y": 23.8,
+    "ending_distance_m": 5.8,
+    "frames": 360,
+    "fps": 24
+  },
+  "post_audit": {
+    "before": {
+      "before": {},
+      "remaining_p105_objects": 0,
+      "extension_collections": [
+        "CORRIDOR_EXTENSION_CAMERAS"
+      ],
+      "duplicate_mesh_transform_groups": [],
+      "duplicate_mesh_group_count": 0,
+      "animated_materials": [],
+      "animated_world": false,
+      "animated_lights": [
+        "LIGHT_A_01_NORMAL",
+        "LIGHT_A_02_NORMAL",
+        "LIGHT_A_03_NORMAL",
+        "LIGHT_A_04_AGED_TINT",
+        "LIGHT_A_WALL_01_NORMAL",
+        "LIGHT_B_01_NORMAL",
+        "LIGHT_B_02_WEAK",
+        "LIGHT_B_03_OFF",
+        "LIGHT_B_04_WEAK",
+        "LIGHT_B_WALL_01_WEAK",
+        "LIGHT_C_01_WEAK",
+        "LIGHT_C_02_OFF",
+        "LIGHT_C_03_NORMAL",
+        "LIGHT_C_04_WEAK",
+        "LIGHT_C_WALL_01_OFF",
+        "LIGHT_FINAL_DOOR_FLUORESCENT"
+      ],
+      "wall_end_visible": true
+    },
+    "remaining_p105_objects": 0,
+    "extension_collections": [
+      "CORRIDOR_EXTENSION_CAMERAS"
+    ],
+    "duplicate_mesh_transform_groups": [],
+    "duplicate_mesh_group_count": 0,
+    "animated_materials": [],
+    "animated_world": false,
+    "animated_lights": [
+      "LIGHT_A_01_NORMAL",
+      "LIGHT_A_02_NORMAL",
+      "LIGHT_A_03_NORMAL",
+      "LIGHT_A_04_AGED_TINT",
+      "LIGHT_A_WALL_01_NORMAL",
+      "LIGHT_B_01_NORMAL",
+      "LIGHT_B_02_WEAK",
+      "LIGHT_B_03_OFF",
+      "LIGHT_B_04_WEAK",
+      "LIGHT_B_WALL_01_WEAK",
+      "LIGHT_C_01_WEAK",
+      "LIGHT_C_02_OFF",
+      "LIGHT_C_03_NORMAL",
+      "LIGHT_C_04_WEAK",
+      "LIGHT_C_WALL_01_OFF",
+      "LIGHT_FINAL_DOOR_FLUORESCENT"
+    ],
+    "wall_end_visible": true
+  },
+  "flicker_root_cause": "Phase 10.5 linked extension shells and fixture/light duplicates were removed; Hero legacy material slots were also remapped to the validated 10.6C materials. This removes the known extension handoff/duplicate surface and lighting sources rather than masking them with exposure."
+}
