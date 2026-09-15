@@ -83,6 +83,18 @@ def sep_xyz(nt, vector, loc):
     return node.outputs["X"], node.outputs["Y"], node.outputs["Z"]
 
 
+def broad_color(nt, fac, dark, light, loc):
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.location = loc
+    ramp.color_ramp.interpolation = "EASE"
+    ramp.color_ramp.elements[0].position = 0.28
+    ramp.color_ramp.elements[0].color = (*dark, 1.0)
+    ramp.color_ramp.elements[1].position = 0.72
+    ramp.color_ramp.elements[1].color = (*light, 1.0)
+    link(nt, fac, ramp.inputs["Fac"])
+    return ramp.outputs["Color"]
+
+
 def rebuild_wall(mat: bpy.types.Material) -> None:
     """Keep broad quiet areas, but retain age when the wall is well lit."""
     nt = p106b.reset_tree(mat)
@@ -104,7 +116,7 @@ def rebuild_wall(mat: bpy.types.Material) -> None:
     skirt_col = (0.052, 0.048, 0.042)
 
     macro_m = p106.map_range(nt, macro.outputs["Fac"], 0.25, 0.75, 0.0, 0.38, (-360, 300))
-    base = p106.mix_col(nt, macro_m, warm_a, warm_b, (-100, 260))
+    base = broad_color(nt, macro.outputs["Fac"], warm_b, warm_a, (-100, 260))
     meso_m = p106.map_range(nt, meso.outputs["Fac"], 0.30, 0.70, 0.0, 0.24, (-360, 100))
     aged = p106.mix_col(
         nt, p106.mathn(nt, "MULTIPLY", (-100, 100), meso_m, 0.30),
@@ -153,7 +165,7 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
     aggregate = (0.170, 0.166, 0.154)
 
     macro_m = p106.map_range(nt, macro.outputs["Fac"], 0.24, 0.76, 0.0, 0.38, (-420, 360))
-    base = p106.mix_col(nt, macro_m, concrete_a, concrete_b, (-160, 320))
+    base = broad_color(nt, macro.outputs["Fac"], concrete_b, concrete_a, (-160, 320))
     medium_m = p106.map_range(nt, medium.outputs["Fac"], 0.30, 0.70, 0.0, 0.32, (-420, 160))
     aged = p106.mix_col(
         nt, p106.mathn(nt, "MULTIPLY", (-160, 160), medium_m, 0.24),
