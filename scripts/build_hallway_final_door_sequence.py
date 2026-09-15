@@ -172,18 +172,18 @@ def assign_hero_materials() -> dict:
     for obj in bpy.data.objects:
         if obj.name.startswith("P105_") or not hasattr(obj.data, "materials"):
             continue
-        for slot in obj.material_slots:
-            if slot.material is None:
+        for index, material in enumerate(list(obj.data.materials)):
+            if material is None:
                 continue
-            target_name = LEGACY_MATERIAL_MAP.get(slot.material.name)
+            target_name = LEGACY_MATERIAL_MAP.get(material.name)
             if target_name is None:
                 continue
             target = bpy.data.materials.get(target_name)
             if target is None:
                 raise RuntimeError(f"Missing rebuilt material {target_name}")
-            if slot.material != target:
-                changed.append((obj.name, slot.material.name, target_name))
-                slot.material = target
+            if material != target:
+                changed.append((obj.name, material.name, target_name))
+                obj.data.materials[index] = target
     return {
         "legacy_slots_remapped": len(changed),
         "legacy_slot_examples": changed[:20],
