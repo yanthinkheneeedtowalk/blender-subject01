@@ -1,0 +1,85 @@
+PHASE 7 最終照明與能見度控制
+未移動 Phase 1–6 走廊幾何、管線、設備、材質或老化。相機路徑不變。
+Phase 1 六盞 LIGHT.Utility.* 位置保留，能量歸零並隱藏，改由可見燈具照明。
+
+RENDER / COLOR MANAGEMENT
+  引擎：BLENDER_EEVEE
+  視圖轉換：AgX  look=None
+  曝光：0.00（不以極端曝光解照明）
+  World 顏色 (0.042, 0.046, 0.052) 強度 0.300
+  Fast GI 作為有限間接光，避免無燈區變成 RGB 0 空洞。
+  無 volumetric fog、無 raytracing。
+
+LIGHT FIXTURES
+  類型：天花工業日光燈槽（housing + diffuser + 端蓋 + 短吊桿）與少量壁掛工作燈。
+  數量：天花 12 + 壁燈 3 = 15 盞 Area Light；燈具網格 78。
+  實作：RECTANGLE Area Light（normalize 瓦特），沿走廊拉長，不把燈管當成點光源。
+  發射片只負責燈具外觀；場景照明以 Area Light 為主。
+  陰影投射燈：12（OFF 不投射）。
+
+ZONE A
+  狀態：NORMAL 4 / AGED_TINT 1 / WEAK 0 / OFF 0  運轉比 100%
+  策略：四盞天花全運轉，間距不完全相等；A_04 略暖、略弱。東牆 PN-04 旁一盞工作燈。
+  能見度：可讀牆、管、地坪、設備與走廊方向。對比中等，不是展示廳。
+
+ZONE B
+  狀態：NORMAL 1 / WEAK 3 / OFF 1  運轉比 80%
+  策略：AB 樑後故意空一拍；B_03 實體熄燈；兩盞 WEAK；西牆維修區弱壁燈。
+  能見度：仍可走，但節奏不穩、管線陰影更深、明暗交替更明顯。
+
+ZONE C
+  狀態：NORMAL 1 / WEAK 2 / OFF 2  運轉比 60%
+  策略：C_02 熄燈；C_04 極弱以保留地坪／牆輪廓；C_03 是最後一盞完整工作燈；遠端壁燈為 OFF。
+  能見度：可辨地坪與牆輪廓，遠處細節不確定。
+
+FAR END
+  以照明而非改牆解決：C_04 極弱、C_03 中短距離、World 低填充、無遠距強光。
+  終端牆保留極弱形體，不純黑遮住。既有梁、管、艙門打斷視線。
+
+SHADOWS
+  由真實燈具與既有管／樑／設備投射，無假陰影 decal。
+  EEVEE shadows + Fast GI；OFF 燈不投影。
+
+COLOR TEMPERATURE
+  基準：偏冷工業白 (0.95–0.98, 0.98, 1.00)。
+  變化：AGED_TINT 微暖、WEAK 微綠老化、壁燈略中性。沒有藍／綠／橙分區。
+
+MATERIAL INTERACTION
+  保留 Phase 5/6 材質與老化 mask。照明用來顯現 roughness、水痕與金屬高光，不重做老化。
+
+FIRST-PERSON VALIDATION
+  既有 CAM_INSPECT 路徑：START→A→B→C→FAR END。
+  不以同等亮度貫穿整廊。
+
+PERFORMANCE
+  Area Light 15 盞；陰影燈 12。
+  每燈 use_custom_distance；OFF 關閉陰影；共用 housing/diffuser mesh。
+  無 volumetric、無數百盞燈、無高解析陰影池堆疊。
+
+PHASE 1 空間凍結量測點
+  標籤       y       實測寬度       實測天花高度       目標寬度       目標天花高度
+  A clear     3.25    2.200 m       3.000 m          2.200 m       3.000 m
+  B clear    11.75    2.050 m       2.740 m          2.050 m       2.740 m
+  C clear    21.55    2.200 m       2.930 m          2.200 m       2.930 m
+
+凍結／驗證細節
+  核心物件變換改動：0
+  核心物件刪除：0；非燈具新增：0
+  相機路徑錯誤：0
+  Phase 1 佔位燈停用：LIGHT.Utility.01, LIGHT.Utility.02, LIGHT.Utility.03, LIGHT.Utility.04, LIGHT.Utility.05, LIGHT.Utility.06
+
+PHASE 1 空間凍結狀態： PASS
+PHASE 2 結構凍結狀態： PASS
+PHASE 3 管線凍結狀態： PASS
+PHASE 4 設備凍結狀態： PASS
+PHASE 5 材質凍結狀態： PASS
+PHASE 6 老化凍結狀態： PASS
+PHASE 7 照明驗證： PASS
+  Phase 1 尺寸是否修改：否
+  Phase 2 結構骨架是否修改：否
+  Phase 3 管線路由是否修改：否
+  Phase 4 設備位置是否修改：否
+  Phase 5 材質名稱／分類是否保留：是
+  Phase 6 老化節點組／5 個標記是否保留：是
+  Phase 1 佔位燈：位置未改，能量歸零（Phase 7 允許調整燈具）
+  尚未開始 Phase 8。
