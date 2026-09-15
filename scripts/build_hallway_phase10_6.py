@@ -561,6 +561,9 @@ def apply_palette(pal: dict) -> dict[str, bpy.types.Material]:
     group = bpy.data.node_groups.get("P6_NG_AgingMasks")
     if group is not None:
         p6.inject_aging(aging_keys, group)
+    host = aging_keys.get("MAT_Rubber_Dark")
+    if host is not None and host.name.startswith(P106_PREFIX):
+        bpy.data.materials.remove(host)
     return mats
 
 
