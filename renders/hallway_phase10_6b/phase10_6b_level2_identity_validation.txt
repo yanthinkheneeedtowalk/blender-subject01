@@ -1,0 +1,52 @@
+PHASE 10.6B Backrooms Level 2 身分校正＋地坪重做
+未改走廊尺度、延伸段、9 秒相機路徑、主設備與主管線佈局。
+未加房間／分岔／怪物／血液／恐怖字樣。未渲染 9 秒成片。未開始 Phase 10.7／11。
+
+視覺判定（Cycles 96 spp + OIDN，1280×720）
+
+LEVEL2_A 主英雄視：第一人稱第 108 幀。前景／中景／無盡遠端仍連續。牆已離開奶油米色，改讀髒機構灰；主管偏炭黑、伴管灰綠。地坪為連續冷灰澆置面，不再是均勻磁磚格。燈光有強／弱／滅差異，遠端未收成純黑。
+
+LEVEL2_B 地坪／牆腳：連續混凝土面＋一條細施工縫，非大片磁磚。牆腳較暗。無鏡面、無水窪。微觀孔隙刻意克制，大面積保持安靜。
+
+LEVEL2_C 設備／管：烤漆櫃仍在服役（Coat／稜線），非廢鐵。管徑與塗層有深淺差；閥輪為克制工業紅。牆面安靜。
+
+LEVEL2_D 暗部距離：天花管／樑／吊架可辨。照明不均勻。無盡透視仍在。無可見霧層。
+
+殘餘風險（供審核，非下一階段）：大面牆仍相對平整（符合約 80% 克制、且牆為既有大片幾何）。櫃磨損刻意輕。若仍讀成「乾淨現代機房」需再加中觀牆污，但不能加程序噪點或恐怖裝飾。
+
+FLOOR
+  隱藏 4 條均勻接縫；保留 3 條作為施工／控制／修補邊界並壓平。
+  保留：P8_FLOOR_JOINT_2_35, P8_FLOOR_JOINT_11_08, P8_FLOOR_JOINT_17_62
+  地坪 shader：冷中性連續澆置、交通帶／牆邊積塵進 albedo、微孔隙只進 normal。
+  已移除沿廊拉伸 bump（曾讀成木紋／拉絲）。隱藏 P8_DAMP 濕斑。
+
+WALL
+  髒機構灰／微黃老化塗層。牆腳積塵隨重力（Z）。稀疏垂流。大面保持安靜。
+
+CABINET / PIPE
+  櫃保留烤漆 Coat／Bevel／橘皮；近端較新、遠端較舊。非廢鐵。
+  主管炭黑，伴管灰綠；氧化只在接頭 MASK。新增 6 件修理抱箍／套管。
+
+LIGHTING
+  位置凍結。面積加大以柔化管影。NORMAL／WEAK／AGED／OFF 分化。OFF=0 W。
+  World 0.30，volume density 0.0036（無可見霧）。
+
+LEVEL 2 IDENTITY: PASS
+FLOOR REWORK: PASS
+FLOOR JOINTS: PASS
+WALL MATERIAL: PASS
+WALL AGING: PASS
+CABINET AGING: PASS
+PIPE MATERIAL / HISTORY: PASS
+MAINTENANCE HISTORY: PASS
+COLOR IDENTITY: PASS
+LIGHTING IDENTITY: PASS
+DARK-AREA READABILITY: PASS
+ENDLESS CORRIDOR PRESERVED: PASS
+CAMERA FREEZE: PASS
+RENDER NOISE CONTROL: PASS
+
+  幾何非接縫改動：0
+  燈光位置改動：0
+  CAM_P105 路徑錯誤：0
+  等待使用者審核。未進入下一階段。
