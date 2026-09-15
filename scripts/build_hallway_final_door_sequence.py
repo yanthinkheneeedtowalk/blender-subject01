@@ -344,7 +344,7 @@ def create_door() -> dict:
     pivot.keyframe_insert(data_path="rotation_euler", index=2, frame=282)
     pivot.rotation_euler[2] = -1.05
     pivot.keyframe_insert(data_path="rotation_euler", index=2, frame=CUT_FRAME)
-    for fc in pivot.animation_data.action.fcurves:
+    for fc in action_fcurves(pivot.animation_data.action):
         for kp in fc.keyframe_points:
             kp.interpolation = "BEZIER"
     return {"collection": col.name, "pivot": pivot.name, "cut_angle_deg": round(math.degrees(-1.05), 2)}
@@ -393,6 +393,14 @@ def copy_emission_material(obj: bpy.types.Object, tag: str) -> bpy.types.Materia
     mat.name = f"MAT_FINAL_{tag}_{obj.name}"
     obj.data.materials[0] = mat
     return mat
+
+
+def action_fcurves(action):
+    for layer in action.layers:
+        for strip in layer.strips:
+            for bag in strip.channelbags:
+                for fc in bag.fcurves:
+                    yield fc
 
 
 def emission_input(mat: bpy.types.Material):
