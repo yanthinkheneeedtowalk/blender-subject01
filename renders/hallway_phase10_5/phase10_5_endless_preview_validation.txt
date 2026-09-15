@@ -1,0 +1,61 @@
+PHASE 10.5 無盡走廊延續 + 9 秒第一人稱行走預覽
+這是 MOTION / CAMERA / ENDLESSNESS PREVIEW，不是最終電影級畫面。
+未重建材質、未改 shader、未做飽和／調色、未加程序紋理。
+Hero 0–24 m 凍結。延續段為可編輯的 P105_* 附加物件。
+
+GOAL 1  CORRIDOR CONTINUATION
+  Hero 端牆 WALL.End 仍在檔案中（y=24.1），hide_render=True。
+  附加殼體 / 管 / 燈從 y=24 延到 y=96（+72 m）。
+  使用既有 MAT_* 指定，無新 shader。燈具為 C 段 linked duplicate。
+  未 bake / flatten / merge。
+  延續物件數：559
+  前方 +Y 射線（暫時隱藏 WALL.End 以免 viewport ray 打到它）：
+    y= 1.40  hit=94.60 m
+    y= 8.00  hit=88.00 m
+    y=14.00  hit=82.00 m
+    y=18.00  hit=78.00 m
+
+GOAL 2  9s FIRST-PERSON WALK
+  Camera CAM_P105_WALK  lens 32.0 mm, clip_end 130 m。
+  216 frames @ 24 fps = 9 s。
+  y 1.40 → 14.00 m（約 1.4 m/s），眼高 1.68 m，x=0。
+  起點 (0.0, 1.4, 1.68)  終點 (0.0, 14.0, 1.68)
+  Track-To 看向走廊軸線。CAM_INSPECT 250 幀路徑未改。
+
+ATMOSPHERE
+  Volume density 0.0036（未改）。
+  volumetric_end 120.0 m（僅加長範圍以覆蓋延續段）。
+  World strength 0.360。
+
+KNOWN LOOK WEAKNESSES (NOT ADDRESSED IN 10.5)
+  Materials remain preview-quality: relatively flat, grey, limited surface response.
+  Color richness, hero material rebuild, and look-dev are deferred.
+  Lighting/material interaction and final grading are deferred.
+  Playblast uses low EEVEE samples; do not treat it as the final render.
+
+PHASE 1 空間凍結量測點
+  標籤       y       實測寬度       實測天花高度       目標寬度       目標天花高度
+  A clear     3.25    2.200 m       3.000 m          2.200 m       3.000 m
+  B clear    11.75    2.050 m       2.740 m          2.050 m       2.740 m
+  C clear    21.55    2.200 m       2.930 m          2.200 m       2.930 m
+
+凍結／驗證細節
+  核心物件變換改動：0
+  核心物件刪除：0；非延續新增：0
+  Hero 燈光能量／位置改動：0
+  材質節點指紋改動：0
+  CAM_INSPECT 路徑錯誤：0
+  CAM_INSPECT keys unchanged: True
+
+PHASE 1 空間凍結狀態： PASS
+PHASE 2 結構凍結狀態： PASS
+PHASE 3 管線凍結狀態： PASS
+PHASE 4 設備凍結狀態： PASS
+PHASE 5 材質凍結狀態： PASS
+PHASE 6 老化凍結狀態： PASS
+PHASE 7 照明佈局凍結狀態： PASS
+PHASE 8 英雄打磨凍結狀態： PASS
+PHASE 9 標誌凍結狀態： PASS
+PHASE 10.5 無盡預覽驗證： PASS
+  未開始 Hero Material Rebuild / Look Development。
+  未開始 Phase 11。
