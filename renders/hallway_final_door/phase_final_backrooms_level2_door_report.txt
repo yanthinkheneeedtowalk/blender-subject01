@@ -51,6 +51,6 @@ NO Z-FIGHTING: PASS
 NO OBVIOUS DENOISER PUMPING: PASS
 NO DISTRACTING CRAWLING NOISE: PASS
 短段 temporal test frames：not run。
-Still outputs：0；video：FAIL。
+Still outputs：4；video：FAIL。
 Animation：EEVEE 24 samples、960×540、24 fps；Cycles CPU 64 samples 用於靜幀 reality audit。
 未加入怪物／人／血液／分岔／流體模擬／fog concealment／horror props。等待使用者審核，停止於本製作 pass。
