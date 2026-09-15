@@ -16,7 +16,7 @@ EQUIPMENT LABELS
   P9_SVC_B04：Zone B 維修／電氣櫃銘牌 y=13.25，SVC-B04。
   P9_ELEC_C07：Zone C 孤立櫃銘牌 y=19.42，褪色 ELEC-C07。
   P9_VENT_03：Zone B 左牆通風 y=12.05，VENT-03。
-  P9_VALVE_V2B：Zone B 閥前 y=14.38，V-2B。
+  P9_VALVE_V2B：Zone B 閥旁牆面 y=14.48 z=2.32，V-2B。
 
 PIPE IDENTIFICATION
   P9_PIPE_P02：Zone A 左主管 y=3.10，P-02 加流向箭頭（朝 Zone C／+Y）。
@@ -34,6 +34,7 @@ MAINTENANCE HISTORY
   既有 MARK_INSP_B：控制櫃 INSP 03-98。
   P9_INSP_B_SVC：SVC-B04 門下角貼紙 INSP 11-02／OK／M.H.，一角剝落。
   日期只暗示曾有人巡檢，不建立劇情年表。
+  既有缺陷（未改）：MARK_INSP_B 被 Phase 8 控制櫃指示塊／搭扣部分遮住。
 
 ZONE A
   最清楚、最程序化：ELEC-A04 銘牌、P-02 流向、既有 PN-04。

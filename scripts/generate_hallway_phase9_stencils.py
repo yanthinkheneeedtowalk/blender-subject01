@@ -124,7 +124,7 @@ def id_plate(text: str, wear: float, seed: int, fade: float, size: tuple[int, in
     fnt = font(FONT_SANS, 54 if len(text) <= 8 else 46)
     tracking = 3.2
     # Dark filled industrial lettering, not glossy white.
-    center_tracked(draw, (0, 0, size[0], size[1]), text, fnt, (36, 32, 28, 255), tracking, dy=-2)
+    center_tracked(draw, (0, 0, size[0], size[1]), text, fnt, (18, 16, 14, 255), tracking, dy=-2)
     return apply_wear(img, wear, seed, fade)
 
 
@@ -159,11 +159,11 @@ def hv_plate() -> Image.Image:
     return apply_wear(img, 0.34, 77, 0.88)
 
 
-def small_id(text: str, wear: float, seed: int, fade: float) -> Image.Image:
+def small_id(text: str, wear: float, seed: int, fade: float, fill=(40, 36, 32, 255)) -> Image.Image:
     img = Image.new("RGBA", (440, 176), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     fnt = font(FONT_SANS, 64)
-    center_tracked(draw, (0, 0, 440, 176), text, fnt, (40, 36, 32, 255), 3.0)
+    center_tracked(draw, (0, 0, 440, 176), text, fnt, fill, 3.0)
     return apply_wear(img, wear, seed, fade)
 
 
@@ -172,7 +172,7 @@ def hot_stencil() -> Image.Image:
     draw = ImageDraw.Draw(img)
     fnt = font(FONT_SANS, 62)
     center_tracked(draw, (0, 0, 680, 200), "HOT SURFACE", fnt, (48, 42, 32, 255), 3.6)
-    return apply_wear(img, 0.40, 91, 0.78)
+    return apply_wear(img, 0.36, 91, 0.84)
 
 
 def inspection_sticker() -> Image.Image:
@@ -220,13 +220,13 @@ def floor_bay() -> Image.Image:
 
 def build_atlas() -> Image.Image:
     atlas = Image.new("RGBA", (ATLAS_SIZE, ATLAS_SIZE), (0, 0, 0, 0))
-    paste_cell(atlas, id_plate("ELEC-A04", 0.16, 3, 0.94, (480, 176)), "elec_a04")
-    paste_cell(atlas, id_plate("ELEC-B12", 0.28, 5, 0.90, (560, 176)), "elec_b12")
-    paste_cell(atlas, id_plate("SVC-B04", 0.30, 7, 0.88, (560, 176)), "svc_b04")
+    paste_cell(atlas, id_plate("ELEC-A04", 0.12, 3, 0.96, (480, 176)), "elec_a04")
+    paste_cell(atlas, id_plate("ELEC-B12", 0.24, 5, 0.92, (560, 176)), "elec_b12")
+    paste_cell(atlas, id_plate("SVC-B04", 0.26, 7, 0.90, (560, 176)), "svc_b04")
     paste_cell(atlas, id_plate("ELEC-C07", 0.62, 11, 0.52, (288, 176)), "elec_c07")
     paste_cell(atlas, pipe_mark(), "p02")
     paste_cell(atlas, hv_plate(), "hv")
-    paste_cell(atlas, small_id("V-2B", 0.36, 13, 0.84), "v2b")
+    paste_cell(atlas, small_id("V-2B", 0.30, 13, 0.90, fill=(186, 178, 166, 255)), "v2b")
     paste_cell(atlas, small_id("VENT-03", 0.33, 17, 0.86), "vent03")
     paste_cell(atlas, hot_stencil(), "hot")
     paste_cell(atlas, inspection_sticker(), "insp")
