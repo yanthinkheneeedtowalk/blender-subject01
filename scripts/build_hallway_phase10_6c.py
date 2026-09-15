@@ -92,9 +92,9 @@ def broad_color(nt, fac, dark, light, loc):
     ramp = nt.nodes.new("ShaderNodeValToRGB")
     ramp.location = loc
     ramp.color_ramp.interpolation = "EASE"
-    ramp.color_ramp.elements[0].position = 0.28
+    ramp.color_ramp.elements[0].position = 0.40
     ramp.color_ramp.elements[0].color = (*dark, 1.0)
-    ramp.color_ramp.elements[1].position = 0.72
+    ramp.color_ramp.elements[1].position = 0.60
     ramp.color_ramp.elements[1].color = (*light, 1.0)
     link(nt, fac, ramp.inputs["Fac"])
     return ramp.outputs["Color"]
@@ -105,8 +105,8 @@ def rebuild_wall(mat: bpy.types.Material) -> None:
     nt = p106b.reset_tree(mat)
     pos = generated_pos(nt, (-980, 40))
     _x, _y, z = sep_xyz(nt, pos, (-820, 40))
-    macro = p106.noise(nt, pos, 0.22, 1.2, (-620, 300), 0.30)
-    meso = p106.noise(nt, pos, 1.45, 4.0, (-620, 100), 0.46, 0.05)
+    macro = p106.noise(nt, pos, 0.34, 1.2, (-620, 300), 0.30)
+    meso = p106.noise(nt, pos, 2.40, 4.0, (-620, 100), 0.46, 0.05)
     vertical = p106.noise(
         nt, p106.mapping(nt, pos, (-620, -80), (18.0, 5.0, 0.24)),
         1.0, 2.0, (-620, -100), 0.52,
@@ -156,10 +156,10 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
     nt = p106b.reset_tree(mat)
     pos = generated_pos(nt, (-980, 40))
     generated_x, _generated_y, _generated_z = sep_xyz(nt, pos, (-860, 40))
-    macro = p106.noise(nt, pos, 0.16, 1.0, (-660, 360), 0.26)
-    medium = p106.noise(nt, pos, 1.15, 3.0, (-660, 160), 0.42, 0.06)
-    traffic = p106.noise(nt, pos, 3.8, 3.0, (-660, -20), 0.44, 0.08)
-    edge = p106.noise(nt, pos, 1.55, 2.0, (-660, -180), 0.42)
+    macro = p106.noise(nt, pos, 0.34, 1.0, (-660, 360), 0.26)
+    medium = p106.noise(nt, pos, 1.80, 3.0, (-660, 160), 0.42, 0.06)
+    traffic = p106.noise(nt, pos, 5.0, 3.0, (-660, -20), 0.44, 0.08)
+    edge = p106.noise(nt, pos, 2.00, 2.0, (-660, -180), 0.42)
     pores = p106.voronoi(nt, pos, 52.0, (-660, -360), 0.93)
     micro = p106.noise(nt, pos, 112.0, 8.0, (-660, -540), 0.50)
 
