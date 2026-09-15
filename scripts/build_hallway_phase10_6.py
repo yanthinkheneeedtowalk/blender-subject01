@@ -654,7 +654,8 @@ def enable_cycles_cpu(scene: bpy.types.Scene) -> None:
     scene.cycles.volume_bounces = 1
     scene.cycles.transparent_max_bounces = 4
     scene.cycles.sample_clamp_indirect = 6.0
-    scene.cycles.filter_glossy = 0.5
+    if hasattr(scene.cycles, "blur_glossy"):
+        scene.cycles.blur_glossy = 0.5
     scene.render.resolution_x = RES_X
     scene.render.resolution_y = RES_Y
     scene.render.resolution_percentage = 100
