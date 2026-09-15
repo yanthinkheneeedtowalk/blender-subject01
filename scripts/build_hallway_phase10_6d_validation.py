@@ -32,7 +32,7 @@ import build_hallway_phase10_6b as p106b
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "renders" / "hallway_phase10_6d"
-FRAME_DIR = OUTPUT_DIR / "motion_frames"
+FRAME_DIR = OUTPUT_DIR / "motion_frames_v2"
 ARTIFACT_DIR = Path("/opt/cursor/artifacts")
 BLEND_PATH = ROOT / "hallway.blend"
 
@@ -41,6 +41,7 @@ FPS = 24
 FRAME_START = 1
 FRAME_END = 216
 RES_X, RES_Y = 1280, 720
+MOTION_RES_X, MOTION_RES_Y = 960, 540
 
 
 def make_camera(name: str, loc, target, lens: float) -> bpy.types.Object:
@@ -79,10 +80,12 @@ def configure_motion(scene: bpy.types.Scene) -> None:
     # changing the action, interpolation, timing, or camera transform.
     p106b.restore_eevee(scene)
     scene.render.engine = "BLENDER_EEVEE"
-    scene.eevee.taa_render_samples = 48
+    scene.eevee.taa_render_samples = 16
     scene.eevee.use_raytracing = False
-    scene.render.resolution_x = RES_X
-    scene.render.resolution_y = RES_Y
+    scene.eevee.volumetric_samples = 16
+    scene.eevee.volumetric_tile_size = "16"
+    scene.render.resolution_x = MOTION_RES_X
+    scene.render.resolution_y = MOTION_RES_Y
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGB"
@@ -242,7 +245,7 @@ def write_report(stills: list[Path], video: Path, frame_count: int, audit: dict)
         "",
         "9-SECOND MOTION FINDINGS",
         "  動畫先輸出 PNG image sequence，再以 H.264／yuv420p／24 fps 編碼。",
-        "  使用 EEVEE 48 samples 進行動態驗證；CPU Cycles 對 216 幀不具合理驗證成本。",
+        "  使用 EEVEE 16 samples、960×540、volume 16 進行動態驗證；CPU Cycles 對 216 幀不具合理驗證成本。",
         f"  圖像序列幀數：{frame_count}；預期：216；影片存在：{video.exists()}。",
         f"VIDEO RENDER: {'PASS' if video_ok else 'FAIL'}",
         f"FULL 9 SECONDS COMPLETED: {'PASS' if video_ok else 'FAIL'}",
