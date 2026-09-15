@@ -1,0 +1,25 @@
+TARGETED CLEANUP — FINAL VIDEO VALIDATION
+承接 transverse slab cleanup；未修改 lighting、exposure、materials、puddles、camera motion、samples、denoising。
+
+STILL IMAGE OUTPUTS
+  Dry-floor Cycles render: PASS
+  Damp/wet transition render: PASS
+  Puddle/reflection render: PASS
+  Door-light ON hero render: PASS
+  Still count: 4；Cycles CPU 64 samples、adaptive threshold 0.03、960×540。
+
+VIDEO OUTPUT
+  Actual MP4: PASS
+  Complete timeline: frames 1–360, 24 fps, 15.000 seconds。
+  Image sequence first；H.264／yuv420p；EEVEE 12 samples；768×432；volume density=0；ray tracing ON。
+  Geometry flicker: PASS（removed transverse slab family absent）。
+  Material shimmer: PASS。
+  Puddle instability: PASS。
+  Denoiser pumping: PASS（EEVEE validation path；no denoiser pumping observed）。
+  Texture swimming: PASS。
+  Camera clipping: PASS。
+  Door ignition／stable light／slow opening／half-open／hard black: PASS。
+  Remaining note: preserved soffit/pipe shadow bands remain architectural lighting structure; the removed slab family is absent.
+  最終影片抽查：start／middle／end、門燈事件、半開門與 hard cut 均 PASS；未見 beam occlusion、geometry flicker、texture swimming、puddle/reflection instability、denoiser pumping 或 camera clipping。
+
+STOP：完成 targeted cleanup 後的 final video validation；未開始新的 final-master render。
