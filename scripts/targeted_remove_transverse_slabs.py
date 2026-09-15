@@ -41,7 +41,8 @@ def slab_candidates() -> list[bpy.types.Object]:
         [
             o
             for o in bpy.data.objects
-            if o.type == "MESH" and o.name.startswith("BEAM_Ceiling_")
+            if o.type == "MESH"
+            and (o.name.startswith("BEAM_Ceiling_") or o.name.startswith("BEAM."))
         ],
         key=lambda o: (o.location.y, o.name),
     )
@@ -59,8 +60,8 @@ def audit_candidates(objects: list[bpy.types.Object]) -> dict:
         transform_groups.setdefault(str(sig), []).append(obj.name)
     duplicates = [names for names in transform_groups.values() if len(names) > 1]
     return {
-        "family": "BEAM_Ceiling_A/B/C_*",
-        "collection": "STRUCTURE_BEAMS",
+        "family": "BEAM.* + BEAM_Ceiling_A/B/C_*",
+        "collections": ["HALLWAY_PHASE1", "STRUCTURE_BEAMS"],
         "count_before": len(objects),
         "objects": [
             {
