@@ -58,12 +58,12 @@ KEEP_JOINTS = {
 # Size multipliers are applied to Phase 10 base sizes so reruns stay idempotent.
 LIGHT_IDENTITY = {
     "LIGHT_A_01_NORMAL": dict(energy=52.0, color=(1.00, 0.97, 0.90), size=1.26),
-    "LIGHT_A_02_NORMAL": dict(energy=48.0, color=(0.96, 0.99, 0.93), size=1.22),
+    "LIGHT_A_02_NORMAL": dict(energy=40.0, color=(0.96, 0.99, 0.93), size=1.22),
     "LIGHT_A_03_NORMAL": dict(energy=54.0, color=(1.00, 0.96, 0.88), size=1.24),
     "LIGHT_A_04_AGED_TINT": dict(energy=38.0, color=(1.00, 0.94, 0.84), size=1.30),
     "LIGHT_A_WALL_01_NORMAL": dict(energy=10.0, color=(1.00, 0.96, 0.88), size=1.18),
     "LIGHT_B_01_NORMAL": dict(energy=46.0, color=(0.96, 0.99, 0.92), size=1.28),
-    "LIGHT_B_02_WEAK": dict(energy=18.0, color=(0.93, 0.99, 0.86), size=1.34),
+    "LIGHT_B_02_WEAK": dict(energy=13.0, color=(0.93, 0.99, 0.86), size=1.34),
     "LIGHT_B_03_OFF": dict(energy=0.0, color=(0.92, 0.93, 0.90), size=1.00),
     "LIGHT_B_04_WEAK": dict(energy=16.0, color=(0.94, 0.98, 0.86), size=1.32),
     "LIGHT_B_WALL_01_WEAK": dict(energy=4.8, color=(0.94, 0.99, 0.88), size=1.20),
@@ -128,24 +128,27 @@ def rebuild_wall(mat: bpy.types.Material) -> None:
     meso = p106.noise(nt, pos, 2.1, 5.0, (-560, 40), 0.52, 0.10)
     pores = p106.voronoi(nt, pos, 36.0, (-560, -180), 0.9)
     micro = p106.noise(nt, pos, 80.0, 9.0, (-560, -360), 0.60)
-    grey_a = (0.210, 0.204, 0.188)
-    grey_b = (0.168, 0.164, 0.152)
-    stain = (0.122, 0.112, 0.096)
-    yellow = (0.232, 0.214, 0.168)
-    skirt_col = (0.108, 0.102, 0.092)
-    mf = p106.map_range(nt, macro.outputs["Fac"], 0.32, 0.68, 0.0, 0.16, (-320, 260))
+    grey_a = (0.152, 0.146, 0.132)
+    grey_b = (0.088, 0.086, 0.080)
+    stain = (0.058, 0.052, 0.044)
+    yellow = (0.168, 0.150, 0.108)
+    skirt_col = (0.048, 0.046, 0.042)
+    mf = p106.map_range(nt, macro.outputs["Fac"], 0.28, 0.72, 0.0, 0.40, (-320, 260))
     base = p106.mix_col(nt, mf, grey_a, grey_b, (-80, 240))
-    yellow_m = p106.sparse(nt, meso.outputs["Fac"], (-320, 120), 0.72, 0.90)
-    aged = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (-80, 120), yellow_m, 0.08), base, yellow, (120, 160))
-    stain_m = p106.sparse(nt, meso.outputs["Fac"], (-320, -20), 0.70, 0.88)
-    stained = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (-80, -20), stain_m, 0.14), aged, stain, (120, 20))
-    skirt = p106.map_range(nt, z, 0.02, 0.48, 0.28, 0.0, (-320, -200))
-    colored = p106.mix_col(nt, skirt, stained, skirt_col, (300, 40))
+    yellow_m = p106.sparse(nt, meso.outputs["Fac"], (-320, 120), 0.68, 0.88)
+    aged = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (-80, 120), yellow_m, 0.16), base, yellow, (120, 160))
+    drip_v = p106.noise(nt, p106.mapping(nt, pos, (-560, -80), (36.0, 7.0, 0.22)), 1.0, 2.5, (-320, -80), 0.55)
+    drip_m = p106.sparse(nt, drip_v.outputs["Fac"], (-80, -80), 0.78, 0.94)
+    stained = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (120, -80), drip_m, 0.32), aged, stain, (300, 80))
+    stain_m = p106.sparse(nt, meso.outputs["Fac"], (-320, -20), 0.66, 0.86)
+    stained = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (-80, -20), stain_m, 0.22), stained, stain, (300, 20))
+    skirt = p106.map_range(nt, z, 0.01, 0.58, 0.46, 0.0, (-320, -200))
+    colored = p106.mix_col(nt, skirt, stained, skirt_col, (480, 40))
     pore_h = p106.map_range(nt, pores.outputs["Distance"], 0.0, 0.32, 1.0, 0.0, (-320, -360))
     rough = p106.mix_f(nt, pore_h, 0.86, 0.93, (120, -200))
     rough = p106.mix_f(nt, skirt, rough, 0.92, (300, -200))
-    nrm = p106.bump(nt, micro.outputs["Fac"], 0.010, 0.0014, (300, -360))
-    nrm = p106.bump(nt, pore_h, 0.005, 0.0007, (480, -360), nrm)
+    nrm = p106.bump(nt, micro.outputs["Fac"], 0.014, 0.0016, (300, -360))
+    nrm = p106.bump(nt, pore_h, 0.007, 0.0009, (480, -360), nrm)
     bsdf = p106.principled(nt, (700, 40))
     out = p106.output(nt, (980, 40))
     p106.set_spec(bsdf, 0.18, ior=1.52, metallic=0.0, coat=0.0)
@@ -165,26 +168,28 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
     edge = p106.noise(nt, pos, 1.4, 1.8, (-560, -140), 0.42)
     pores = p106.voronoi(nt, pos, 42.0, (-560, -320), 0.90)
     micro = p106.noise(nt, pos, 96.0, 10.0, (-560, -500), 0.55)
-    cool_a = (0.118, 0.120, 0.126)
-    cool_b = (0.092, 0.094, 0.100)
-    dirt = (0.062, 0.063, 0.066)
-    repair = (0.138, 0.134, 0.126)
-    mf = p106.map_range(nt, macro.outputs["Fac"], 0.28, 0.72, 0.0, 0.14, (-80, 260))
+    cool_a = (0.078, 0.080, 0.086)
+    cool_b = (0.042, 0.044, 0.048)
+    dirt = (0.028, 0.029, 0.032)
+    repair = (0.110, 0.106, 0.098)
+    mf = p106.map_range(nt, macro.outputs["Fac"], 0.24, 0.76, 0.0, 0.36, (-80, 260))
     base = p106.mix_col(nt, mf, cool_a, cool_b, (120, 240))
-    traffic = p106.sparse(nt, wear.outputs["Fac"], (-80, 40), 0.50, 0.74)
-    worn = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (120, 80), traffic, 0.12), base, dirt, (300, 80))
+    traffic = p106.sparse(nt, wear.outputs["Fac"], (-80, 40), 0.44, 0.70)
+    worn = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (120, 80), traffic, 0.24), base, dirt, (300, 80))
     abs_x = p106.mathn(nt, "ABSOLUTE", (-80, -140), x, 0.0)
-    edge_w = p106.map_range(nt, abs_x, 0.58, 1.08, 0.0, 0.20, (120, -140))
+    lane = p106.map_range(nt, abs_x, 0.08, 0.55, 0.18, 0.0, (120, 0))
+    worn = p106.mix_col(nt, lane, worn, dirt, (300, 40))
+    edge_w = p106.map_range(nt, abs_x, 0.52, 1.08, 0.0, 0.34, (120, -140))
     edged = p106.mix_col(nt, edge_w, worn, dirt, (300, -40))
-    repair_m = p106.sparse(nt, edge.outputs["Fac"], (-80, -280), 0.82, 0.96)
-    colored = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (120, -280), repair_m, 0.10), edged, repair, (300, -200))
+    repair_m = p106.sparse(nt, edge.outputs["Fac"], (-80, -280), 0.78, 0.94)
+    colored = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (120, -280), repair_m, 0.16), edged, repair, (300, -200))
     pore_h = p106.map_range(nt, pores.outputs["Distance"], 0.0, 0.28, 1.0, 0.0, (-80, -420))
-    rough = p106.mix_f(nt, pore_h, 0.80, 0.90, (120, -420))
-    rough = p106.mix_f(nt, traffic, rough, 0.68, (300, -360))
-    rough = p106.mix_f(nt, edge_w, rough, 0.88, (480, -300))
-    nrm = p106.bump(nt, wear.outputs["Fac"], 0.006, 0.0008, (300, -520))
-    nrm = p106.bump(nt, micro.outputs["Fac"], 0.007, 0.0009, (480, -520), nrm)
-    nrm = p106.bump(nt, pore_h, 0.003, 0.0005, (660, -520), nrm)
+    rough = p106.mix_f(nt, pore_h, 0.78, 0.91, (120, -420))
+    rough = p106.mix_f(nt, traffic, rough, 0.66, (300, -360))
+    rough = p106.mix_f(nt, edge_w, rough, 0.90, (480, -300))
+    nrm = p106.bump(nt, wear.outputs["Fac"], 0.010, 0.0012, (300, -520))
+    nrm = p106.bump(nt, micro.outputs["Fac"], 0.012, 0.0013, (480, -520), nrm)
+    nrm = p106.bump(nt, pore_h, 0.006, 0.0008, (660, -520), nrm)
     bsdf = p106.principled(nt, (860, 20))
     out = p106.output(nt, (1120, 20))
     p106.set_spec(bsdf, 0.24, ior=1.52, metallic=0.0, coat=0.0)
@@ -221,14 +226,14 @@ def rebuild_cabinet(mat: bpy.types.Material) -> None:
     peel = p106.noise(nt, pos, 92.0, 6.0, (-520, 40), 0.48)
     wear = p106.noise(nt, pos, 5.8, 2.0, (-520, 240), 0.40)
     newer = p106.map_range(nt, y, 0.5, 20.0, 0.0, 1.0, (-240, 360))
-    a_new, a_old = (0.168, 0.182, 0.176), (0.118, 0.136, 0.130)
-    b_new, b_old = (0.142, 0.158, 0.152), (0.096, 0.112, 0.106)
-    base_new = p106.mix_col(nt, p106.map_range(nt, peel.outputs["Fac"], 0.3, 0.7, 0.0, 0.12, (-240, 160)), a_new, b_new, (0, 200))
-    base_old = p106.mix_col(nt, p106.map_range(nt, peel.outputs["Fac"], 0.3, 0.7, 0.0, 0.12, (-240, 40)), a_old, b_old, (0, 40))
+    a_new, a_old = (0.162, 0.176, 0.168), (0.092, 0.110, 0.104)
+    b_new, b_old = (0.132, 0.148, 0.140), (0.072, 0.088, 0.082)
+    base_new = p106.mix_col(nt, p106.map_range(nt, peel.outputs["Fac"], 0.3, 0.7, 0.0, 0.16, (-240, 160)), a_new, b_new, (0, 200))
+    base_old = p106.mix_col(nt, p106.map_range(nt, peel.outputs["Fac"], 0.3, 0.7, 0.0, 0.16, (-240, 40)), a_old, b_old, (0, 40))
     base = p106.mix_col(nt, newer, base_new, base_old, (220, 120))
-    wear_m = p106.sparse(nt, wear.outputs["Fac"], (-240, -80), 0.76, 0.93)
-    colored = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (0, -80), wear_m, 0.18), base, (0.086, 0.082, 0.074), (220, -40))
-    rough0 = p106.mix_f(nt, newer, 0.46, 0.60, (220, -180))
+    wear_m = p106.sparse(nt, wear.outputs["Fac"], (-240, -80), 0.70, 0.90)
+    colored = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (0, -80), wear_m, 0.28), base, (0.070, 0.066, 0.058), (220, -40))
+    rough0 = p106.mix_f(nt, newer, 0.48, 0.64, (220, -180))
     rough = p106.mix_f(nt, peel.outputs["Fac"], rough0, p106.mathn(nt, "ADD", (0, -220), rough0, 0.06), (400, -180))
     nrm = p106.bump(nt, peel.outputs["Fac"], 0.007, 0.0006, (400, -320))
     bevel = nt.nodes.new("ShaderNodeBevel")
@@ -262,14 +267,14 @@ def rebuild_pipe(mat: bpy.types.Material, primary: bool) -> None:
     peel = p106.noise(nt, pos, 70.0, 4.0, (-520, 40), 0.46)
     joint = p106.noise(nt, pos, 4.2, 2.0, (-520, 220), 0.38)
     if primary:
-        a, b = (0.040, 0.044, 0.042), (0.028, 0.032, 0.031)
+        a, b = (0.028, 0.030, 0.029), (0.016, 0.018, 0.017)
     else:
-        a, b = (0.048, 0.066, 0.056), (0.036, 0.050, 0.046)
-    oxide = (0.102, 0.058, 0.036)
-    mf = p106.map_range(nt, peel.outputs["Fac"], 0.3, 0.7, 0.0, 0.14, (-240, 40))
+        a, b = (0.042, 0.062, 0.050), (0.028, 0.044, 0.038)
+    oxide = (0.118, 0.062, 0.036)
+    mf = p106.map_range(nt, peel.outputs["Fac"], 0.28, 0.72, 0.0, 0.30, (-240, 40))
     base = p106.mix_col(nt, mf, a, b, (0, 80))
-    ox_m = p106.sparse(nt, joint.outputs["Fac"], (-240, 220), 0.80, 0.95)
-    colored = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (0, 220), ox_m, 0.16), base, oxide, (220, 160))
+    ox_m = p106.sparse(nt, joint.outputs["Fac"], (-240, 220), 0.76, 0.93)
+    colored = p106.mix_col(nt, p106.mathn(nt, "MULTIPLY", (0, 220), ox_m, 0.22), base, oxide, (220, 160))
     rough = p106.mix_f(nt, peel.outputs["Fac"], 0.42, 0.56, (220, -20))
     rough = p106.mix_f(nt, ox_m, rough, 0.64, (400, -20))
     nrm = p106.bump(nt, peel.outputs["Fac"], 0.008, 0.0006, (400, -180))
@@ -549,24 +554,27 @@ def add_eval_cameras() -> None:
     data.clip_start = 0.04
     data.clip_end = 40.0
     cam = bpy.data.objects.new(FLOOR_CAM, data)
-    loc = Vector((0.18, 7.85, 0.78))
-    target = Vector((0.05, 9.55, 0.04))
+    loc = Vector((0.38, 10.15, 0.58))
+    target = Vector((-0.35, 11.20, 0.04))
     cam.location = loc
     cam.rotation_euler = (target - loc).to_track_quat("-Z", "Y").to_euler()
     cam["phase"] = 10.62
     bpy.context.scene.collection.objects.link(cam)
-    if bpy.data.objects.get(CLOSE_CAM) is None:
-        data = bpy.data.cameras.new(CLOSE_CAM)
-        data.lens = 50.0
-        data.clip_start = 0.05
-        data.clip_end = 40.0
-        cam = bpy.data.objects.new(CLOSE_CAM, data)
-        loc = Vector((0.38, 12.42, 1.50))
-        target = Vector((0.90, 13.20, 1.92))
-        cam.location = loc
-        cam.rotation_euler = (target - loc).to_track_quat("-Z", "Y").to_euler()
-        cam["phase"] = 10.62
-        bpy.context.scene.collection.objects.link(cam)
+    close = bpy.data.objects.get(CLOSE_CAM)
+    if close is not None:
+        bpy.data.objects.remove(close, do_unlink=True)
+    data = bpy.data.cameras.new(CLOSE_CAM)
+    data.lens = 32.0
+    data.sensor_width = 36.0
+    data.clip_start = 0.05
+    data.clip_end = 40.0
+    cam = bpy.data.objects.new(CLOSE_CAM, data)
+    loc = Vector((0.02, 12.72, 1.58))
+    target = Vector((0.70, 13.55, 1.92))
+    cam.location = loc
+    cam.rotation_euler = (target - loc).to_track_quat("-Z", "Y").to_euler()
+    cam["phase"] = 10.62
+    bpy.context.scene.collection.objects.link(cam)
 
 
 def inject_aging_available(keys: dict[str, bpy.types.Material], group) -> None:
@@ -616,34 +624,8 @@ def apply_materials() -> None:
         rebuild_valve(bpy.data.materials["MAT_Valve_IndustrialAccent"])
     rebuild_diffusers()
     rebuild_housing()
-    group = bpy.data.node_groups.get("P6_NG_AgingMasks")
-    if group is None:
-        return
-    keys = {}
-    for name in (
-        "MAT_Wall_PaintedConcrete",
-        "MAT_Floor_IndustrialConcrete",
-        "MAT_Ceiling_AgedConcrete",
-        "MAT_Structure_PaintedSteel",
-        "MAT_Pipe_DarkPaintedSteel",
-        "MAT_Pipe_Secondary",
-        "MAT_Metal_Galvanized",
-        "MAT_Cabinet_PaintedMetal",
-        "MAT_Vent_GalvanizedMetal",
-        "MAT_Valve_IndustrialAccent",
-    ):
-        mat = bpy.data.materials.get(name)
-        if mat is not None:
-            keys[name] = mat
-    rubber = bpy.data.materials.get("MAT_Rubber_Dark")
-    if rubber is not None:
-        host = rubber.copy()
-        host.name = "MAT_P106B_RubberHost"
-        keys["MAT_Rubber_Dark"] = host
-    inject_aging_available(keys, group)
-    host = bpy.data.materials.get("MAT_P106B_RubberHost")
-    if host is not None:
-        bpy.data.materials.remove(host)
+    # Do not re-inject Phase 6 dust veils: on darker Level 2 albedos they
+    # flatten pipes/walls toward a uniform mid-grey and erase material identity.
 
 
 def restore_eevee(scene: bpy.types.Scene) -> None:
