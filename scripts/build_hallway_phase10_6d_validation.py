@@ -279,7 +279,17 @@ def main() -> None:
     action_keys = p105.inspect_keys(bpy.data.objects[WALK_CAM])
     light_layout = p106b.capture_light_layout()
 
-    stills = render_stills(scene)
+    expected_stills = [
+        OUTPUT_DIR / "HERO_REALISM_A.jpg",
+        OUTPUT_DIR / "HERO_REALISM_B.jpg",
+        OUTPUT_DIR / "HERO_REALISM_C.jpg",
+        OUTPUT_DIR / "FLOOR_REALISM_CLOSEUP.jpg",
+    ]
+    if all(path.exists() for path in expected_stills):
+        stills = expected_stills
+        print("reusing completed still validation renders")
+    else:
+        stills = render_stills(scene)
     video, frame_count = render_motion(scene)
     audit = freeze_audit(scene, light_layout, action_keys)
 
