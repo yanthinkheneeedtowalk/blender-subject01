@@ -50,7 +50,7 @@ FPS = 24
 FINAL_END = 360
 CUT_FRAME = 348
 FINAL_SCENE_FRAMES = 348
-RES_X, RES_Y = 960, 540
+RES_X, RES_Y = 768, 432
 
 DOOR_COLLECTION = "FINAL_DOOR_SEQUENCE"
 PUDDLE_COLLECTION = "FINAL_PUDDLES"
@@ -660,8 +660,9 @@ def configure_cycles(scene: bpy.types.Scene) -> None:
 def configure_eevee(scene: bpy.types.Scene, frame_dir: Path) -> None:
     p106b.restore_eevee(scene)
     scene.render.engine = "BLENDER_EEVEE"
-    scene.eevee.taa_render_samples = 24
-    scene.eevee.volumetric_samples = 16
+    scene.eevee.taa_render_samples = 12
+    scene.eevee.volumetric_end = 35.0
+    scene.eevee.volumetric_samples = 8
     scene.eevee.volumetric_tile_size = "16"
     scene.render.resolution_x = RES_X
     scene.render.resolution_y = RES_Y
