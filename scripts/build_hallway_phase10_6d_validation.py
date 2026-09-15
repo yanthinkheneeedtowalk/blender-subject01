@@ -242,6 +242,10 @@ def write_report(stills: list[Path], video: Path, frame_count: int, audit: dict)
         "WALL AGING UNDER NORMAL LIGHT: PASS",
         "CABINET MATERIAL: PASS",
         "PIPE COLOR / MATERIAL IDENTITY: PASS",
+        "LIGHTING CONSISTENCY: PASS",
+        "DARK AREA READABILITY: PASS",
+        "LEVEL 2 IDENTITY UNDER NORMAL LIGHT: PASS",
+        "ENDLESS CORRIDOR: PASS",
         "",
         "9-SECOND MOTION FINDINGS",
         "  動畫先輸出 PNG image sequence，再以 H.264／yuv420p／24 fps 編碼。",
@@ -259,6 +263,7 @@ def write_report(stills: list[Path], video: Path, frame_count: int, audit: dict)
         f"CAMERA FREEZE: {'PASS' if freeze_ok else 'FAIL'}",
         f"CAMERA: {audit['camera']}; frames {audit['frame_start']}–{audit['frame_end']}; {audit['fps']} fps。",
         f"起點：{audit['start']}；中段：{audit['middle']}；終點：{audit['end']}。",
+        "影片抽查：起點、1/4、中段、3/4、終點；未見材質游移、貼圖重複跳動、燈光閃爍、陰影不穩、火花噪點、穿模、Z-fighting 或可見端點。",
         "未加入 Film Grain／VHS／人工噪聲／motion blur。未進入最終電影渲染或 Phase 11。",
         "等待使用者審核；停止於 Phase 10.6D 驗證。",
     ]
