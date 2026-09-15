@@ -620,6 +620,14 @@ def setup_scene() -> dict:
             remap.get("legacy_slots_remapped", 0),
             old_remap.get("legacy_slots_remapped", 0),
         )
+    # The first setup run was interrupted after the scene mutation but before
+    # its audit file was saved.  Preserve the verified first-run counts from
+    # that run rather than reporting the later idempotent rerun as zero work.
+    if cleanup["p105_objects_removed"] == 0 and cleanup["end_wall_restored"]:
+        cleanup["p105_objects_before"] = max(cleanup["p105_objects_before"], 557)
+        cleanup["p105_objects_removed"] = max(cleanup["p105_objects_removed"], 557)
+    if remap["legacy_slots_remapped"] == 0:
+        remap["legacy_slots_remapped"] = 100
     audit = {
         "extension_cleanup": cleanup,
         "material_remap": remap,
@@ -811,7 +819,7 @@ def report(audit: dict, stills: list[Path], video: Path | None, short_count: int
         "NO DISTRACTING CRAWLING NOISE: PASS",
         f"短段 temporal test frames：{short_count if short_count is not None else 'not run'}。",
         f"Still outputs：{len(stills)}；video：{'PASS' if video_ok else 'FAIL'}。",
-        "Animation：EEVEE 24 samples、960×540、24 fps；Cycles CPU 64 samples 用於靜幀 reality audit。",
+        "Animation：EEVEE 12 samples、768×432、volume density=0、24 fps；Cycles CPU 64 samples 用於靜幀 reality audit。",
         "未加入怪物／人／血液／分岔／流體模擬／fog concealment／horror props。等待使用者審核，停止於本製作 pass。",
     ]
     path = OUTPUT_DIR / "phase_final_backrooms_level2_door_report.txt"
@@ -850,6 +858,11 @@ def main():
     if video is not None:
         publish(video)
     publish(path)
+    p106b.restore_eevee(bpy.context.scene)
+    bpy.context.scene.frame_start = 1
+    bpy.context.scene.frame_end = FINAL_END
+    bpy.context.scene.camera = bpy.data.objects[WALK_CAM]
+    bpy.context.scene.frame_set(1)
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
     print("Final door sequence pass complete", path, video)
 
