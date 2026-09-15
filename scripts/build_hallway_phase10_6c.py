@@ -105,12 +105,12 @@ def rebuild_wall(mat: bpy.types.Material) -> None:
 
     macro_m = p106.map_range(nt, macro.outputs["Fac"], 0.25, 0.75, 0.0, 0.38, (-360, 300))
     base = p106.mix_col(nt, macro_m, warm_a, warm_b, (-100, 260))
-    meso_m = p106.sparse(nt, meso.outputs["Fac"], (-360, 100), 0.52, 0.84)
+    meso_m = p106.map_range(nt, meso.outputs["Fac"], 0.30, 0.70, 0.0, 0.24, (-360, 100))
     aged = p106.mix_col(
         nt, p106.mathn(nt, "MULTIPLY", (-100, 100), meso_m, 0.30),
         base, repair, (160, 220),
     )
-    vertical_m = p106.sparse(nt, vertical.outputs["Fac"], (-360, -100), 0.62, 0.90)
+    vertical_m = p106.sparse(nt, vertical.outputs["Fac"], (-360, -100), 0.58, 0.90)
     damp = p106.mix_col(
         nt, p106.mathn(nt, "MULTIPLY", (-100, -100), vertical_m, 0.28),
         aged, moisture, (160, 80),
@@ -154,12 +154,12 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
 
     macro_m = p106.map_range(nt, macro.outputs["Fac"], 0.24, 0.76, 0.0, 0.38, (-420, 360))
     base = p106.mix_col(nt, macro_m, concrete_a, concrete_b, (-160, 320))
-    medium_m = p106.sparse(nt, medium.outputs["Fac"], (-420, 160), 0.54, 0.84)
+    medium_m = p106.map_range(nt, medium.outputs["Fac"], 0.30, 0.70, 0.0, 0.32, (-420, 160))
     aged = p106.mix_col(
         nt, p106.mathn(nt, "MULTIPLY", (-160, 160), medium_m, 0.24),
         base, repair, (80, 260),
     )
-    traffic_m = p106.sparse(nt, traffic.outputs["Fac"], (-420, -20), 0.60, 0.88)
+    traffic_m = p106.sparse(nt, traffic.outputs["Fac"], (-420, -20), 0.58, 0.88)
     worn = p106.mix_col(
         nt, p106.mathn(nt, "MULTIPLY", (-160, -20), traffic_m, 0.22),
         aged, dust, (280, 220),
@@ -174,9 +174,9 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
         nt, p106.mathn(nt, "MULTIPLY", (-160, -360), old_zone, 0.18),
         edge_dirt, repair, (460, 40),
     )
-    aggregate_m = p106.sparse(nt, pores.outputs["Distance"], (80, -460), 0.0, 0.055)
+    aggregate_m = p106.map_range(nt, pores.outputs["Distance"], 0.0, 0.22, 0.10, 0.0, (80, -460))
     colored = p106.mix_col(
-        nt, p106.mathn(nt, "MULTIPLY", (260, -460), aggregate_m, 0.08),
+        nt, p106.mathn(nt, "MULTIPLY", (260, -460), aggregate_m, 0.12),
         colored, aggregate, (640, 40),
     )
 
@@ -185,8 +185,8 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
     rough = p106.mix_f(nt, traffic_m, rough, 0.70, (360, -360))
     rough = p106.mix_f(nt, edge_m, rough, 0.91, (560, -300))
     nrm = p106.bump(nt, macro.outputs["Fac"], 0.004, 0.0018, (280, -520))
-    nrm = p106.bump(nt, micro.outputs["Fac"], 0.008, 0.0009, (460, -520), nrm)
-    nrm = p106.bump(nt, pore_h, 0.004, 0.0006, (640, -520), nrm)
+    nrm = p106.bump(nt, micro.outputs["Fac"], 0.012, 0.0011, (460, -520), nrm)
+    nrm = p106.bump(nt, pore_h, 0.010, 0.0008, (640, -520), nrm)
 
     bsdf = p106.principled(nt, (840, 40))
     out = p106.output(nt, (1100, 40))
