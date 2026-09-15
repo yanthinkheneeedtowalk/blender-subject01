@@ -119,10 +119,10 @@ def configure_eevee_polish(scene: bpy.types.Scene, samples: int) -> None:
     scene.eevee.use_shadows = True
     scene.eevee.use_fast_gi = True
     scene.eevee.fast_gi_method = "GLOBAL_ILLUMINATION"
-    scene.eevee.fast_gi_quality = 0.72
+    scene.eevee.fast_gi_quality = 0.62
     scene.eevee.fast_gi_ray_count = 16
     scene.eevee.fast_gi_step_count = 10
-    scene.eevee.fast_gi_resolution = "1"
+    scene.eevee.fast_gi_resolution = "2"
     scene.eevee.fast_gi_bias = 0.04
     scene.eevee.clamp_surface_indirect = 2.45
     scene.eevee.indirect_light_intensity = 1.32
@@ -130,7 +130,7 @@ def configure_eevee_polish(scene: bpy.types.Scene, samples: int) -> None:
     scene.eevee.shadow_step_count = 12
     scene.eevee.shadow_resolution_scale = 1.0
     # Screen-space tracing only on mid-roughness metals / paint; walls stay diffuse.
-    scene.eevee.use_raytracing = True
+    scene.eevee.use_raytracing = False
     rt = scene.eevee.ray_tracing_options
     rt.trace_max_roughness = 0.48
     rt.resolution_scale = "2"
@@ -290,10 +290,11 @@ def add_close_camera() -> bpy.types.Object:
     data.clip_start = 0.05
     data.clip_end = 40.0
     cam = bpy.data.objects.new("CAM_P10_D", data)
-    loc = Vector((0.20, 13.08, 1.46))
-    target = Vector((0.82, 13.30, 1.52))
+    loc = Vector((0.02, 12.72, 1.58))
+    target = Vector((0.70, 13.55, 1.92))
     cam.location = loc
     cam.rotation_euler = (target - loc).to_track_quat("-Z", "Y").to_euler()
+    data.lens = 32.0
     cam["phase"] = 10
     bpy.context.scene.collection.objects.link(cam)
     return cam
@@ -493,7 +494,7 @@ def write_report(validation: dict) -> Path:
         "  遠端靠 C_04 WEAK 與 GI，不是 RGB 0 黑塊。",
         "",
         "RENDER QUALITY",
-        "  引擎 EEVEE。靜幀 TAA 48。Fast GI + screen ray tracing。",
+        "  引擎 EEVEE。靜幀 TAA 48。Fast GI；螢幕空間 ray tracing 關閉以保持實用取樣時間。",
         "  無合成器對比／暗角／CA／顆粒。",
         "",
         "HERO TEST",

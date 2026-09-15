@@ -47,7 +47,7 @@ DEPTH
   遠端靠 C_04 WEAK 與 GI，不是 RGB 0 黑塊。
 
 RENDER QUALITY
-  引擎 EEVEE。靜幀 TAA 48。Fast GI + screen ray tracing。
+  引擎 EEVEE。靜幀 TAA 48。Fast GI；螢幕空間 ray tracing 關閉以保持實用取樣時間。
   無合成器對比／暗角／CA／顆粒。
 
 HERO TEST
