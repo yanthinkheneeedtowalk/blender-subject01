@@ -1,0 +1,68 @@
+PHASE 10.6 英雄材質重建與色彩身份對照
+Phase 10.5 相機／運動／無盡走廊已凍結。未改幾何、延伸段、9 秒路徑。
+三套 Look 僅用於同一鏡位對照；場景材質指定已恢復為 LOOK_00 現況。
+未選勝者，未套用全廊，未進入 Phase 11。
+
+LOOK_00 基準問題（舊材質）
+  牆／地／櫃／管幾乎都是 Noise→Mix→Bump，看起來像塑膠灰與粘土渲染。
+  牆過亮過平、與櫃 equip 色相接近；管是深色圓柱缺少塗層高光。
+  鍍鋅金屬偏均勻灰；燈槽 housing 與支架共用 MAT_Metal_Galvanized，擴散片偏白塊。
+
+牆／混凝土
+  舊：近白／平灰，程序噪成了材質本身。
+  Base Color：暖髒灰／機構米灰，宏觀澆置色差極低對比；中觀水漬／修補當 MASK；微觀不進 albedo。
+  Roughness：高粗糙 0.83–0.86，孔隙與污漬只作微幅加減，維持漫射。
+  Normal：細孔隙＋微觀凹凸，強度很低，靠光反應顯形，不是牆上畫噪點。
+  Metallic 0，Specular ~0.20，IOR 1.52，無清漆。
+
+地坪
+  舊：與牆同家族、分離不足。
+  Base Color：更暗更密；沿走廊軸向交通磨耗作 MASK 混入積塵，無新增水窪。
+  Roughness：基底 ~0.70–0.74，磨耗路徑略降但不低於約 0.56，避免鏡面。
+  Normal：拉伸刮痕＋微觀，掠射可有寬弱反應。
+
+烤漆櫃／設備
+  舊：與牆同灰，Metallic 幾乎 0 又沒有塗層，讀成另一塊混凝土。
+  Base Color：冷灰／灰綠烤漆，磨損 MASK 露出更深底層。
+  Roughness：0.42–0.55；Coat ~0.12 模擬電介質漆膜，不是 Metallic=1。
+  Normal：橘皮微結構＋Cycles Bevel 讓稜線吃光不同於混凝土。
+
+工業管
+  舊：炭黑圓柱，高光弱、無塗層差異。
+  Base Color：A 炭黑；B 主管灰綠、伴管藍灰；C 更深冷灰。非彩虹管線。
+  Roughness：0.38–0.50 以得到柱面高光；Coat 低；磨損處才略提 Metallic 0.12。
+  閥門紅保留並在 B 略加強。
+
+鍍鋅／外露金屬
+  舊：均勻金屬灰。
+  Metallic ~0.88，軋延波紋進 roughness／微 normal，各向異性 0.18，非鉻。
+
+燈具
+  舊：housing=鍍鋅、擴散片共用 Weak、近白塊。
+  Housing 改烤漆金屬；擴散片帶塵與微透射，發射非 #FFFFFF；燈管與槽分離。
+  未改燈具能量／位置；B／C 僅極微混入光源色溫。
+
+LOOK 比較（同一 CAM_P105_WALK 第 108 幀，同一幾何）
+  LOOK A 紀實工業：中性螢光、暖髒牆、冷櫃、炭黑管。最像文獻／現場照片。
+    可讀性靠材質分離，色彩身份最克制，Level 2 氣氛較「真實設施」。
+  LOOK B Level 2 工業（建議候選，尚未套用）：機構暖牆、灰綠主管、藍灰伴管、
+    極微暖黃／綠螢光來自物體與燈色而非全圖濾鏡。閥門紅較可讀。
+    深度仍靠幾何與光衰減；色彩在物件上，不是後期。
+  LOOK C 克制電影工業：牆更暖、金屬／暗部更冷，對比略高。無青橙、無賽博、無海報調色。
+    氣氛較有冷暖層，但比 B 更「鏡頭」，比 A 更不紀實。
+
+PHASE 10.5 FREEZE STATUS: PASS
+LOOK_00 BASELINE: PASS
+LOOK A GENERATED: PASS
+LOOK B GENERATED: PASS
+LOOK C GENERATED: PASS
+MATERIAL COMPARISON READY FOR USER REVIEW: PASS
+
+凍結細節
+  幾何變換改動：0
+  CAM_INSPECT 路徑不變：True
+  CAM_P105_WALK 路徑錯誤：0
+  材質槽已恢復 LOOK_00：True
+  燈光顏色已恢復：True
+  P8/P9/MARK/P105：209/11/5/559
+  未開始 Phase 11。等待使用者選擇 Look。
