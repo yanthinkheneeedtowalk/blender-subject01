@@ -97,22 +97,22 @@ def rebuild_wall(mat: bpy.types.Material) -> None:
     pores = p106.voronoi(nt, pos, 38.0, (-620, -300), 0.90)
     micro = p106.noise(nt, pos, 88.0, 8.0, (-620, -480), 0.52)
 
-    warm_a = (0.165, 0.157, 0.140)
-    warm_b = (0.105, 0.101, 0.092)
-    moisture = (0.074, 0.067, 0.057)
-    repair = (0.190, 0.178, 0.150)
-    skirt_col = (0.060, 0.056, 0.049)
+    warm_a = (0.188, 0.178, 0.158)
+    warm_b = (0.082, 0.078, 0.070)
+    moisture = (0.064, 0.057, 0.048)
+    repair = (0.205, 0.190, 0.158)
+    skirt_col = (0.052, 0.048, 0.042)
 
-    macro_m = p106.map_range(nt, macro.outputs["Fac"], 0.25, 0.75, 0.0, 0.28, (-360, 300))
+    macro_m = p106.map_range(nt, macro.outputs["Fac"], 0.25, 0.75, 0.0, 0.38, (-360, 300))
     base = p106.mix_col(nt, macro_m, warm_a, warm_b, (-100, 260))
-    meso_m = p106.sparse(nt, meso.outputs["Fac"], (-360, 100), 0.58, 0.86)
+    meso_m = p106.sparse(nt, meso.outputs["Fac"], (-360, 100), 0.52, 0.84)
     aged = p106.mix_col(
-        nt, p106.mathn(nt, "MULTIPLY", (-100, 100), meso_m, 0.20),
+        nt, p106.mathn(nt, "MULTIPLY", (-100, 100), meso_m, 0.30),
         base, repair, (160, 220),
     )
-    vertical_m = p106.sparse(nt, vertical.outputs["Fac"], (-360, -100), 0.72, 0.93)
+    vertical_m = p106.sparse(nt, vertical.outputs["Fac"], (-360, -100), 0.62, 0.90)
     damp = p106.mix_col(
-        nt, p106.mathn(nt, "MULTIPLY", (-100, -100), vertical_m, 0.24),
+        nt, p106.mathn(nt, "MULTIPLY", (-100, -100), vertical_m, 0.28),
         aged, moisture, (160, 80),
     )
     skirt = p106.map_range(nt, z, 0.01, 0.56, 0.40, 0.0, (-360, -220))
@@ -146,21 +146,22 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
     pores = p106.voronoi(nt, pos, 52.0, (-660, -360), 0.93)
     micro = p106.noise(nt, pos, 112.0, 8.0, (-660, -540), 0.50)
 
-    concrete_a = (0.105, 0.108, 0.114)
-    concrete_b = (0.065, 0.068, 0.074)
-    dust = (0.042, 0.043, 0.046)
-    repair = (0.142, 0.138, 0.128)
+    concrete_a = (0.132, 0.136, 0.146)
+    concrete_b = (0.054, 0.058, 0.066)
+    dust = (0.034, 0.035, 0.039)
+    repair = (0.158, 0.151, 0.138)
+    aggregate = (0.170, 0.166, 0.154)
 
-    macro_m = p106.map_range(nt, macro.outputs["Fac"], 0.24, 0.76, 0.0, 0.30, (-420, 360))
+    macro_m = p106.map_range(nt, macro.outputs["Fac"], 0.24, 0.76, 0.0, 0.38, (-420, 360))
     base = p106.mix_col(nt, macro_m, concrete_a, concrete_b, (-160, 320))
-    medium_m = p106.sparse(nt, medium.outputs["Fac"], (-420, 160), 0.60, 0.86)
+    medium_m = p106.sparse(nt, medium.outputs["Fac"], (-420, 160), 0.54, 0.84)
     aged = p106.mix_col(
-        nt, p106.mathn(nt, "MULTIPLY", (-160, 160), medium_m, 0.16),
+        nt, p106.mathn(nt, "MULTIPLY", (-160, 160), medium_m, 0.24),
         base, repair, (80, 260),
     )
-    traffic_m = p106.sparse(nt, traffic.outputs["Fac"], (-420, -20), 0.66, 0.90)
+    traffic_m = p106.sparse(nt, traffic.outputs["Fac"], (-420, -20), 0.60, 0.88)
     worn = p106.mix_col(
-        nt, p106.mathn(nt, "MULTIPLY", (-160, -20), traffic_m, 0.18),
+        nt, p106.mathn(nt, "MULTIPLY", (-160, -20), traffic_m, 0.22),
         aged, dust, (280, 220),
     )
     abs_x = p106.mathn(nt, "ABSOLUTE", (-420, -180), x, 0.0)
@@ -168,13 +169,18 @@ def rebuild_floor(mat: bpy.types.Material) -> None:
     edge_dirt = p106.mix_col(
         nt, edge_m, worn, dust, (280, 80),
     )
-    old_zone = p106.sparse(nt, edge.outputs["Fac"], (-420, -360), 0.82, 0.96)
+    old_zone = p106.sparse(nt, edge.outputs["Fac"], (-420, -360), 0.78, 0.95)
     colored = p106.mix_col(
-        nt, p106.mathn(nt, "MULTIPLY", (-160, -360), old_zone, 0.14),
+        nt, p106.mathn(nt, "MULTIPLY", (-160, -360), old_zone, 0.18),
         edge_dirt, repair, (460, 40),
     )
+    aggregate_m = p106.sparse(nt, pores.outputs["Distance"], (80, -460), 0.0, 0.055)
+    colored = p106.mix_col(
+        nt, p106.mathn(nt, "MULTIPLY", (260, -460), aggregate_m, 0.08),
+        colored, aggregate, (640, 40),
+    )
 
-    pore_h = p106.map_range(nt, pores.outputs["Distance"], 0.0, 0.25, 1.0, 0.0, (-160, -460))
+    pore_h = p106.map_range(nt, pores.outputs["Distance"], 0.0, 0.25, 1.0, 0.0, (-160, -520))
     rough = p106.mix_f(nt, pore_h, 0.80, 0.93, (120, -420))
     rough = p106.mix_f(nt, traffic_m, rough, 0.70, (360, -360))
     rough = p106.mix_f(nt, edge_m, rough, 0.91, (560, -300))
