@@ -1,0 +1,276 @@
+{
+  "family": "BEAM_Ceiling_A/B/C_*",
+  "collection": "STRUCTURE_BEAMS",
+  "count_before": 11,
+  "objects": [
+    {
+      "name": "BEAM_Ceiling_A_01",
+      "mesh": "MODULE_CeilingBeam_A_MESH",
+      "location": [
+        0.0,
+        1.7,
+        2.9
+      ],
+      "dimensions": [
+        2.04,
+        0.16,
+        0.1
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_A_02",
+      "mesh": "MODULE_CeilingBeam_A_MESH",
+      "location": [
+        0.0,
+        4.25,
+        2.9
+      ],
+      "dimensions": [
+        2.04,
+        0.16,
+        0.1
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_A_03",
+      "mesh": "MODULE_CeilingBeam_A_MESH",
+      "location": [
+        0.0,
+        6.85,
+        2.9
+      ],
+      "dimensions": [
+        2.04,
+        0.16,
+        0.1
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_B_01",
+      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "location": [
+        0.0,
+        9.35,
+        2.66
+      ],
+      "dimensions": [
+        1.89,
+        0.14,
+        0.08
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_B_02",
+      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "location": [
+        0.0,
+        10.9,
+        2.66
+      ],
+      "dimensions": [
+        1.89,
+        0.14,
+        0.08
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_B_03",
+      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "location": [
+        0.0,
+        12.45,
+        2.66
+      ],
+      "dimensions": [
+        1.89,
+        0.14,
+        0.08
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_B_04",
+      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "location": [
+        0.0,
+        14.0,
+        2.66
+      ],
+      "dimensions": [
+        1.89,
+        0.14,
+        0.08
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_B_05",
+      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "location": [
+        0.0,
+        15.15,
+        2.66
+      ],
+      "dimensions": [
+        1.89,
+        0.14,
+        0.08
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_C_01",
+      "mesh": "MODULE_CeilingBeam_C_MESH",
+      "location": [
+        0.0,
+        17.85,
+        2.84
+      ],
+      "dimensions": [
+        2.04,
+        0.18,
+        0.09
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_C_02",
+      "mesh": "MODULE_CeilingBeam_C_MESH",
+      "location": [
+        0.0,
+        20.55,
+        2.84
+      ],
+      "dimensions": [
+        2.04,
+        0.18,
+        0.09
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    },
+    {
+      "name": "BEAM_Ceiling_C_03",
+      "mesh": "MODULE_CeilingBeam_C_MESH",
+      "location": [
+        0.0,
+        22.95,
+        2.84
+      ],
+      "dimensions": [
+        2.04,
+        0.18,
+        0.09
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "collections": [
+        "STRUCTURE_BEAMS"
+      ]
+    }
+  ],
+  "duplicate_transform_groups": [],
+  "duplicate_transform_group_count": 0,
+  "coplanar_or_overlapping_family_pairs": 0,
+  "camera_path_intersections": 0,
+  "finding": "Repeated transverse ceiling beam family; no camera-volume intersection, but each member spans most of the ceiling width and passes close above the eye line, creating the moving dark bands.",
+  "removed": [
+    "BEAM_Ceiling_A_01",
+    "BEAM_Ceiling_A_02",
+    "BEAM_Ceiling_A_03",
+    "BEAM_Ceiling_B_01",
+    "BEAM_Ceiling_B_02",
+    "BEAM_Ceiling_B_03",
+    "BEAM_Ceiling_B_04",
+    "BEAM_Ceiling_B_05",
+    "BEAM_Ceiling_C_01",
+    "BEAM_Ceiling_C_02",
+    "BEAM_Ceiling_C_03"
+  ],
+  "count_after": 0,
+  "preserved": {
+    "floor": true,
+    "walls": true,
+    "ceiling": true,
+    "pipes": true,
+    "door": true,
+    "walk_camera": true
+  }
+}
