@@ -1,20 +1,23 @@
 {
-  "family": "BEAM_Ceiling_A/B/C_*",
-  "collection": "STRUCTURE_BEAMS",
-  "count_before": 11,
+  "family": "BEAM.* + BEAM_Ceiling_A/B/C_*",
+  "collections": [
+    "HALLWAY_PHASE1",
+    "STRUCTURE_BEAMS"
+  ],
+  "count_before": 8,
   "objects": [
     {
-      "name": "BEAM_Ceiling_A_01",
-      "mesh": "MODULE_CeilingBeam_A_MESH",
+      "name": "BEAM.A.01",
+      "mesh": "BEAM.A.01",
       "location": [
         0.0,
-        1.7,
-        2.9
+        2.665,
+        2.94
       ],
       "dimensions": [
-        2.04,
-        0.16,
-        0.1
+        2.2,
+        0.23,
+        0.12
       ],
       "rotation": [
         0.0,
@@ -22,21 +25,21 @@
         0.0
       ],
       "collections": [
-        "STRUCTURE_BEAMS"
+        "HALLWAY_PHASE1"
       ]
     },
     {
-      "name": "BEAM_Ceiling_A_02",
-      "mesh": "MODULE_CeilingBeam_A_MESH",
+      "name": "BEAM.A.02",
+      "mesh": "BEAM.A.02",
       "location": [
         0.0,
-        4.25,
-        2.9
+        5.465,
+        2.94
       ],
       "dimensions": [
-        2.04,
-        0.16,
-        0.1
+        2.2,
+        0.23,
+        0.12
       ],
       "rotation": [
         0.0,
@@ -44,21 +47,21 @@
         0.0
       ],
       "collections": [
-        "STRUCTURE_BEAMS"
+        "HALLWAY_PHASE1"
       ]
     },
     {
-      "name": "BEAM_Ceiling_A_03",
-      "mesh": "MODULE_CeilingBeam_A_MESH",
+      "name": "BEAM.AB",
+      "mesh": "BEAM.AB",
       "location": [
         0.0,
-        6.85,
-        2.9
+        8.35,
+        2.87
       ],
       "dimensions": [
-        2.04,
-        0.16,
-        0.1
+        2.2,
+        0.8,
+        0.26
       ],
       "rotation": [
         0.0,
@@ -66,21 +69,21 @@
         0.0
       ],
       "collections": [
-        "STRUCTURE_BEAMS"
+        "HALLWAY_PHASE1"
       ]
     },
     {
-      "name": "BEAM_Ceiling_B_01",
-      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "name": "BEAM.B.01",
+      "mesh": "BEAM.B.01",
       "location": [
         0.0,
-        9.35,
-        2.66
+        11.265,
+        2.82
       ],
       "dimensions": [
-        1.89,
-        0.14,
-        0.08
+        2.05,
+        0.23,
+        0.36
       ],
       "rotation": [
         0.0,
@@ -88,21 +91,21 @@
         0.0
       ],
       "collections": [
-        "STRUCTURE_BEAMS"
+        "HALLWAY_PHASE1"
       ]
     },
     {
-      "name": "BEAM_Ceiling_B_02",
-      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "name": "BEAM.B.02",
+      "mesh": "BEAM.B.02",
       "location": [
         0.0,
-        10.9,
-        2.66
+        13.665,
+        2.82
       ],
       "dimensions": [
-        1.89,
-        0.14,
-        0.08
+        2.05,
+        0.23,
+        0.36
       ],
       "rotation": [
         0.0,
@@ -110,21 +113,21 @@
         0.0
       ],
       "collections": [
-        "STRUCTURE_BEAMS"
+        "HALLWAY_PHASE1"
       ]
     },
     {
-      "name": "BEAM_Ceiling_B_03",
-      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "name": "BEAM.BC",
+      "mesh": "BEAM.BC",
       "location": [
         0.0,
-        12.45,
-        2.66
+        16.1,
+        2.935
       ],
       "dimensions": [
-        1.89,
-        0.14,
-        0.08
+        2.2,
+        0.8,
+        0.13
       ],
       "rotation": [
         0.0,
@@ -132,21 +135,21 @@
         0.0
       ],
       "collections": [
-        "STRUCTURE_BEAMS"
+        "HALLWAY_PHASE1"
       ]
     },
     {
-      "name": "BEAM_Ceiling_B_04",
-      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "name": "BEAM.C.01",
+      "mesh": "BEAM.C.01",
       "location": [
         0.0,
-        14.0,
-        2.66
+        19.265,
+        2.915
       ],
       "dimensions": [
-        1.89,
-        0.14,
-        0.08
+        2.2,
+        0.23,
+        0.17
       ],
       "rotation": [
         0.0,
@@ -154,21 +157,21 @@
         0.0
       ],
       "collections": [
-        "STRUCTURE_BEAMS"
+        "HALLWAY_PHASE1"
       ]
     },
     {
-      "name": "BEAM_Ceiling_B_05",
-      "mesh": "MODULE_CeilingBeam_B_MESH",
+      "name": "BEAM.End",
+      "mesh": "BEAM.End",
       "location": [
         0.0,
-        15.15,
-        2.66
+        23.615,
+        2.94
       ],
       "dimensions": [
-        1.89,
-        0.14,
-        0.08
+        2.2,
+        0.33,
+        0.12
       ],
       "rotation": [
         0.0,
@@ -176,73 +179,7 @@
         0.0
       ],
       "collections": [
-        "STRUCTURE_BEAMS"
-      ]
-    },
-    {
-      "name": "BEAM_Ceiling_C_01",
-      "mesh": "MODULE_CeilingBeam_C_MESH",
-      "location": [
-        0.0,
-        17.85,
-        2.84
-      ],
-      "dimensions": [
-        2.04,
-        0.18,
-        0.09
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "collections": [
-        "STRUCTURE_BEAMS"
-      ]
-    },
-    {
-      "name": "BEAM_Ceiling_C_02",
-      "mesh": "MODULE_CeilingBeam_C_MESH",
-      "location": [
-        0.0,
-        20.55,
-        2.84
-      ],
-      "dimensions": [
-        2.04,
-        0.18,
-        0.09
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "collections": [
-        "STRUCTURE_BEAMS"
-      ]
-    },
-    {
-      "name": "BEAM_Ceiling_C_03",
-      "mesh": "MODULE_CeilingBeam_C_MESH",
-      "location": [
-        0.0,
-        22.95,
-        2.84
-      ],
-      "dimensions": [
-        2.04,
-        0.18,
-        0.09
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "collections": [
-        "STRUCTURE_BEAMS"
+        "HALLWAY_PHASE1"
       ]
     }
   ],
@@ -252,17 +189,14 @@
   "camera_path_intersections": 0,
   "finding": "Repeated transverse ceiling beam family; no camera-volume intersection, but each member spans most of the ceiling width and passes close above the eye line, creating the moving dark bands.",
   "removed": [
-    "BEAM_Ceiling_A_01",
-    "BEAM_Ceiling_A_02",
-    "BEAM_Ceiling_A_03",
-    "BEAM_Ceiling_B_01",
-    "BEAM_Ceiling_B_02",
-    "BEAM_Ceiling_B_03",
-    "BEAM_Ceiling_B_04",
-    "BEAM_Ceiling_B_05",
-    "BEAM_Ceiling_C_01",
-    "BEAM_Ceiling_C_02",
-    "BEAM_Ceiling_C_03"
+    "BEAM.A.01",
+    "BEAM.A.02",
+    "BEAM.AB",
+    "BEAM.B.01",
+    "BEAM.B.02",
+    "BEAM.BC",
+    "BEAM.C.01",
+    "BEAM.End"
   ],
   "count_after": 0,
   "preserved": {
