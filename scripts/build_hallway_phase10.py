@@ -72,9 +72,6 @@ STILLS = (
     ("SHOT_B_zone_b_density", "CAM_HERO_B"),
     ("SHOT_C_zone_c_isolation", "CAM_HERO_C"),
     ("SHOT_D_close_cabinet_pipe", "CAM_P10_D"),
-    ("REVIEW_entrance", "CAM_INSPECT", 1),
-    ("REVIEW_trans_ab", "CAM_INSPECT", 78),
-    ("REVIEW_zone_c", "CAM_INSPECT", 185),
     ("REVIEW_lookback", "CAM_HERO_LOOKBACK"),
 )
 
@@ -123,13 +120,13 @@ def configure_eevee_polish(scene: bpy.types.Scene, samples: int) -> None:
     scene.eevee.use_fast_gi = True
     scene.eevee.fast_gi_method = "GLOBAL_ILLUMINATION"
     scene.eevee.fast_gi_quality = 0.72
-    scene.eevee.fast_gi_ray_count = 24
-    scene.eevee.fast_gi_step_count = 12
+    scene.eevee.fast_gi_ray_count = 16
+    scene.eevee.fast_gi_step_count = 10
     scene.eevee.fast_gi_resolution = "1"
     scene.eevee.fast_gi_bias = 0.04
     scene.eevee.clamp_surface_indirect = 2.45
     scene.eevee.indirect_light_intensity = 1.32
-    scene.eevee.shadow_ray_count = 6
+    scene.eevee.shadow_ray_count = 4
     scene.eevee.shadow_step_count = 12
     scene.eevee.shadow_resolution_scale = 1.0
     # Screen-space tracing only on mid-roughness metals / paint; walls stay diffuse.
@@ -143,7 +140,7 @@ def configure_eevee_polish(scene: bpy.types.Scene, samples: int) -> None:
     scene.eevee.volumetric_start = 0.20
     scene.eevee.volumetric_end = 26.0
     scene.eevee.volumetric_tile_size = "8"
-    scene.eevee.volumetric_samples = 48
+    scene.eevee.volumetric_samples = 32
     scene.eevee.volumetric_sample_distribution = 0.75
     scene.eevee.use_volumetric_shadows = False
     scene.eevee.volumetric_light_clamp = 4.0
@@ -232,25 +229,26 @@ def set_spec(mat_name: str, spec: float, metallic: float | None = None, coat: fl
 
 def set_mix_rgba(mat_name: str, node_name: str, socket: str, color) -> None:
     mat = bpy.data.materials.get(mat_name)
-    if mat is None:
+    if mat is None or mat.node_tree is None:
         return
     node = mat.node_tree.nodes.get(node_name)
     if node is None or node.type != "MIX":
         return
-    sock = node.inputs.get(socket)
-    if sock is not None and not sock.links:
-        sock.default_value = (*color, 1.0)
+    for inp in node.inputs:
+        if inp.identifier == socket and not inp.links:
+            inp.default_value = (*color, 1.0)
+            return
 
 
 def polish_materials() -> None:
     # Wall: warmer dirty grey, more diffuse. Cabinet: cooler enamel, clearer edges.
-    set_mix_rgba("MAT_Wall_PaintedConcrete", "Mix", "A_Color", (0.50, 0.465, 0.408))
-    set_mix_rgba("MAT_Wall_PaintedConcrete", "Mix", "B_Color", (0.41, 0.388, 0.348))
+    set_mix_rgba("MAT_Wall_PaintedConcrete", "Mix", "A_Color", (0.445, 0.418, 0.372))
+    set_mix_rgba("MAT_Wall_PaintedConcrete", "Mix", "B_Color", (0.372, 0.352, 0.318))
     set_spec("MAT_Wall_PaintedConcrete", 0.18)
-    set_mix_rgba("MAT_Cabinet_PaintedMetal", "Mix", "A_Color", (0.355, 0.372, 0.365))
-    set_mix_rgba("MAT_Cabinet_PaintedMetal", "Mix.001", "A_Color", (0.355, 0.372, 0.365))
-    set_mix_rgba("MAT_Cabinet_PaintedMetal", "Mix", "B_Color", (0.275, 0.325, 0.300))
-    set_mix_rgba("MAT_Cabinet_PaintedMetal", "Mix.001", "B_Color", (0.300, 0.292, 0.268))
+    set_mix_rgba("MAT_Cabinet_PaintedMetal", "Mix", "A_Color", (0.268, 0.292, 0.288))
+    set_mix_rgba("MAT_Cabinet_PaintedMetal", "Mix.001", "A_Color", (0.268, 0.292, 0.288))
+    set_mix_rgba("MAT_Cabinet_PaintedMetal", "Mix", "B_Color", (0.220, 0.268, 0.248))
+    set_mix_rgba("MAT_Cabinet_PaintedMetal", "Mix.001", "B_Color", (0.250, 0.242, 0.225))
     set_spec("MAT_Cabinet_PaintedMetal", 0.52, metallic=0.035, coat=0.055)
     set_spec("MAT_Floor_IndustrialConcrete", 0.34)
     set_spec("MAT_Pipe_DarkPaintedSteel", 0.56, metallic=0.07)
@@ -495,7 +493,7 @@ def write_report(validation: dict) -> Path:
         "  遠端靠 C_04 WEAK 與 GI，不是 RGB 0 黑塊。",
         "",
         "RENDER QUALITY",
-        "  引擎 EEVEE。靜幀 TAA 96。Fast GI + screen ray tracing。",
+        "  引擎 EEVEE。靜幀 TAA 48。Fast GI + screen ray tracing。",
         "  無合成器對比／暗角／CA／顆粒。",
         "",
         "HERO TEST",
@@ -562,7 +560,7 @@ def archive_before() -> None:
 
 def render_stills(scene: bpy.types.Scene) -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    configure_eevee_polish(scene, 96)
+    configure_eevee_polish(scene, 48)
     scene.render.image_settings.file_format = "JPEG"
     scene.render.image_settings.quality = 92
     inspect = bpy.data.objects["CAM_INSPECT"]
