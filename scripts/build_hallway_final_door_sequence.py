@@ -432,7 +432,7 @@ def set_fixture_event(light_name: str, events: list[tuple[int, float]], strength
         light_obj.data.energy = energy
         light_obj.data.keyframe_insert(data_path="energy", frame=frame)
     if light_obj.data.animation_data and light_obj.data.animation_data.action:
-        for fc in light_obj.data.animation_data.action.fcurves:
+        for fc in action_fcurves(light_obj.data.animation_data.action):
             for kp in fc.keyframe_points:
                 kp.interpolation = "CONSTANT"
     diffuser_names = [f"FIX_{light_name}_Diffuser"]
