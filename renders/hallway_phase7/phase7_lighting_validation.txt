@@ -6,7 +6,7 @@ RENDER / COLOR MANAGEMENT
   引擎：BLENDER_EEVEE
   視圖轉換：AgX  look=None
   曝光：0.00（不以極端曝光解照明）
-  World 顏色 (0.028, 0.031, 0.036) 強度 0.160
+  World 顏色 (0.042, 0.046, 0.052) 強度 0.300
   Fast GI 作為有限間接光，避免無燈區變成 RGB 0 空洞。
   無 volumetric fog、無 raytracing。
 
@@ -15,7 +15,7 @@ LIGHT FIXTURES
   數量：天花 12 + 壁燈 3 = 15 盞 Area Light；燈具網格 78。
   實作：RECTANGLE Area Light（normalize 瓦特），沿走廊拉長，不把燈管當成點光源。
   發射片只負責燈具外觀；場景照明以 Area Light 為主。
-  陰影投射燈：11（OFF 不投射）。
+  陰影投射燈：12（OFF 不投射）。
 
 ZONE A
   狀態：NORMAL 4 / AGED_TINT 1 / WEAK 0 / OFF 0  運轉比 100%
@@ -28,12 +28,12 @@ ZONE B
   能見度：仍可走，但節奏不穩、管線陰影更深、明暗交替更明顯。
 
 ZONE C
-  狀態：NORMAL 1 / WEAK 1 / OFF 3  運轉比 40%
-  策略：C_02／C_04 熄燈；C_03 是最後一盞完整工作燈且 cutoff 3.5 m；遠端壁燈為 OFF。
+  狀態：NORMAL 1 / WEAK 2 / OFF 2  運轉比 60%
+  策略：C_02 熄燈；C_04 極弱以保留地坪／牆輪廓；C_03 是最後一盞完整工作燈；遠端壁燈為 OFF。
   能見度：可辨地坪與牆輪廓，遠處細節不確定。
 
 FAR END
-  以照明而非改牆解決：C_04 OFF、C_03 短距離、World 極弱、無遠距填充。
+  以照明而非改牆解決：C_04 極弱、C_03 中短距離、World 低填充、無遠距強光。
   終端牆保留極弱形體，不純黑遮住。既有梁、管、艙門打斷視線。
 
 SHADOWS
@@ -52,7 +52,7 @@ FIRST-PERSON VALIDATION
   不以同等亮度貫穿整廊。
 
 PERFORMANCE
-  Area Light 15 盞；陰影燈 11。
+  Area Light 15 盞；陰影燈 12。
   每燈 use_custom_distance；OFF 關閉陰影；共用 housing/diffuser mesh。
   無 volumetric、無數百盞燈、無高解析陰影池堆疊。
 

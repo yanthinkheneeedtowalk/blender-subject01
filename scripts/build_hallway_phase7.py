@@ -58,18 +58,18 @@ STILLS = (
 # facility grid is no longer identical from fixture to fixture.
 # state, zone, y, z, length, x, energy_w, color, cutoff, spread
 CEILING_FIXTURES = (
-    ("LIGHT_A_01_NORMAL", "A", 0.95, 2.78, 0.82, 0.00, 78.0, (0.96, 0.98, 1.00), 6.8, 2.40),
-    ("LIGHT_A_02_NORMAL", "A", 2.16, 2.78, 0.58, 0.05, 72.0, (0.97, 0.98, 0.99), 6.6, 2.45),
-    ("LIGHT_A_03_NORMAL", "A", 3.50, 2.78, 0.88, -0.04, 80.0, (0.95, 0.98, 1.00), 6.8, 2.35),
-    ("LIGHT_A_04_AGED_TINT", "A", 6.18, 2.78, 0.82, 0.03, 64.0, (1.00, 0.96, 0.86), 6.2, 2.30),
+    ("LIGHT_A_01_NORMAL", "A", 0.95, 2.78, 0.82, 0.00, 70.0, (0.96, 0.98, 1.00), 6.8, 2.40),
+    ("LIGHT_A_02_NORMAL", "A", 2.16, 2.78, 0.58, 0.05, 66.0, (0.97, 0.98, 0.99), 6.6, 2.45),
+    ("LIGHT_A_03_NORMAL", "A", 3.50, 2.78, 0.88, -0.04, 70.0, (0.95, 0.98, 1.00), 6.8, 2.35),
+    ("LIGHT_A_04_AGED_TINT", "A", 6.18, 2.78, 0.82, 0.03, 58.0, (1.00, 0.96, 0.86), 6.2, 2.30),
     ("LIGHT_B_01_NORMAL", "B", 10.12, 2.575, 0.88, 0.02, 58.0, (0.94, 0.98, 1.00), 5.4, 2.25),
-    ("LIGHT_B_02_WEAK", "B", 11.68, 2.575, 0.88, -0.06, 22.0, (0.92, 1.00, 0.84), 5.0, 2.15),
+    ("LIGHT_B_02_WEAK", "B", 11.68, 2.575, 0.88, -0.06, 30.0, (0.92, 1.00, 0.84), 5.0, 2.15),
     ("LIGHT_B_03_OFF", "B", 13.22, 2.575, 0.88, 0.04, 0.0, (0.90, 0.92, 0.88), 0.8, 2.20),
-    ("LIGHT_B_04_WEAK", "B", 14.58, 2.575, 0.70, -0.02, 18.0, (0.95, 1.00, 0.80), 4.8, 2.10),
-    ("LIGHT_C_01_WEAK", "C", 17.22, 2.72, 0.78, 0.05, 20.0, (0.93, 1.00, 0.86), 4.6, 2.20),
+    ("LIGHT_B_04_WEAK", "B", 14.58, 2.575, 0.70, -0.02, 28.0, (0.95, 1.00, 0.80), 4.8, 2.10),
+    ("LIGHT_C_01_WEAK", "C", 17.22, 2.72, 0.78, 0.05, 30.0, (0.93, 1.00, 0.86), 5.0, 2.35),
     ("LIGHT_C_02_OFF", "C", 18.54, 2.72, 0.82, -0.05, 0.0, (0.90, 0.92, 0.88), 0.8, 2.20),
-    ("LIGHT_C_03_NORMAL", "C", 19.90, 2.72, 0.72, 0.03, 48.0, (0.97, 0.98, 0.96), 3.5, 2.30),
-    ("LIGHT_C_04_OFF", "C", 21.72, 2.72, 0.90, -0.03, 0.0, (0.90, 0.92, 0.88), 0.8, 2.20),
+    ("LIGHT_C_03_NORMAL", "C", 19.90, 2.72, 0.72, 0.03, 52.0, (0.97, 0.98, 0.96), 4.8, 2.45),
+    ("LIGHT_C_04_WEAK", "C", 21.72, 2.72, 0.90, -0.03, 16.0, (0.94, 0.98, 0.88), 3.8, 2.40),
 )
 
 # Wall bulkheads: (name, zone, x, y, z, yaw_y_deg, energy, color, cutoff, state)
@@ -184,21 +184,21 @@ def build_materials() -> dict[str, bpy.types.Material]:
             "MAT_P7_Diffuser_Normal",
             (0.72, 0.74, 0.70),
             (0.90, 0.95, 1.00),
-            11.0,
+            5.5,
             0.42,
         ),
         "AGED_TINT": make_emission_material(
             "MAT_P7_Diffuser_Aged",
             (0.70, 0.68, 0.60),
             (1.00, 0.94, 0.80),
-            7.5,
+            4.0,
             0.48,
         ),
         "WEAK": make_emission_material(
             "MAT_P7_Diffuser_Weak",
             (0.55, 0.56, 0.48),
             (0.82, 0.92, 0.70),
-            2.6,
+            1.4,
             0.55,
         ),
         "OFF": make_emission_material(
@@ -266,8 +266,8 @@ def configure_world(scene: bpy.types.Scene) -> dict:
         if out is not None:
             world.node_tree.links.new(background.outputs["Background"], out.inputs["Surface"])
     # Restrained fill so unlit pockets keep a physical darkness floor.
-    background.inputs[0].default_value = (0.028, 0.031, 0.036, 1.0)
-    background.inputs[1].default_value = 0.16
+    background.inputs[0].default_value = (0.042, 0.046, 0.052, 1.0)
+    background.inputs[1].default_value = 0.30
     chosen = "Standard"
     for candidate in ("AgX", "Khronos PBR Neutral", "Filmic", "Standard"):
         try:
@@ -314,10 +314,10 @@ def configure_eevee(scene: bpy.types.Scene, samples: int) -> None:
     scene.eevee.use_raytracing = False
     scene.eevee.use_fast_gi = True
     scene.eevee.fast_gi_method = "GLOBAL_ILLUMINATION"
-    scene.eevee.fast_gi_quality = 0.40
-    scene.eevee.fast_gi_ray_count = 10
-    scene.eevee.clamp_surface_indirect = 1.15
-    scene.eevee.indirect_light_intensity = 0.78
+    scene.eevee.fast_gi_quality = 0.50
+    scene.eevee.fast_gi_ray_count = 12
+    scene.eevee.clamp_surface_indirect = 1.80
+    scene.eevee.indirect_light_intensity = 1.05
     scene.eevee.use_volumetric_shadows = False
     scene.eevee.shadow_ray_count = 2
     scene.eevee.shadow_step_count = 8
@@ -675,11 +675,11 @@ def write_report(validation: dict, color: dict) -> Path:
         "",
         "ZONE C",
         f"  狀態：NORMAL {bz['C']['NORMAL']} / WEAK {bz['C']['WEAK']} / OFF {bz['C']['OFF']}  運轉比 {c_ratio:.0%}",
-        "  策略：C_02／C_04 熄燈；C_03 是最後一盞完整工作燈且 cutoff 3.5 m；遠端壁燈為 OFF。",
+        "  策略：C_02 熄燈；C_04 極弱以保留地坪／牆輪廓；C_03 是最後一盞完整工作燈；遠端壁燈為 OFF。",
         "  能見度：可辨地坪與牆輪廓，遠處細節不確定。",
         "",
         "FAR END",
-        "  以照明而非改牆解決：C_04 OFF、C_03 短距離、World 極弱、無遠距填充。",
+        "  以照明而非改牆解決：C_04 極弱、C_03 中短距離、World 低填充、無遠距強光。",
         "  終端牆保留極弱形體，不純黑遮住。既有梁、管、艙門打斷視線。",
         "",
         "SHADOWS",
