@@ -272,6 +272,7 @@ def render(scene, camera: str, frame: int, name: str) -> Path:
 
 
 def write_report(validation: dict, stills_ok: bool, visual_pass: bool = True) -> Path:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     freeze = (
         not validation["moved"]
         and not validation["light_moved"]
