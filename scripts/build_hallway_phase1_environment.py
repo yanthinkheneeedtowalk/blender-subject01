@@ -1197,7 +1197,12 @@ def render_animation() -> dict:
     mp4 = OUTPUT_DIR / "phase1_steam_correction_review.mp4"
     encode_mp4(FRAME_DIR, audio_path, mp4)
     artifact = ARTIFACT_DIR / "phase1_steam_correction_review.mp4"
-    shutil.copy2(mp4, artifact)
+    try:
+        ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(mp4, artifact)
+    except OSError as exc:
+        artifact = None
+        print(f"artifact copy skipped: {exc}")
     return {
         "frame_count": len(frames),
         "elapsed_sec": round(elapsed, 2),

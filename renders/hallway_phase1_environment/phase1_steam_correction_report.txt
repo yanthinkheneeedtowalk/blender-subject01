@@ -1,0 +1,19 @@
+Phase 1 steam correction — review of phase1_steam_correction_review.mp4
+
+Source: 360 EEVEE frames (768x432, 24 fps, CAM_P105_WALK 1–360) + phase1_mixdown.wav AAC.
+Verdict is from the encoded MP4, not viewport or stills.
+
+VERDICT: PASS
+
+Primary P1 defect (oval / billboard steam at ~6s, 10s, 14s): fixed.
+- No UV-sphere radial volumes.
+- No filled emission disc.
+- World volume density 0 (no camera-attached fog).
+- Steam is sourced at valve B, ingress B, and elbow C hardware.
+- Shape reads as irregular wisps that expand and thin, then dissipate.
+- Camera path, corridor, door sequence, weathering, wetness, and lights were not rebuilt.
+
+Notes:
+- EEVEE froxels still soften small wisps; they no longer silhouette as ovals.
+- Removing world volume and emissive blobs lifts crushed blacks without a global light boost.
+- Audio is present on the MP4 (AAC stereo from the existing Phase 1 mixdown).
