@@ -78,13 +78,13 @@ def add_dirt_layer(mat: bpy.types.Material, floor: bool) -> None:
     rough_out = p106.mix_f(nt, grime_m, rough, 0.76 if floor else 0.82, (320, 380))
     link(nt, rough_out, rough_socket)
     if floor:
-        stain = p106.noise(nt, pos, 1.85, 2.0, (-680, 180), 0.56, 0.04)
-        stain_m = p106.map_range(nt, stain.outputs["Fac"], 0.38, 0.64, 0.0, 0.26, (-480, 180))
-        stained = p106.mix_col(nt, stain_m, color, (0.018, 0.020, 0.019), (-40, 520))
+        stain = p106.noise(nt, pos, 4.2, 2.0, (-680, 180), 0.56, 0.04)
+        stain_m = p106.map_range(nt, stain.outputs["Fac"], 0.34, 0.66, 0.0, 0.44, (-480, 180))
+        stained = p106.mix_col(nt, stain_m, color, (0.012, 0.014, 0.013), (-40, 520))
         link(nt, stained, base_socket)
-        worn = p106.noise(nt, pos, 4.6, 2.5, (-680, 20), 0.48, 0.02)
-        worn_m = p106.map_range(nt, worn.outputs["Fac"], 0.62, 0.82, 0.0, 0.12, (-480, 20))
-        worn_color = p106.mix_col(nt, worn_m, stained, (0.16, 0.16, 0.15), (220, 520))
+        worn = p106.noise(nt, pos, 6.0, 2.5, (-680, 20), 0.48, 0.02)
+        worn_m = p106.map_range(nt, worn.outputs["Fac"], 0.58, 0.80, 0.0, 0.18, (-480, 20))
+        worn_color = p106.mix_col(nt, worn_m, stained, (0.19, 0.19, 0.18), (220, 520))
         link(nt, worn_color, base_socket)
 
 
