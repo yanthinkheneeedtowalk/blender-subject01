@@ -20,6 +20,5 @@ VIDEO OUTPUT
   Camera clipping: PASS。
   Door ignition／stable light／slow opening／half-open／hard black: PASS。
   Remaining note: preserved soffit/pipe shadow bands remain architectural lighting structure; the removed slab family is absent.
-  最終影片抽查：start／middle／end、門燈事件、半開門與 hard cut 均 PASS；未見 beam occlusion、geometry flicker、texture swimming、puddle/reflection instability、denoiser pumping 或 camera clipping。
 
 STOP：完成 targeted cleanup 後的 final video validation；未開始新的 final-master render。
