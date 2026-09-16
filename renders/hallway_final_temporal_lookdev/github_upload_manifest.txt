@@ -1,0 +1,32 @@
+FINAL LOOKDEV UPLOAD MANIFEST
+
+本次 GitHub 上傳內容：
+
+1. hallway.blend
+   - 最新 reference-directed temporal LookDev scene
+   - 已包含目前接受的 corridor、white door、15 秒 animation、beam cleanup、
+     floor／puddle／lighting LookDev 狀態。
+
+2. 相關 Python scripts
+   - scripts/build_hallway_final_temporal_lookdev.py
+   - scripts/build_hallway_reference_lookdev.py
+   - scripts/build_hallway_final_door_sequence.py
+   - scripts/render_targeted_cleanup_validation.py
+   - scripts/targeted_remove_transverse_slabs.py
+   - scripts/build_hallway_phase10_6b.py
+   - scripts/build_hallway_phase10_6c.py
+   - scripts/build_hallway_phase10_6d_validation.py
+
+3. Flicker diagnostic video
+   - renders/hallway_final_temporal_lookdev/flicker_diagnostic_denoise_off_1s.mp4
+   - 24 frames、24 fps、約 1 秒
+   - fixed-light section、Cycles 128 samples、Denoise OFF。
+
+4. Diagnostic evidence
+   - temporal_diagnostic_results.json
+   - Denoise ON wall temporal std: 7.0049
+   - Denoise OFF／higher samples wall temporal std: 7.0037
+   - 結論：Denoiser／單純 samples convergence 不是主要 wall-flicker 根因。
+
+未上傳舊 phase 大型 frame dump、無關 donut／house／found-footage 素材，
+也未開始 final-master render。
