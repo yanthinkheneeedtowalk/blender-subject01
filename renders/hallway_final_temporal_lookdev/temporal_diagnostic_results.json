@@ -1,0 +1,38 @@
+{
+  "section": [
+    120,
+    143
+  ],
+  "intentional_light_changes": "none",
+  "settings": {
+    "A": "Cycles64 adaptive denoise ON",
+    "B": "Cycles128 adaptive denoise OFF"
+  },
+  "results": {
+    "diagnostic_denoise_on": {
+      "count": 24,
+      "global_mean_range": [
+        4.114278793334961,
+        14.997994422912598
+      ],
+      "wall_mean_range": [
+        8.114144325256348,
+        30.663768768310547
+      ],
+      "wall_temporal_std": 7.004905252587866
+    },
+    "diagnostic_denoise_off_high_samples": {
+      "count": 24,
+      "global_mean_range": [
+        4.120159149169922,
+        14.999312400817871
+      ],
+      "wall_mean_range": [
+        8.115748405456543,
+        30.659868240356445
+      ],
+      "wall_temporal_std": 7.003684349847353
+    }
+  },
+  "interpretation": "Matched wall ROI stability comparison; no intentional fixture changes in section."
+}
