@@ -1,0 +1,64 @@
+PHASE 0 BUG STABILIZATION REPORT
+
+ENVIRONMENT
+  Blender：5.2.1 LTS
+  Render Engine：BLENDER_EEVEE
+  Scene：Scene
+  Camera：CAM_P105_WALK
+  Resolution：768×432
+  FPS：24
+  Frame range：1–360
+  View Transform：AgX；Exposure：0.0；World strength：0.30
+  Objects：634；Materials：35；Lights：22
+  Checkpoint：renders/checkpoints/phase0_preflight_hallway.blend
+
+STATIC AUDIT
+  P105 extension objects：0；只保留 CORRIDOR_EXTENSION_CAMERAS 作為相機資料集合。
+  Duplicate mesh transform groups：0。
+  Duplicate light transform groups：0。
+  Zero scale objects：0；extreme scale candidates：0。
+  Broken image paths：0。
+  Animated materials：0。
+  Animated World：False；Animated Exposure：False。
+  WALL.End visible：True。
+  Hero material slots：FLOOR／WALL／CEIL 均指向目前 validated materials。
+
+CONFIRMED BUG
+  本輪沒有確認到 P0 或 P1 技術 Bug，因此沒有做 destructive geometry、
+  material、lighting、camera 或 animation 修改。
+
+SUSPECTED
+  S-01：部分管線與牆面交界缺少明顯收口；可能是合理 penetration，
+  沒有充分證據證明為錯誤，未修改。
+  S-02：深暗區資訊不足；目前可能是 intentional lighting／composition，
+  不視為 rendering defect，未修改。
+
+ART-DIRECTION GAP（DEFERRED）
+  模組重複感、表面老化／鏽蝕程度、設備世代差異、部分表面平整度。
+  這些屬於下一階段美術／LookDev，不在 Phase 0 修復。
+
+DYNAMIC REGRESSION CHECK
+  檢查現有 15 秒／360 幀／24 fps validation video 的 start、middle、
+  door-light event、half-open door、hard-black tail。
+  Camera keys：[(1, 1.4), (216, 14.0), (360, 18.0)]；target keys unchanged。
+  Camera clipping：未發現。
+  Object popping：未發現。
+  Geometry clipping／Z-fighting：未發現。
+  Material／texture sudden change：未發現。
+  World／exposure jump：未發現。
+  非物理 wall brightness flicker：本輪抽查未重現；固定燈段 A/B 也沒有
+  denoise-on 與 denoise-off 的顯著穩定性差異。
+  Door-light change 與 door opening：符合既有 intentional animation。
+
+REGRESSION RESULT
+  Geometry：PASS
+  Materials：PASS
+  Lighting：PASS
+  Camera：PASS
+  Animation：PASS
+  Render：PASS
+
+FINAL VERDICT
+  PASS — Ready for Phase 1
+
+停止於 Phase 0；未開始 Phase 1，未順手美化任何正常內容。
