@@ -1,0 +1,153 @@
+{
+  "environment": {
+    "blender": "5.2.1 LTS",
+    "render_engine": "BLENDER_EEVEE",
+    "scene": "Scene",
+    "camera": "CAM_P105_WALK",
+    "resolution": [
+      768,
+      432
+    ],
+    "fps": 24,
+    "frame_range": [
+      1,
+      360
+    ],
+    "view_transform": "AgX",
+    "exposure": 0.0,
+    "world_strength": 0.30000001192092896,
+    "objects": 634,
+    "materials": 35,
+    "lights": 22,
+    "collections": [
+      "CORRIDOR_EXTENSION_CAMERAS",
+      "EQUIPMENT_CONTROL",
+      "EQUIPMENT_ELECTRICAL",
+      "EQUIPMENT_METERS",
+      "EQUIPMENT_SERVICE",
+      "EQUIPMENT_VENTILATION",
+      "FINAL_DOOR_SEQUENCE",
+      "FINAL_PUDDLES",
+      "HALLWAY_PHASE1",
+      "LEVEL2_IDENTITY",
+      "LIGHTING_ACTIVE",
+      "LIGHTING_FIXTURES",
+      "LIGHTING_GUIDES",
+      "LIGHTING_OFF",
+      "LIGHTING_WEAK",
+      "POLISH_CAMERAS",
+      "POLISH_EQUIPMENT",
+      "POLISH_FIXTURES",
+      "POLISH_FLOOR",
+      "POLISH_PIPES",
+      "POLISH_SUPPORTS",
+      "POLISH_WALLS",
+      "STORY_MARKINGS",
+      "STORY_SIGNAGE",
+      "STRUCTURE_BEAMS",
+      "STRUCTURE_GUIDES",
+      "STRUCTURE_MOUNTS",
+      "STRUCTURE_WALL",
+      "UTILITY_CABLES",
+      "UTILITY_CABLE_TRAY",
+      "UTILITY_PRIMARY_PIPES",
+      "UTILITY_SECONDARY_PIPES",
+      "UTILITY_SUPPORTS",
+      "UTILITY_VALVES"
+    ]
+  },
+  "geometry": {
+    "p105_objects": 0,
+    "extension_collections": [
+      "CORRIDOR_EXTENSION_CAMERAS"
+    ],
+    "duplicate_mesh_transform_groups": [],
+    "duplicate_mesh_group_count": 0,
+    "duplicate_light_transform_groups": [],
+    "duplicate_light_group_count": 0,
+    "zero_scale_objects": [],
+    "extreme_scale_objects": [],
+    "wall_end_visible": true
+  },
+  "materials": {
+    "broken_image_paths": [],
+    "animated_materials": [],
+    "legacy_surface_slots": {
+      "FLOOR": [
+        "MAT_Floor_IndustrialConcrete"
+      ],
+      "WALL.West.Shell": [
+        "MAT_Wall_PaintedConcrete"
+      ],
+      "WALL.End": [
+        "MAT_Wall_PaintedConcrete"
+      ],
+      "CEIL.Shell": [
+        "MAT_Ceiling_AgedConcrete"
+      ]
+    }
+  },
+  "animation": {
+    "camera_keys": [
+      [
+        1,
+        1.4
+      ],
+      [
+        216,
+        14.0
+      ],
+      [
+        360,
+        18.0
+      ]
+    ],
+    "target_keys": [
+      [
+        1,
+        13.4
+      ],
+      [
+        216,
+        26.0
+      ],
+      [
+        360,
+        30.0
+      ]
+    ],
+    "animated_lights": [
+      "LIGHT_A_01_NORMAL",
+      "LIGHT_A_02_NORMAL",
+      "LIGHT_A_03_NORMAL",
+      "LIGHT_A_04_AGED_TINT",
+      "LIGHT_A_WALL_01_NORMAL",
+      "LIGHT_B_01_NORMAL",
+      "LIGHT_B_02_WEAK",
+      "LIGHT_B_03_OFF",
+      "LIGHT_B_04_WEAK",
+      "LIGHT_B_WALL_01_WEAK",
+      "LIGHT_C_01_WEAK",
+      "LIGHT_C_02_OFF",
+      "LIGHT_C_03_NORMAL",
+      "LIGHT_C_04_WEAK",
+      "LIGHT_C_WALL_01_OFF",
+      "LIGHT_FINAL_DOOR_FLUORESCENT"
+    ],
+    "animated_world": false,
+    "animated_exposure": false
+  },
+  "classification": {
+    "confirmed_bug_candidates": [],
+    "suspected": [
+      "部分管線與牆面交界：可能是合理 penetration，未見充分證據，不修改。",
+      "部分暗區資訊不足：可能是設計／LookDev，不視為 Bug。"
+    ],
+    "art_direction_gaps_deferred": [
+      "模組重複感",
+      "表面老化與鏽蝕不足",
+      "局部設備與管線老化世代不一致",
+      "部分表面偏平整"
+    ]
+  }
+}
