@@ -1,0 +1,207 @@
+{
+  "before": {
+    "objects": 665,
+    "materials": 42,
+    "lights": 24,
+    "speakers": 9,
+    "steam_volumes": 3,
+    "engine": "BLENDER_EEVEE",
+    "samples": 12,
+    "volume_samples": 32,
+    "resolution": [
+      768,
+      432
+    ],
+    "fps": 24,
+    "frames": [
+      1,
+      360
+    ],
+    "camera": "CAM_P105_WALK"
+  },
+  "after": {
+    "objects": 665,
+    "materials": 42,
+    "lights": 24,
+    "speakers": 9,
+    "steam_volumes": 3,
+    "engine": "BLENDER_EEVEE",
+    "samples": 12,
+    "volume_samples": 32,
+    "resolution": [
+      768,
+      432
+    ],
+    "fps": 24,
+    "frames": [
+      1,
+      360
+    ],
+    "camera": "CAM_P105_WALK"
+  },
+  "camera_before": {
+    "camera": [
+      [
+        1,
+        1.4
+      ],
+      [
+        216,
+        14.0
+      ],
+      [
+        360,
+        18.0
+      ]
+    ],
+    "target": [
+      [
+        1,
+        13.4
+      ],
+      [
+        216,
+        26.0
+      ],
+      [
+        360,
+        30.0
+      ]
+    ]
+  },
+  "camera_after": {
+    "camera": [
+      [
+        1,
+        1.4
+      ],
+      [
+        216,
+        14.0
+      ],
+      [
+        360,
+        18.0
+      ]
+    ],
+    "target": [
+      [
+        1,
+        13.4
+      ],
+      [
+        216,
+        26.0
+      ],
+      [
+        360,
+        30.0
+      ]
+    ]
+  },
+  "camera_unchanged": true,
+  "wet": {
+    "wet_objects": [
+      "P1_WET_VENT_B",
+      "P1_WET_INGRESS_B",
+      "P1_OIL_VALVE_B",
+      "P1_WET_ELBOW_C"
+    ],
+    "beads": [
+      "P1_BEAD_00",
+      "P1_BEAD_01",
+      "P1_BEAD_02",
+      "P1_BEAD_03",
+      "P1_BEAD_04",
+      "P1_BEAD_05",
+      "P1_BEAD_06",
+      "P1_BEAD_07",
+      "P1_BEAD_08",
+      "P1_BEAD_09"
+    ]
+  },
+  "steam": {
+    "sockets": [
+      {
+        "name": "STEAM_SOCKET_VALVE_B",
+        "kind": "valve packing leak",
+        "source": [
+          0.84,
+          14.62,
+          2.43
+        ],
+        "frames": [
+          36,
+          52,
+          78,
+          108
+        ],
+        "peak_density": 1.45
+      },
+      {
+        "name": "STEAM_SOCKET_INGRESS_B",
+        "kind": "wall penetration / damaged connection",
+        "source": [
+          1.01,
+          15.09,
+          2.43
+        ],
+        "frames": [
+          150,
+          168,
+          198,
+          228
+        ],
+        "peak_density": 1.28
+      },
+      {
+        "name": "STEAM_SOCKET_ELBOW_C",
+        "kind": "pressure release at elbow flange",
+        "source": [
+          -0.84,
+          17.84,
+          2.46
+        ],
+        "frames": [
+          240,
+          258,
+          300,
+          330
+        ],
+        "peak_density": 1.55
+      }
+    ]
+  },
+  "heat": {
+    "world_strength": 0.52,
+    "volume_density": 0.0018
+  },
+  "lighting": {
+    "fill": [
+      "LIGHT_P1_FILL",
+      "LIGHT_P1_FILL_C"
+    ],
+    "varied": [
+      "LIGHT_A_03_NORMAL",
+      "LIGHT_B_01_NORMAL"
+    ],
+    "door_light_untouched": true
+  },
+  "audio": {
+    "ambience": "P1_AMB_LEVEL2",
+    "rare": "P1_RARE_STRUCTURE",
+    "speakers": [
+      "SPK_PIPE_RUMBLE",
+      "SPK_VENT_HUM",
+      "SPK_ELECTRICAL",
+      "SPK_DRIP_A",
+      "SPK_DRIP_B",
+      "SPK_METAL_TICK",
+      "SPK_STEAM_VALVE_B",
+      "SPK_STEAM_INGRESS_B",
+      "SPK_STEAM_ELBOW_C"
+    ],
+    "source": "procedural (no user Level 2 file in workspace)"
+  },
+  "checkpoint": "/workspace/renders/checkpoints/phase1_pre_environment.blend"
+}
