@@ -1,0 +1,11 @@
+{
+  "frame_count": 360,
+  "elapsed_sec": 12680,
+  "sec_per_frame": 35.222,
+  "mp4": "/workspace/renders/hallway_phase1_environment/phase1_steam_correction_review.mp4",
+  "audio": "/workspace/renders/hallway_phase1_environment/phase1_mixdown.wav",
+  "resolution": [768, 432],
+  "fps": 24,
+  "camera": "CAM_P105_WALK",
+  "verdict": "PASS"
+}

@@ -12,6 +12,7 @@ Pipeline:
 
 Usage:
   blender -b hallway.blend --python scripts/build_hallway_phase1_environment.py -- --setup
+  blender -b hallway.blend --python scripts/build_hallway_phase1_environment.py -- --steam-fix
   blender -b hallway.blend --python scripts/build_hallway_phase1_environment.py -- --stills
   blender -b hallway.blend --python scripts/build_hallway_phase1_environment.py -- --render
 """
@@ -61,41 +62,39 @@ COL_STEAM = "PHASE1_STEAM"
 COL_AUDIO = "PHASE1_AUDIO"
 COL_WET = "PHASE1_WETNESS"
 
-# Steam sockets: local sources at real hardware, staggered so they never all jet at once.
+# Steam sockets: local leak jets at real hardware. Aim points down/inward from the source
+# so the volume grows along the leak instead of sitting as a mid-corridor oval.
 STEAM_SOCKETS = (
     dict(
         name="STEAM_SOCKET_VALVE_B",
         kind="valve packing leak",
-        loc=(0.40, 14.62, 1.68),
         source=(0.84, 14.62, 2.43),
-        scale=(0.52, 0.44, 1.15),
-        rotation=(0.22, 0.18, 0.0),
-        peak_density=1.45,
+        aim=(0.22, 14.50, 1.22),
+        peak_density=12.5,
         keys=(36, 52, 78, 108),
+        seed=0.17,
         sound="local_steam_hiss_a.wav",
         speaker="SPK_STEAM_VALVE_B",
     ),
     dict(
         name="STEAM_SOCKET_INGRESS_B",
         kind="wall penetration / damaged connection",
-        loc=(0.46, 15.09, 1.70),
         source=(1.01, 15.09, 2.43),
-        scale=(0.48, 0.40, 1.05),
-        rotation=(0.18, -0.22, 0.0),
-        peak_density=1.28,
+        aim=(0.28, 15.16, 1.24),
+        peak_density=11.8,
         keys=(150, 168, 198, 228),
+        seed=0.61,
         sound="local_steam_hiss_b.wav",
         speaker="SPK_STEAM_INGRESS_B",
     ),
     dict(
         name="STEAM_SOCKET_ELBOW_C",
         kind="pressure release at elbow flange",
-        loc=(-0.34, 17.84, 1.62),
         source=(-0.84, 17.84, 2.46),
-        scale=(0.56, 0.48, 1.22),
-        rotation=(0.24, 0.28, 0.0),
-        peak_density=1.55,
+        aim=(-0.20, 17.70, 1.18),
+        peak_density=13.4,
         keys=(240, 258, 300, 330),
+        seed=1.04,
         sound="local_steam_hiss_c.wav",
         speaker="SPK_STEAM_ELBOW_C",
     ),
@@ -131,6 +130,8 @@ def parse_mode() -> str:
         return "render"
     if "--stills" in argv:
         return "stills"
+    if "--steam-fix" in argv:
+        return "steam-fix"
     if "--setup" in argv or "--no-render" in argv:
         return "setup"
     return "setup"
@@ -538,7 +539,8 @@ def build_wetness() -> dict:
     return {"wet_objects": [o.name for o in extras], "beads": beads}
 
 
-def steam_material(name: str, peak: float) -> bpy.types.Material:
+def steam_material(name: str, peak: float, seed: float) -> bpy.types.Material:
+    """EEVEE leak jet: elongated cube, broken noise, source-dense, zero filled emission."""
     mat = bpy.data.materials.get(name)
     if mat is not None:
         bpy.data.materials.remove(mat)
@@ -548,78 +550,192 @@ def steam_material(name: str, peak: float) -> bpy.types.Material:
     nt.nodes.clear()
     vol = nt.nodes.new("ShaderNodeVolumePrincipled")
     vol.name = "P1_SteamVolume"
-    vol.location = (0, 0)
-    vol.inputs["Color"].default_value = (0.80, 0.85, 0.88, 1.0)
+    vol.location = (980, 40)
+    vol.inputs["Color"].default_value = (0.78, 0.83, 0.86, 1.0)
     vol.inputs["Density"].default_value = 0.0
     if "Anisotropy" in vol.inputs:
-        vol.inputs["Anisotropy"].default_value = -0.08
+        vol.inputs["Anisotropy"].default_value = 0.18
     if "Emission Color" in vol.inputs:
-        vol.inputs["Emission Color"].default_value = (0.70, 0.78, 0.84, 1.0)
+        vol.inputs["Emission Color"].default_value = (0.72, 0.79, 0.84, 1.0)
     if "Emission Strength" in vol.inputs:
         vol.inputs["Emission Strength"].default_value = 0.0
+
     coord = nt.nodes.new("ShaderNodeTexCoord")
-    coord.location = (-720, 40)
-    length = nt.nodes.new("ShaderNodeVectorMath")
-    length.operation = "LENGTH"
-    length.location = (-520, 80)
-    nt.links.new(coord.outputs["Object"], length.inputs[0])
-    falloff = nt.nodes.new("ShaderNodeMapRange")
-    falloff.location = (-320, 80)
-    falloff.clamp = True
-    nt.links.new(length.outputs["Value"], falloff.inputs["Value"])
-    falloff.inputs["From Min"].default_value = 0.04
-    falloff.inputs["From Max"].default_value = 0.52
-    falloff.inputs["To Min"].default_value = 1.0
-    falloff.inputs["To Max"].default_value = 0.0
-    noise = nt.nodes.new("ShaderNodeTexNoise")
-    noise.location = (-520, -160)
-    noise.noise_dimensions = "3D"
-    noise.inputs["Scale"].default_value = 3.4
-    noise.inputs["Detail"].default_value = 2.0
-    if "Roughness" in noise.inputs:
-        noise.inputs["Roughness"].default_value = 0.55
-    nt.links.new(coord.outputs["Object"], noise.inputs["Vector"])
-    nmap = nt.nodes.new("ShaderNodeMapRange")
-    nmap.location = (-320, -160)
-    nmap.clamp = True
-    nt.links.new(noise.outputs["Fac"], nmap.inputs["Value"])
-    nmap.inputs["From Min"].default_value = 0.32
-    nmap.inputs["From Max"].default_value = 0.78
-    nmap.inputs["To Min"].default_value = 0.25
-    nmap.inputs["To Max"].default_value = 1.0
+    coord.location = (-1100, 40)
+    mapping = nt.nodes.new("ShaderNodeMapping")
+    mapping.name = "P1_SteamAdvect"
+    mapping.location = (-900, 80)
+    # Stretch noise along the leak so features read as streaks, not a disc.
+    mapping.inputs["Scale"].default_value = (2.05, 1.75, 0.38)
+    mapping.inputs["Location"].default_value = (seed, seed * 0.37, 0.0)
+    nt.links.new(coord.outputs["Object"], mapping.inputs["Vector"])
+
+    def noise(loc, scale, detail, roughness, w, distortion=0.55):
+        node = nt.nodes.new("ShaderNodeTexNoise")
+        node.location = loc
+        node.noise_dimensions = "4D"
+        node.inputs["Scale"].default_value = scale
+        node.inputs["Detail"].default_value = detail
+        if "Roughness" in node.inputs:
+            node.inputs["Roughness"].default_value = roughness
+        if "Distortion" in node.inputs:
+            node.inputs["Distortion"].default_value = distortion
+        if "W" in node.inputs:
+            node.inputs["W"].default_value = w
+        nt.links.new(mapping.outputs["Vector"], node.inputs["Vector"])
+        return node
+
+    def map_range(loc, src, fmin, fmax, tmin, tmax):
+        node = nt.nodes.new("ShaderNodeMapRange")
+        node.location = loc
+        node.clamp = True
+        nt.links.new(src, node.inputs["Value"])
+        node.inputs["From Min"].default_value = fmin
+        node.inputs["From Max"].default_value = fmax
+        node.inputs["To Min"].default_value = tmin
+        node.inputs["To Max"].default_value = tmax
+        return node
+
+    n_large = noise((-680, 260), 1.55, 6.0, 0.68, seed)
+    n_large.name = "P1_SteamNoiseLarge"
+    n_fine = noise((-680, 20), 5.2, 3.0, 0.52, seed + 1.7, 0.8)
+    n_fine.name = "P1_SteamNoiseFine"
+    cells = nt.nodes.new("ShaderNodeTexVoronoi")
+    cells.name = "P1_SteamCells"
+    cells.location = (-680, -240)
+    cells.voronoi_dimensions = "4D"
+    cells.feature = "F1"
+    if "Scale" in cells.inputs:
+        cells.inputs["Scale"].default_value = 2.35
+    if "Randomness" in cells.inputs:
+        cells.inputs["Randomness"].default_value = 1.0
+    if "W" in cells.inputs:
+        cells.inputs["W"].default_value = seed + 3.4
+    nt.links.new(mapping.outputs["Vector"], cells.inputs["Vector"])
+
+    # Hard contrast so EEVEE froxels keep holes instead of averaging into a disc.
+    clumps = map_range((-420, 260), n_large.outputs["Fac"], 0.42, 0.58, 0.0, 1.0)
+    wisps = map_range((-420, 20), n_fine.outputs["Fac"], 0.34, 0.68, 0.12, 1.0)
+    distance = cells.outputs["Distance"] if "Distance" in cells.outputs else cells.outputs[0]
+    holes = map_range((-420, -240), distance, 0.22, 0.48, 1.0, 0.0)
+
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    sep.location = (-900, -420)
+    nt.links.new(coord.outputs["Object"], sep.inputs["Vector"])
+    # Dense at the valve (local -Z), feathered toward the tip. Not radial.
+    along = map_range((-620, -360), sep.outputs["Z"], -0.48, 0.46, 1.0, 0.08)
+
+    absx = nt.nodes.new("ShaderNodeMath")
+    absx.operation = "ABSOLUTE"
+    absx.location = (-620, -520)
+    nt.links.new(sep.outputs["X"], absx.inputs[0])
+    absy = nt.nodes.new("ShaderNodeMath")
+    absy.operation = "ABSOLUTE"
+    absy.location = (-620, -620)
+    nt.links.new(sep.outputs["Y"], absy.inputs[0])
+    # Square-ish cross-section (not LENGTH) so the jet never silhouettes as an oval.
+    lateral = nt.nodes.new("ShaderNodeMath")
+    lateral.operation = "MAXIMUM"
+    lateral.location = (-440, -560)
+    nt.links.new(absx.outputs[0], lateral.inputs[0])
+    nt.links.new(absy.outputs[0], lateral.inputs[1])
+    widen = map_range((-440, -720), sep.outputs["Z"], -0.48, 0.46, 0.62, 1.18)
+    scaled = nt.nodes.new("ShaderNodeMath")
+    scaled.operation = "DIVIDE"
+    scaled.location = (-240, -560)
+    nt.links.new(lateral.outputs[0], scaled.inputs[0])
+    nt.links.new(widen.outputs["Result"], scaled.inputs[1])
+    n_lat_m = nt.nodes.new("ShaderNodeMath")
+    n_lat_m.operation = "MULTIPLY"
+    n_lat_m.location = (-240, -720)
+    nt.links.new(n_fine.outputs["Fac"], n_lat_m.inputs[0])
+    n_lat_m.inputs[1].default_value = 0.28
+    n_lat = nt.nodes.new("ShaderNodeMath")
+    n_lat.operation = "SUBTRACT"
+    n_lat.location = (-240, -840)
+    nt.links.new(n_lat_m.outputs[0], n_lat.inputs[0])
+    n_lat.inputs[1].default_value = 0.14
+    ragged = nt.nodes.new("ShaderNodeMath")
+    ragged.operation = "SUBTRACT"
+    ragged.location = (-40, -560)
+    nt.links.new(scaled.outputs[0], ragged.inputs[0])
+    nt.links.new(n_lat.outputs[0], ragged.inputs[1])
+    lat_mask = map_range((160, -560), ragged.outputs[0], 0.03, 0.40, 1.0, 0.0)
+
     amount = nt.nodes.new("ShaderNodeValue")
     amount.name = "P1_SteamAmount"
     amount.label = "Steam Amount"
-    amount.location = (-320, 260)
+    amount.location = (160, 340)
     amount.outputs[0].default_value = 0.0
-    mul_a = nt.nodes.new("ShaderNodeMath")
-    mul_a.operation = "MULTIPLY"
-    mul_a.location = (-80, 80)
-    nt.links.new(amount.outputs[0], mul_a.inputs[0])
-    mul_a.inputs[1].default_value = peak
-    mul_b = nt.nodes.new("ShaderNodeMath")
-    mul_b.operation = "MULTIPLY"
-    mul_b.location = (80, 80)
-    nt.links.new(mul_a.outputs[0], mul_b.inputs[0])
-    nt.links.new(falloff.outputs["Result"], mul_b.inputs[1])
-    mul_c = nt.nodes.new("ShaderNodeMath")
-    mul_c.operation = "MULTIPLY"
-    mul_c.location = (240, 80)
-    nt.links.new(mul_b.outputs[0], mul_c.inputs[0])
-    nt.links.new(nmap.outputs["Result"], mul_c.inputs[1])
-    nt.links.new(mul_c.outputs[0], vol.inputs["Density"])
+
+    structure = nt.nodes.new("ShaderNodeMath")
+    structure.operation = "MULTIPLY"
+    structure.location = (160, 180)
+    nt.links.new(clumps.outputs["Result"], structure.inputs[0])
+    nt.links.new(wisps.outputs["Result"], structure.inputs[1])
+    broken = nt.nodes.new("ShaderNodeMath")
+    broken.operation = "MULTIPLY"
+    broken.location = (340, 140)
+    nt.links.new(structure.outputs[0], broken.inputs[0])
+    nt.links.new(holes.outputs["Result"], broken.inputs[1])
+    shaped = nt.nodes.new("ShaderNodeMath")
+    shaped.operation = "MULTIPLY"
+    shaped.location = (340, -40)
+    nt.links.new(broken.outputs[0], shaped.inputs[0])
+    nt.links.new(along.outputs["Result"], shaped.inputs[1])
+    masked = nt.nodes.new("ShaderNodeMath")
+    masked.operation = "MULTIPLY"
+    masked.location = (540, -40)
+    nt.links.new(shaped.outputs[0], masked.inputs[0])
+    nt.links.new(lat_mask.outputs["Result"], masked.inputs[1])
+    mul_peak = nt.nodes.new("ShaderNodeMath")
+    mul_peak.operation = "MULTIPLY"
+    mul_peak.location = (540, 140)
+    nt.links.new(amount.outputs[0], mul_peak.inputs[0])
+    mul_peak.inputs[1].default_value = peak
+    dens = nt.nodes.new("ShaderNodeMath")
+    dens.operation = "MULTIPLY"
+    dens.location = (740, 40)
+    nt.links.new(mul_peak.outputs[0], dens.inputs[0])
+    nt.links.new(masked.outputs[0], dens.inputs[1])
+    nt.links.new(dens.outputs[0], vol.inputs["Density"])
+    # Tiny structured emission on wisps only — never a filled disc.
     emit = nt.nodes.new("ShaderNodeMath")
     emit.operation = "MULTIPLY"
-    emit.location = (-80, 240)
+    emit.location = (740, 220)
     nt.links.new(amount.outputs[0], emit.inputs[0])
-    emit.inputs[1].default_value = 0.12
+    emit.inputs[1].default_value = 0.022
+    emit2 = nt.nodes.new("ShaderNodeMath")
+    emit2.operation = "MULTIPLY"
+    emit2.location = (900, 220)
+    nt.links.new(emit.outputs[0], emit2.inputs[0])
+    nt.links.new(broken.outputs[0], emit2.inputs[1])
     if "Emission Strength" in vol.inputs:
-        nt.links.new(emit.outputs[0], vol.inputs["Emission Strength"])
+        nt.links.new(emit2.outputs[0], vol.inputs["Emission Strength"])
     out = nt.nodes.new("ShaderNodeOutputMaterial")
-    out.location = (280, 0)
+    out.location = (1220, 40)
     nt.links.new(vol.outputs["Volume"], out.inputs["Volume"])
     mat["p1_peak_density"] = peak
     return mat
+
+
+def key_socket(socket, frame: int, value) -> None:
+    socket.default_value = value
+    socket.keyframe_insert(data_path="default_value", frame=frame)
+
+
+def soften_action(id_data) -> None:
+    ad = getattr(id_data, "animation_data", None)
+    if ad is None or ad.action is None:
+        return
+    for layer in ad.action.layers:
+        for strip in layer.strips:
+            for bag in strip.channelbags:
+                for fc in bag.fcurves:
+                    for kp in fc.keyframe_points:
+                        kp.interpolation = "BEZIER"
+                        kp.handle_left_type = "AUTO_CLAMPED"
+                        kp.handle_right_type = "AUTO_CLAMPED"
 
 
 def key_density(mat: bpy.types.Material, frame: int, value: float) -> None:
@@ -627,27 +743,16 @@ def key_density(mat: bpy.types.Material, frame: int, value: float) -> None:
     peak = float(mat.get("p1_peak_density", 1.0)) or 1.0
     amount.outputs[0].default_value = 0.0 if peak <= 0 else (value / peak)
     amount.outputs[0].keyframe_insert(data_path="default_value", frame=frame)
-    if mat.node_tree.animation_data and mat.node_tree.animation_data.action:
-        for layer in mat.node_tree.animation_data.action.layers:
-            for strip in layer.strips:
-                for bag in strip.channelbags:
-                    for fc in bag.fcurves:
-                        for kp in fc.keyframe_points:
-                            kp.interpolation = "BEZIER"
-                            kp.handle_left_type = "AUTO_CLAMPED"
-                            kp.handle_right_type = "AUTO_CLAMPED"
+    soften_action(mat.node_tree)
 
 
-def add_steam_volume(name, loc, scale, mat, col, rotation=(0.0, 0.0, 0.0)) -> bpy.types.Object:
+def add_steam_volume(name, mat, col) -> bpy.types.Object:
     mesh = bpy.data.meshes.new(f"P1_{name}_MESH")
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=14, v_segments=8, radius=0.5)
+    bmesh.ops.create_cube(bm, size=1.0)
     bm.to_mesh(mesh)
     bm.free()
     obj = bpy.data.objects.new(name, mesh)
-    obj.location = loc
-    obj.scale = scale
-    obj.rotation_euler = rotation
     col.objects.link(obj)
     mesh.materials.append(mat)
     obj.display_type = "WIRE"
@@ -656,29 +761,75 @@ def add_steam_volume(name, loc, scale, mat, col, rotation=(0.0, 0.0, 0.0)) -> bp
     return obj
 
 
+def animate_steam_advection(mat: bpy.types.Material, start: int, end: int, seed: float) -> None:
+    mapping = mat.node_tree.nodes["P1_SteamAdvect"]
+    n_large = mat.node_tree.nodes["P1_SteamNoiseLarge"]
+    n_fine = mat.node_tree.nodes["P1_SteamNoiseFine"]
+    loc = mapping.inputs["Location"]
+    key_socket(loc, start, (seed, seed * 0.37, 0.0))
+    key_socket(loc, end, (seed + 0.55, seed * 0.37 + 0.95, 1.65))
+    if "W" in n_large.inputs:
+        key_socket(n_large.inputs["W"], start, seed)
+        key_socket(n_large.inputs["W"], end, seed + 1.85)
+        key_socket(n_fine.inputs["W"], start, seed + 1.7)
+        key_socket(n_fine.inputs["W"], end, seed + 3.6)
+    cells = mat.node_tree.nodes.get("P1_SteamCells")
+    if cells is not None and "W" in cells.inputs:
+        key_socket(cells.inputs["W"], start, seed + 3.4)
+        key_socket(cells.inputs["W"], end, seed + 5.1)
+    soften_action(mat.node_tree)
+
+
 def build_steam() -> dict:
     col = clear_collection(COL_STEAM)
     created = []
     for spec in STEAM_SOCKETS:
-        mat = steam_material(f"MAT_P1_{spec['name']}", spec["peak_density"])
-        obj = add_steam_volume(spec["name"], spec["loc"], spec["scale"], mat, col, spec["rotation"])
+        mat = steam_material(f"MAT_P1_{spec['name']}", spec["peak_density"], spec["seed"])
+        obj = add_steam_volume(spec["name"], mat, col)
+        source = Vector(spec["source"])
+        aim = Vector(spec["aim"])
+        leak = aim - source
         empty = bpy.data.objects.new(f"{spec['name']}_SOURCE", None)
-        empty.location = spec["source"]
-        empty.empty_display_type = "SPHERE"
-        empty.empty_display_size = 0.06
+        empty.location = source
+        empty.rotation_euler = leak.normalized().to_track_quat("Z", "Y").to_euler()
+        empty.empty_display_type = "PLAIN_AXES"
+        empty.empty_display_size = 0.08
         col.objects.link(empty)
+        obj.parent = empty
         start, peak, hold, end = spec["keys"]
+        scale_keys = (
+            (1, (0.07, 0.06, 0.14)),
+            (start, (0.12, 0.10, 0.28)),
+            (peak, (0.38, 0.52, 1.42)),
+            (hold, (0.50, 0.70, 1.78)),
+            (end, (0.62, 0.88, 2.08)),
+            (FRAME_END, (0.62, 0.88, 2.08)),
+        )
+        obj.animation_data_clear()
+        for frame, scale in scale_keys:
+            obj.scale = scale
+            drift = (frame - start) / max(end - start, 1)
+            obj.location = (
+                0.03 * spec["seed"] + 0.05 * drift,
+                -0.02 * spec["seed"] - 0.04 * drift,
+                scale[2] * 0.48,
+            )
+            obj.keyframe_insert(data_path="scale", frame=frame)
+            obj.keyframe_insert(data_path="location", frame=frame)
+        soften_action(obj)
         key_density(mat, 1, 0.0)
         key_density(mat, start, 0.0)
         key_density(mat, peak, spec["peak_density"])
-        key_density(mat, hold, spec["peak_density"] * 0.85)
+        key_density(mat, hold, spec["peak_density"] * 0.72)
         key_density(mat, end, 0.0)
         key_density(mat, FRAME_END, 0.0)
+        animate_steam_advection(mat, start, end, spec["seed"])
         created.append(
             {
                 "name": spec["name"],
                 "kind": spec["kind"],
                 "source": spec["source"],
+                "aim": spec["aim"],
                 "frames": spec["keys"],
                 "peak_density": spec["peak_density"],
             }
@@ -686,10 +837,45 @@ def build_steam() -> dict:
     return {"sockets": created}
 
 
+def zero_world_volume() -> dict:
+    """World volume reads as camera-attached fog. Heat is carried by local steam only."""
+    scene = bpy.context.scene
+    world = scene.world
+    if world and world.node_tree:
+        vol = world.node_tree.nodes.get("P10_Volume")
+        if vol is not None and "Density" in vol.inputs:
+            vol.inputs["Density"].default_value = 0.0
+    return {"world_volume_density": 0.0}
+
+
+def apply_steam_correction() -> dict:
+    """Rebuild only the steam layer. Preserve weathering, wetness, lights, audio, camera."""
+    cam_before = camera_keys()
+    for mat in list(bpy.data.materials):
+        if mat.name.startswith("MAT_P1_STEAM"):
+            bpy.data.materials.remove(mat)
+    steam = build_steam()
+    world = zero_world_volume()
+    configure_eevee_phase1(bpy.context.scene)
+    bpy.context.scene["PHASE1_STEAM_FIX"] = 1
+    cam_after = camera_keys()
+    report = {
+        "steam": steam,
+        "world": world,
+        "camera_unchanged": cam_before == cam_after,
+        "camera": cam_after,
+        "objects": len(bpy.data.objects),
+        "lights": len([o for o in bpy.data.objects if o.type == "LIGHT"]),
+    }
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    (OUTPUT_DIR / "phase1_steam_fix.json").write_text(json.dumps(report, indent=2))
+    bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
+    return report
+
 def apply_heat_atmosphere() -> dict:
     scene = bpy.context.scene
     world = scene.world
-    density = 0.0018
+    density = 0.0
     if world and world.node_tree:
         bg = world.node_tree.nodes.get("Background")
         if bg is not None:
@@ -859,8 +1045,8 @@ def configure_eevee_phase1(scene: bpy.types.Scene) -> None:
     scene.eevee.taa_render_samples = 12
     scene.eevee.volumetric_start = 0.12
     scene.eevee.volumetric_end = 28.0
-    scene.eevee.volumetric_samples = 32
-    scene.eevee.volumetric_tile_size = "4"
+    scene.eevee.volumetric_samples = 48
+    scene.eevee.volumetric_tile_size = "2"
     if hasattr(scene.eevee, "use_volume_custom_range"):
         scene.eevee.use_volume_custom_range = True
     scene.eevee.use_raytracing = True
@@ -945,7 +1131,7 @@ def apply_phase1() -> dict:
     return report
 
 
-def render_stills(frames=(1, 72, 180, 264, 348)) -> list[Path]:
+def render_stills(frames=(72, 144, 168, 180, 240, 258, 264, 320, 336), prefix="phase1_steamfix") -> list[Path]:
     scene = bpy.context.scene
     configure_eevee_phase1(scene)
     STILL_DIR.mkdir(parents=True, exist_ok=True)
@@ -953,7 +1139,7 @@ def render_stills(frames=(1, 72, 180, 264, 348)) -> list[Path]:
     paths = []
     for frame in frames:
         scene.frame_set(frame)
-        path = STILL_DIR / f"phase1_frame_{frame:04d}.png"
+        path = STILL_DIR / f"{prefix}_f{frame:04d}.png"
         scene.render.filepath = str(path)
         bpy.ops.render.render(write_still=True)
         shutil.copy2(path, ARTIFACT_DIR / path.name)
@@ -1008,10 +1194,15 @@ def render_animation() -> dict:
     frames = sorted(FRAME_DIR.glob("frame_*.png"))
     audio_path = OUTPUT_DIR / "phase1_mixdown.wav"
     mixdown_audio(audio_path)
-    mp4 = OUTPUT_DIR / "phase1_environment_review.mp4"
+    mp4 = OUTPUT_DIR / "phase1_steam_correction_review.mp4"
     encode_mp4(FRAME_DIR, audio_path, mp4)
-    artifact = ARTIFACT_DIR / "phase1_environment_review.mp4"
-    shutil.copy2(mp4, artifact)
+    artifact = ARTIFACT_DIR / "phase1_steam_correction_review.mp4"
+    try:
+        ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(mp4, artifact)
+    except OSError as exc:
+        artifact = None
+        print(f"artifact copy skipped: {exc}")
     return {
         "frame_count": len(frames),
         "elapsed_sec": round(elapsed, 2),
@@ -1029,6 +1220,10 @@ def main() -> None:
     if mode == "setup":
         report = apply_phase1()
         print(json.dumps({"mode": mode, **{k: report[k] for k in ("before", "after", "camera_unchanged")}}, indent=2))
+        return
+    if mode == "steam-fix":
+        report = apply_steam_correction()
+        print(json.dumps({"mode": mode, "camera_unchanged": report["camera_unchanged"], "steam": report["steam"]}, indent=2))
         return
     if mode == "stills":
         if bpy.context.scene.get("PHASE1_ENVIRONMENT") != 1:
