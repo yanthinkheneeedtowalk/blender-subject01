@@ -1,0 +1,8 @@
+{
+  "frame_count": 360,
+  "elapsed_sec": 5794.35,
+  "sec_per_frame": 16.095,
+  "mp4": "/workspace/renders/hallway_phase1_environment/phase1_environment_review.mp4",
+  "artifact": "/opt/cursor/artifacts/phase1_environment_review.mp4",
+  "audio": "/workspace/renders/hallway_phase1_environment/phase1_mixdown.wav"
+}
