@@ -1,0 +1,43 @@
+REFERENCE-DIRECTED LOOKDEV — FINAL VIDEO VALIDATION
+
+本輪依提供的視覺語言方向校正：舊髒澆置混凝土、局部濕潤、深暗走廊、
+弱非門燈、門上螢光燈局部主光。未改 corridor geometry、camera timing、
+white door story、beam cleanup 或 pipes/equipment placement。
+
+STILL REALITY AUDIT
+  Dry-floor Cycles render: PASS
+  Damp/dry transition: PASS
+  Puddle/reflection: PASS
+  Door-light ON hero: PASS
+  Floor：低頻髒污、roughness history、edge accumulation。
+  Puddle：40-sided irregular shallow surface；outer edge uses floor shader，
+  center water keeps lower roughness；無 raised black bevel。
+  Door／wall／pipe／equipment：保持舊 painted steel／industrial palette。
+
+WALL FLICKER ISOLATION
+  Static material/world audit：無 material animation、無 world animation；
+  light animation 僅為 intentional practical events。
+  Cycles no-denoise isolation frames：120、160、220；未見固定燈下牆面
+  brightness pumping。Final EEVEE video 亦未見 wall flicker。
+
+VIDEO VALIDATION
+  VIDEO RENDER: PASS
+  FULL 15 SECONDS: PASS
+  360 frames、24 fps、15.000 sec、768×432、H.264/yuv420p。
+  Image sequence first；EEVEE 12 samples、volume density=0、ray tracing ON。
+  Geometry flicker: PASS
+  Material shimmer: PASS
+  Puddle instability: PASS
+  Denoiser pumping: PASS（EEVEE validation path；無 denoiser）
+  Texture swimming: PASS
+  Camera clipping: PASS
+  Door ignition／stable light／slow opening／half-open: PASS
+  Hard cut：frame 349；black tail frames 349–360：PASS。
+  Exact encoded checks：14.45 sec=half-open scene；14.50、14.75、14.95 sec=純黑。
+
+REMAINING NOTE
+  保留的 longitudinal pipes／soffit shadows 仍可在門燈上方看到，
+  但 targeted transverse slab family 已為 0；未再修改保留管線。
+
+STOP：已提供四張 Cycles stills、實際 15 秒 MP4 與本報告；
+未開始 final-master／450-frame render。
