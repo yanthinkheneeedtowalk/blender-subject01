@@ -1,0 +1,71 @@
+{
+  "heat": {
+    "world_strength": 0.04,
+    "volume_density": 0.0,
+    "world_color": [
+      0.7,
+      0.46,
+      0.22
+    ]
+  },
+  "lighting": {
+    "fill": [],
+    "warmed": [
+      "LIGHT_A_03_NORMAL",
+      "LIGHT_A_04_AGED_TINT",
+      "LIGHT_B_01_NORMAL",
+      "LIGHT_FINAL_DOOR_FLUORESCENT"
+    ],
+    "varied": [
+      "LIGHT_A_03_NORMAL",
+      "LIGHT_B_01_NORMAL"
+    ],
+    "door_light_untouched": true
+  },
+  "steam": {
+    "tinted": [
+      "MAT_P1_STEAM_SOCKET_ELBOW_C",
+      "MAT_P1_STEAM_SOCKET_INGRESS_B",
+      "MAT_P1_STEAM_SOCKET_VALVE_B"
+    ]
+  },
+  "world": {
+    "world_volume_density": 0.0
+  },
+  "camera_unchanged": true,
+  "camera": {
+    "camera": [
+      [
+        1,
+        1.4
+      ],
+      [
+        216,
+        14.0
+      ],
+      [
+        360,
+        18.0
+      ]
+    ],
+    "target": [
+      [
+        1,
+        13.4
+      ],
+      [
+        216,
+        26.0
+      ],
+      [
+        360,
+        30.0
+      ]
+    ]
+  },
+  "fill_present": false,
+  "active_lights": [
+    "LIGHT_A_03_NORMAL",
+    "LIGHT_B_01_NORMAL"
+  ]
+}
