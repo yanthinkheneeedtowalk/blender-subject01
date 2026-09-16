@@ -152,9 +152,9 @@ def render_stills():
     scene = bpy.context.scene
     configure_cycles(scene, 64, True)
     STILL_DIR.mkdir(parents=True, exist_ok=True)
-    dry = final_pass.make_camera("TEMP_DRY_FLOOR", (0.30, 8.8, 0.55), (-0.10, 10.0, 0.02), 40.0)
-    damp = final_pass.make_camera("TEMP_DAMP_TRANSITION", (-0.20, 16.9, 0.58), (0.05, 18.3, 0.02), 38.0)
-    puddle = final_pass.make_camera("TEMP_PUDDLE_REFLECTION", (0.24, 20.7, 0.60), (-0.05, 22.2, 0.02), 40.0)
+    dry = ref.make_camera("TEMP_DRY_FLOOR", (0.30, 8.8, 0.55), (-0.10, 10.0, 0.02), 40.0)
+    damp = ref.make_camera("TEMP_DAMP_TRANSITION", (-0.20, 16.9, 0.58), (0.05, 18.3, 0.02), 38.0)
+    puddle = ref.make_camera("TEMP_PUDDLE_REFLECTION", (0.24, 20.7, 0.60), (-0.05, 22.2, 0.02), 40.0)
     walk = bpy.data.objects[final_pass.WALK_CAM]
     jobs = (
         ("DARK_CORRIDOR", walk, 120),
