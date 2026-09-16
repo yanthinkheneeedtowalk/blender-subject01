@@ -1,0 +1,119 @@
+PHASE 1 ENVIRONMENTAL FOUNDATION REPORT
+
+ENVIRONMENT
+  Blender：5.2.1 LTS
+  Render Engine：BLENDER_EEVEE
+  Scene：Scene
+  Camera：CAM_P105_WALK（keys 未改：y 1.4 / 14.0 / 18.0）
+  Resolution：768×432
+  FPS：24
+  Frame range：1–360（15.00s）
+  Checkpoint：renders/checkpoints/phase1_pre_environment.blend
+  Phase 1 .blend：hallway.blend
+  Review MP4：renders/hallway_phase1_environment/phase1_environment_review.mp4
+
+SOURCE-OF-TRUTH
+  現況 hallway.blend 是 Phase 1–10.6 / door / LookDev 連續腳本的產物，
+  不是單純重跑 build_hallway_phase6.py 的結果。P6_NG_AgingMasks 仍在檔案中，
+  但 wall／floor／pipe 在 LookDev 重建後已不再連接該群組。
+  本輪採取 existing pipeline → Phase 1 extension：
+    scripts/build_hallway_phase1_environment.py
+  從 Phase 0 checkpoint 或當前 hallway.blend 重跑 --setup 可完整重建
+  weathering／steam／wetness／audio／lighting variation。
+  禁止只改 .blend；本輪所有環境層都由該腳本生成。
+
+CHANGES
+  未改 corridor layout、未刪既有資產、未動 CAM_P105_WALK keys、
+  未開 Clockwork、未加 Entity／jumpscare。
+  在 LookDev 材質之上注入 P1_NG_Environment（Rust／Streak／Damp／Skirt／
+  Condensation／Mineral／Oil／Breakup），污損集中於 joints、valves、
+  flanges、wall penetrations、drip 下方與牆地交界。
+  新增少量積水／油膜／冷凝珠。
+  建立 3 個 Steam Socket（閥件 packing、穿牆接點、彎頭洩壓），事件錯開。
+  保留原 Lighting direction；兩盞持續 practical 做輕微螢光燈能量變化；
+  加 LIGHT_P1_FILL／LIGHT_P1_FILL_C 作為暗區最低可讀填光。
+  World strength 0.30 → 0.52，P10_Volume density 0.0018（極弱熱霾）。
+
+ASSETS ADDED
+  Collections：PHASE1_ENVIRONMENT、PHASE1_STEAM、PHASE1_AUDIO、PHASE1_WETNESS
+  Steam sockets：STEAM_SOCKET_VALVE_B、STEAM_SOCKET_INGRESS_B、STEAM_SOCKET_ELBOW_C
+  Wetness：P1_WET_VENT_B、P1_WET_INGRESS_B、P1_OIL_VALVE_B、P1_WET_ELBOW_C、10 condensation beads
+  Materials：MAT_P1_ShallowWater、MAT_P1_OilFilm、MAT_P1_WetPatch、MAT_P1_Condensation、3 steam volumes
+  Lights：LIGHT_P1_FILL、LIGHT_P1_FILL_C
+  Node group：P1_NG_Environment
+
+AUDIO ADDED
+  工作區沒有使用者提供的 Level 2 ambience 檔，因此以
+  scripts/generate_level2_audio.py 生成 15s／44.1kHz 工業管廊音床。
+  Global：amb_level2_loop.wav（seamless crossfade）
+  Rare：rare_distant_structure.wav（遠距金屬撞擊／結構呻吟，非 jumpscare）
+  Local 3D speakers + 同位置空間混音（mix_phase1_audio.py，跟隨 CAM_P105_WALK Y）：
+    pipe rumble、vent hum、electrical hum、water drip×2、metal tick、
+    steam hiss A／B／C（與 Steam Event 同時段）
+  MP4 音軌：AAC 191 kb/s stereo；15s 全程 RMS 0.11–0.25，無靜音、無突然中斷。
+
+STEAM SYSTEM
+  Socket A  VALVE_Body_B packing     frames 36–108（peak 52–78）
+  Socket B  Wall ingress flange      frames 150–228（peak 168–198）
+  Socket C  Elbow C pressure release frames 240–330（peak 258–300）
+  實作：UV sphere + object-space radial falloff + noise；Amount 以 Bézier 淡入淡出。
+  不同時全開。EEVEE volumetric samples 32、tile 4。
+
+WEATHERING SYSTEM
+  世界座標 drip sources（沿用 Phase 6 物理來源）+ JOINT_Y 鏽蝕權重不同，
+  再乘 Object Info Random，避免所有管線同一 pattern。
+  牆：垂直水痕、牆腳積垢、局部潮濕。
+  地：drip 下方濕斑、閥下油膜、邊緣較髒。
+  管：接頭／法蘭氧化、冷凝降低 roughness、礦物質沉積。
+  不是廢墟，也不是平均 procedural dirt。
+
+LIGHTING CHANGES
+  原 dead／stable／door-light 故事保留。
+  LIGHT_A_03／LIGHT_B_01：±約 5% 緩慢能量變化（非恐怖閃燈）。
+  LIGHT_FINAL_DOOR_FLUORESCENT 未改。
+  新增兩盞低能量 area fill，只為暗區幾何可讀，不重打全場。
+
+PERFORMANCE IMPACT
+  Phase 0：Objects 634，Materials 35，Lights 22
+  Phase 1：Objects 665（+31），Materials 42（+7），Lights 24（+2），Speakers 9
+  Review render：EEVEE TAA 12、vol samples 32、768×432、360 frames
+  總時間 5794.35s（16.095 s/frame）
+  未加 high-poly 重建、未加大量獨立貼圖、粒子系統 0、volume 僅 3 個 steam + 極弱 world。
+
+REGRESSION TEST
+  Geometry：PASS（layout／camera freeze；無新 duplicate／zero-scale）
+  Materials：PASS（P1 注入在 LookDev 之上；無壞圖路徑）
+  Lighting：PASS（方向保留；door-light 事件仍在）
+  Camera：PASS（keys 不變）
+  Animation：PASS（連續前進，無 teleport）
+  Render：PASS（完整 360 幀 PNG → H.264）
+  Audio：PASS（AAC 音軌存在，全程有聲）
+  抽查未見 Z-fighting、穿模、蒸汽 pop in／out、突然黑屏、音訊中斷。
+  中段 Zone C 在門燈點亮前仍非常暗，但管線／櫃體輪廓可辨，非技術性全黑。
+
+ANIMATION RENDER RESULT
+  檔案：phase1_environment_review.mp4
+  768×432、24 fps、15.00s、H.264 + AAC
+  抽查：
+    Beginning f0001：入口走廊、潮濕地坪斑、無蒸汽
+    25% f0090：Steam A 殘雲、地面積水
+    50% f0180：Steam B 在右側管線／閥件附近，短暫遮蔽部分視野
+    Steam B 結束 f0228：蒸汽已散，無硬切消失
+    75% f0270：門燈已亮、Steam C、門前積水反射
+    Steam C peak f0258：羽流遮住門左側部分視野
+    Ending f0348：門半開，蒸汽已散，camera 仍在路徑上
+  成片檢視（video review）：連續行走、三股蒸汽依序出現並淡出、
+  積水在門燈下可見、白門開啟、無 jumpscare／紅燈／瘋狂閃爍。
+
+KNOWN ISSUES
+  K-01：EEVEE volume 仍有輕微 hexagonal dither（單幀較明顯，成片中蒸汽讀為軟雲）。
+        已用 tile 4／32 samples／徑向衰減抑制，未再加 sampling 以免預覽成本失控。
+  K-02：門燈點亮前的 Zone C 仍然很暗。這是既有 80% 死燈設計；本輪只加最低填光。
+  K-03：工作區無使用者 Level 2 ambience 原檔，音床為程序生成工業聲。
+  K-04：先前 door-sequence MP4 曾在 349–360 後製黑畫面。本輪渲染的是場景內
+        1–360 實幀（門保持半開），以驗收環境而非重做黑切結尾。
+
+FINAL VERDICT
+  PASS — Ready for Phase 2
+
+停止於 Phase 1。未開始 Phase 2、未開始 Clockwork anomaly。
