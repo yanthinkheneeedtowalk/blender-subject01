@@ -1,0 +1,17 @@
+Phase 1 look restore — review of phase1_look_restore_review.mp4
+
+360 EEVEE frames, 768x432, 24 fps, CAM_P105_WALK, AAC mixdown.
+Verdict is from the encoded MP4.
+
+Technical QA: PASS
+- No oval/billboard steam.
+- No camera-attached world fog (volume density 0).
+- Remaining steam is irregular wisps at pipe/valve locations (visible ~7.5s on the right).
+
+Art Direction: PASS
+- Warm dirty-yellow / tungsten pools from practicals; fixture emitters clip white when viewed directly (same as the original Level 2 render).
+- Corridor-wide grey fill is gone.
+- Distant sections are threateningly dark (~6s, ~10s before door ignition).
+- Door practical at ~10–15s: bright fixture → warm wall pool → rapid falloff → deep side shadow → black void.
+- Wet floor catches a local highlight under the door light only.
+- Exposure unchanged (0.0). Camera, steam domains, weathering, audio, door animation unchanged.

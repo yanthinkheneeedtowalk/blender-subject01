@@ -13,6 +13,7 @@ Pipeline:
 Usage:
   blender -b hallway.blend --python scripts/build_hallway_phase1_environment.py -- --setup
   blender -b hallway.blend --python scripts/build_hallway_phase1_environment.py -- --steam-fix
+  blender -b hallway.blend --python scripts/build_hallway_phase1_environment.py -- --look-restore
   blender -b hallway.blend --python scripts/build_hallway_phase1_environment.py -- --stills
   blender -b hallway.blend --python scripts/build_hallway_phase1_environment.py -- --render
 """
@@ -132,6 +133,8 @@ def parse_mode() -> str:
         return "stills"
     if "--steam-fix" in argv:
         return "steam-fix"
+    if "--look-restore" in argv:
+        return "look-restore"
     if "--setup" in argv or "--no-render" in argv:
         return "setup"
     return "setup"
@@ -551,12 +554,12 @@ def steam_material(name: str, peak: float, seed: float) -> bpy.types.Material:
     vol = nt.nodes.new("ShaderNodeVolumePrincipled")
     vol.name = "P1_SteamVolume"
     vol.location = (980, 40)
-    vol.inputs["Color"].default_value = (0.78, 0.83, 0.86, 1.0)
+    vol.inputs["Color"].default_value = (0.92, 0.74, 0.48, 1.0)
     vol.inputs["Density"].default_value = 0.0
     if "Anisotropy" in vol.inputs:
         vol.inputs["Anisotropy"].default_value = 0.18
     if "Emission Color" in vol.inputs:
-        vol.inputs["Emission Color"].default_value = (0.72, 0.79, 0.84, 1.0)
+        vol.inputs["Emission Color"].default_value = (0.96, 0.70, 0.38, 1.0)
     if "Emission Strength" in vol.inputs:
         vol.inputs["Emission Strength"].default_value = 0.0
 
@@ -704,7 +707,7 @@ def steam_material(name: str, peak: float, seed: float) -> bpy.types.Material:
     emit.operation = "MULTIPLY"
     emit.location = (740, 220)
     nt.links.new(amount.outputs[0], emit.inputs[0])
-    emit.inputs[1].default_value = 0.022
+    emit.inputs[1].default_value = 0.008
     emit2 = nt.nodes.new("ShaderNodeMath")
     emit2.operation = "MULTIPLY"
     emit2.location = (900, 220)
@@ -872,22 +875,76 @@ def apply_steam_correction() -> dict:
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
     return report
 
+
+def tint_steam_to_practicals() -> dict:
+    """Keep steam domains/keys. Warm scatter so wisps inherit tungsten, not grey-white."""
+    tinted = []
+    for mat in bpy.data.materials:
+        if not mat.name.startswith("MAT_P1_STEAM"):
+            continue
+        nt = mat.node_tree
+        if nt is None:
+            continue
+        vol = nt.nodes.get("P1_SteamVolume")
+        if vol is None:
+            continue
+        vol.inputs["Color"].default_value = (0.92, 0.74, 0.48, 1.0)
+        if "Emission Color" in vol.inputs:
+            vol.inputs["Emission Color"].default_value = (0.96, 0.70, 0.38, 1.0)
+        for node in nt.nodes:
+            if node.type != "MATH" or node.operation != "MULTIPLY":
+                continue
+            if abs(node.inputs[1].default_value - 0.022) < 1e-4 or abs(node.inputs[1].default_value - 0.034) < 1e-4:
+                node.inputs[1].default_value = 0.008
+        tinted.append(mat.name)
+    return {"tinted": tinted}
+
+
+def apply_look_restore() -> dict:
+    """Restore dark warm practical lighting. Do not rebuild steam, camera, door, or layout."""
+    cam_before = camera_keys()
+    heat = apply_heat_atmosphere()
+    lighting = apply_lighting_variation()
+    steam = tint_steam_to_practicals()
+    world = zero_world_volume()
+    configure_eevee_phase1(bpy.context.scene)
+    bpy.context.scene["PHASE1_LOOK_RESTORE"] = 1
+    cam_after = camera_keys()
+    report = {
+        "heat": heat,
+        "lighting": lighting,
+        "steam": steam,
+        "world": world,
+        "camera_unchanged": cam_before == cam_after,
+        "camera": cam_after,
+        "fill_present": bool(bpy.data.objects.get("LIGHT_P1_FILL") or bpy.data.objects.get("LIGHT_P1_FILL_C")),
+        "active_lights": sorted(
+            o.name for o in bpy.data.objects if o.type == "LIGHT" and o.data.energy > 0.01
+        ),
+    }
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    (OUTPUT_DIR / "phase1_look_restore.json").write_text(json.dumps(report, indent=2))
+    bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
+    return report
+
 def apply_heat_atmosphere() -> dict:
     scene = bpy.context.scene
     world = scene.world
     density = 0.0
+    strength = 0.04
+    color = (0.70, 0.46, 0.22, 1.0)
     if world and world.node_tree:
         bg = world.node_tree.nodes.get("Background")
         if bg is not None:
-            bg.inputs[1].default_value = 0.52
+            bg.inputs[1].default_value = strength
             if "Color" in bg.inputs:
-                bg.inputs["Color"].default_value = (0.50, 0.47, 0.42, 1.0)
+                bg.inputs["Color"].default_value = color
         vol = world.node_tree.nodes.get("P10_Volume")
         if vol is not None and "Density" in vol.inputs:
             vol.inputs["Density"].default_value = density
             if "Color" in vol.inputs:
-                vol.inputs["Color"].default_value = (0.78, 0.74, 0.68, 1.0)
-    return {"world_strength": 0.52, "volume_density": density}
+                vol.inputs["Color"].default_value = (0.62, 0.48, 0.28, 1.0)
+    return {"world_strength": strength, "volume_density": density, "world_color": color[:3]}
 
 
 def action_fcurves(action):
@@ -895,35 +952,31 @@ def action_fcurves(action):
 
 
 def apply_lighting_variation() -> dict:
-    """Keep original lighting direction. Mild fluorescent variation only."""
-    scene = bpy.context.scene
-    fill_data = bpy.data.lights.get("LIGHT_P1_FILL")
-    if fill_data is not None:
-        bpy.data.lights.remove(fill_data)
-    fill_data = bpy.data.lights.new("LIGHT_P1_FILL", "AREA")
-    fill_data.energy = 24.0
-    fill_data.color = (0.96, 0.91, 0.82)
-    fill_data.shape = "RECTANGLE"
-    fill_data.size = 3.2
-    fill_data.size_y = 1.5
-    fill = bpy.data.objects.new("LIGHT_P1_FILL", fill_data)
-    fill.location = (0.0, 13.6, 2.70)
-    fill.rotation_euler = (0.0, 0.0, 0.0)
-    col = ensure_collection(COL_ENV)
-    col.objects.link(fill)
+    """Practical fixtures only. No corridor-wide fill. Warm dirty-yellow tungsten."""
+    for name in ("LIGHT_P1_FILL", "LIGHT_P1_FILL_C"):
+        obj = bpy.data.objects.get(name)
+        if obj is not None:
+            data = obj.data
+            bpy.data.objects.remove(obj, do_unlink=True)
+            if data is not None and data.users == 0:
+                bpy.data.lights.remove(data)
+        light = bpy.data.lights.get(name)
+        if light is not None:
+            bpy.data.lights.remove(light)
 
-    far = bpy.data.lights.get("LIGHT_P1_FILL_C")
-    if far is not None:
-        bpy.data.lights.remove(far)
-    far = bpy.data.lights.new("LIGHT_P1_FILL_C", "AREA")
-    far.energy = 12.0
-    far.color = (0.90, 0.88, 0.80)
-    far.shape = "RECTANGLE"
-    far.size = 2.8
-    far.size_y = 1.3
-    far_obj = bpy.data.objects.new("LIGHT_P1_FILL_C", far)
-    far_obj.location = (0.0, 18.8, 2.66)
-    col.objects.link(far_obj)
+    practical_colors = {
+        "LIGHT_A_03_NORMAL": (1.00, 0.78, 0.42),
+        "LIGHT_A_04_AGED_TINT": (1.00, 0.74, 0.38),
+        "LIGHT_B_01_NORMAL": (1.00, 0.82, 0.46),
+        "LIGHT_FINAL_DOOR_FLUORESCENT": (1.00, 0.80, 0.48),
+    }
+    warmed = []
+    for name, color in practical_colors.items():
+        obj = bpy.data.objects.get(name)
+        if obj is None or obj.type != "LIGHT":
+            continue
+        obj.data.color = color
+        warmed.append(name)
 
     variations = {
         "LIGHT_A_03_NORMAL": (
@@ -961,7 +1014,8 @@ def apply_lighting_variation() -> dict:
                     kp.handle_left_type = "AUTO_CLAMPED"
                     kp.handle_right_type = "AUTO_CLAMPED"
     return {
-        "fill": ["LIGHT_P1_FILL", "LIGHT_P1_FILL_C"],
+        "fill": [],
+        "warmed": warmed,
         "varied": list(variations),
         "door_light_untouched": True,
     }
@@ -1050,6 +1104,8 @@ def configure_eevee_phase1(scene: bpy.types.Scene) -> None:
     if hasattr(scene.eevee, "use_volume_custom_range"):
         scene.eevee.use_volume_custom_range = True
     scene.eevee.use_raytracing = True
+    scene.eevee.use_fast_gi = True
+    scene.eevee.fast_gi_method = "AMBIENT_OCCLUSION_ONLY"
     scene.eevee.use_volumetric_shadows = False
     scene.render.resolution_x = RES_X
     scene.render.resolution_y = RES_Y
@@ -1131,7 +1187,7 @@ def apply_phase1() -> dict:
     return report
 
 
-def render_stills(frames=(72, 144, 168, 180, 240, 258, 264, 320, 336), prefix="phase1_steamfix") -> list[Path]:
+def render_stills(frames=(1, 72, 144, 180, 240, 264, 336, 348), prefix="phase1_lookrestore") -> list[Path]:
     scene = bpy.context.scene
     configure_eevee_phase1(scene)
     STILL_DIR.mkdir(parents=True, exist_ok=True)
@@ -1194,9 +1250,9 @@ def render_animation() -> dict:
     frames = sorted(FRAME_DIR.glob("frame_*.png"))
     audio_path = OUTPUT_DIR / "phase1_mixdown.wav"
     mixdown_audio(audio_path)
-    mp4 = OUTPUT_DIR / "phase1_steam_correction_review.mp4"
+    mp4 = OUTPUT_DIR / "phase1_look_restore_review.mp4"
     encode_mp4(FRAME_DIR, audio_path, mp4)
-    artifact = ARTIFACT_DIR / "phase1_steam_correction_review.mp4"
+    artifact = ARTIFACT_DIR / "phase1_look_restore_review.mp4"
     try:
         ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
         shutil.copy2(mp4, artifact)
@@ -1224,6 +1280,10 @@ def main() -> None:
     if mode == "steam-fix":
         report = apply_steam_correction()
         print(json.dumps({"mode": mode, "camera_unchanged": report["camera_unchanged"], "steam": report["steam"]}, indent=2))
+        return
+    if mode == "look-restore":
+        report = apply_look_restore()
+        print(json.dumps({"mode": mode, "camera_unchanged": report["camera_unchanged"], "fill_present": report["fill_present"], "heat": report["heat"]}, indent=2))
         return
     if mode == "stills":
         if bpy.context.scene.get("PHASE1_ENVIRONMENT") != 1:
