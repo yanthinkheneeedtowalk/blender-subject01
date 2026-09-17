@@ -1,0 +1,8 @@
+{
+  "frame_count": 720,
+  "elapsed_sec": 26343.12,
+  "sec_per_frame": 36.588,
+  "mp4": "/workspace/renders/hallway_phase2_spatial/phase2_spatial_expansion_review.mp4",
+  "artifact": "/opt/cursor/artifacts/phase2_spatial_expansion_review.mp4",
+  "audio": "/workspace/renders/hallway_phase2_spatial/phase2_mixdown.wav"
+}
