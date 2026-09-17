@@ -1,0 +1,120 @@
+{
+  "checkpoint": "/workspace/renders/checkpoints/phase2_pre_spatial_expansion.blend",
+  "before": {
+    "objects": 819,
+    "materials": 45,
+    "lights": 32,
+    "meshes": 275
+  },
+  "after": {
+    "objects": 819,
+    "materials": 45,
+    "lights": 32,
+    "meshes": 278
+  },
+  "geometry": {
+    "boxes": 73,
+    "pipes": 29,
+    "props": 27
+  },
+  "lights": [
+    "LIGHT_P2_HUB",
+    "LIGHT_P2_HUB_AIM",
+    "LIGHT_P2_HOT",
+    "LIGHT_P2_HOT_AIM",
+    "LIGHT_P2_HOT_FAR",
+    "LIGHT_P2_VENT",
+    "LIGHT_P2_VENT_AIM",
+    "LIGHT_P2_MAINT",
+    "LIGHT_P2_SHAFT",
+    "LIGHT_P2_DEAD"
+  ],
+  "steam": {
+    "sockets": [
+      {
+        "name": "STEAM_P2_PIPE_HUB",
+        "source": [
+          -2.55,
+          7.28,
+          2.38
+        ],
+        "frames": [
+          110,
+          135,
+          175,
+          230
+        ]
+      },
+      {
+        "name": "STEAM_P2_HOT_A",
+        "source": [
+          -3.52,
+          10.85,
+          2.22
+        ],
+        "frames": [
+          230,
+          260,
+          310,
+          390
+        ]
+      },
+      {
+        "name": "STEAM_P2_HOT_B",
+        "source": [
+          -5.22,
+          12.4,
+          2.18
+        ],
+        "frames": [
+          250,
+          285,
+          340,
+          420
+        ]
+      }
+    ]
+  },
+  "camera": {
+    "camera": "CAM_P2_REVIEW",
+    "frames": 720,
+    "keys": 16
+  },
+  "audio": {
+    "speakers": [
+      "SPK_P2_PIPE_DENSE",
+      "SPK_P2_HOT_STEAM",
+      "SPK_P2_HOT_TICK",
+      "SPK_P2_VENT_FAN",
+      "SPK_P2_MAINT_HUM",
+      "SPK_P2_SHAFT"
+    ]
+  },
+  "freeze": {
+    "walk_unchanged": true,
+    "target_unchanged": true,
+    "world_strength": 0.04,
+    "world_volume": 0.0,
+    "fill_present": false,
+    "phase1_steam": [
+      "STEAM_SOCKET_ELBOW_C",
+      "STEAM_SOCKET_INGRESS_B",
+      "STEAM_SOCKET_VALVE_B"
+    ],
+    "walk_keys": [
+      [
+        1,
+        1.4
+      ],
+      [
+        216,
+        14.0
+      ],
+      [
+        360,
+        18.0
+      ]
+    ]
+  },
+  "phase1_protected": true
+}
