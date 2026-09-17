@@ -96,17 +96,17 @@ ROUTE = (
     (1, (0.00, 1.85, 1.68), (0.04, 8.60, 1.42)),
     (40, (0.00, 4.55, 1.68), (-0.95, 6.18, 1.48)),
     (72, (0.02, 6.20, 1.68), (-3.10, 6.18, 1.46)),
-    (120, (-2.35, 6.10, 1.68), (-4.90, 6.35, 1.52)),
-    (160, (-3.40, 6.08, 1.68), (-4.95, 7.40, 2.60)),
-    (210, (-4.38, 7.70, 1.50), (-4.40, 10.50, 1.18)),
-    (280, (-4.40, 10.70, 1.36), (-4.32, 13.10, 1.22)),
-    (340, (-4.38, 8.05, 1.50), (-4.40, 3.10, 1.42)),
-    (400, (-4.40, 2.55, 1.68), (-4.55, 0.85, 1.38)),
-    (455, (-4.42, 1.16, 1.68), (-7.40, 1.14, 1.40)),
+    (120, (-2.20, 6.12, 1.68), (-4.55, 6.22, 1.28)),
+    (160, (-3.25, 6.12, 1.68), (-4.28, 7.70, 1.38)),
+    (210, (-4.35, 8.15, 1.42), (-4.32, 11.20, 1.18)),
+    (280, (-4.36, 9.40, 1.36), (-4.28, 12.55, 1.32)),
+    (340, (-4.36, 8.05, 1.46), (-4.22, 5.20, 1.25)),
+    (400, (-4.08, 3.40, 1.68), (-4.75, 1.10, 1.32)),
+    (455, (-4.40, 1.18, 1.68), (-7.35, 1.14, 1.38)),
     (510, (-6.95, 1.16, 1.68), (-8.30, 1.14, 1.42)),
-    (555, (-4.42, 2.20, 1.68), (-4.30, 5.60, 1.42)),
-    (600, (-4.38, 6.10, 1.68), (-7.10, 6.40, 1.30)),
-    (645, (-7.05, 6.42, 1.68), (-8.10, 7.28, 1.12)),
+    (555, (-4.38, 2.35, 1.68), (-4.25, 5.55, 1.38)),
+    (600, (-4.35, 6.12, 1.68), (-7.05, 6.42, 1.22)),
+    (645, (-7.00, 6.42, 1.68), (-8.05, 7.30, 1.08)),
     (685, (-3.05, 6.16, 1.68), (0.85, 6.22, 1.48)),
     (720, (0.00, 7.15, 1.68), (0.02, 16.40, 1.32)),
 )
@@ -115,7 +115,7 @@ P2_STEAM = (
     dict(
         name="STEAM_P2_PIPE_HUB",
         source=(-2.55, 7.28, 2.38),
-        aim=(-3.35, 6.55, 1.28),
+        aim=(-2.72, 7.05, 1.18),
         peak_density=9.4,
         keys=(110, 135, 175, 230),
         seed=0.41,
@@ -123,28 +123,34 @@ P2_STEAM = (
     dict(
         name="STEAM_P2_HOT_A",
         source=(-3.52, 10.85, 2.22),
-        aim=(-4.35, 10.70, 1.05),
-        peak_density=11.6,
+        aim=(-3.78, 11.05, 1.08),
+        peak_density=14.8,
         keys=(230, 260, 310, 390),
         seed=0.88,
+        scale=(1.15, 1.20, 1.35),
     ),
     dict(
         name="STEAM_P2_HOT_B",
         source=(-5.22, 12.40, 2.18),
-        aim=(-4.50, 12.15, 1.00),
-        peak_density=10.8,
+        aim=(-4.95, 12.55, 1.02),
+        peak_density=13.6,
         keys=(250, 285, 340, 420),
         seed=1.27,
+        scale=(1.10, 1.15, 1.30),
     ),
 )
 
 P2_LIGHTS = (
-    dict(name="LIGHT_P2_HUB", loc=(-3.40, 6.20, 2.52), energy=8.4, color=(1.00, 0.78, 0.40), size=1.15),
-    dict(name="LIGHT_P2_HOT", loc=(-4.40, 10.90, 2.28), energy=7.6, color=(1.00, 0.70, 0.32), size=1.05),
-    dict(name="LIGHT_P2_VENT", loc=(-4.40, 2.15, 2.46), energy=5.8, color=(0.78, 0.86, 0.96), size=1.10),
-    dict(name="LIGHT_P2_MAINT", loc=(-7.05, 6.45, 2.38), energy=5.2, color=(1.00, 0.80, 0.46), size=0.85),
-    dict(name="LIGHT_P2_SHAFT", loc=(-5.05, 7.28, 4.55), energy=2.8, color=(1.00, 0.76, 0.38), size=0.55),
-    dict(name="LIGHT_P2_DEAD", loc=(-7.40, 1.15, 2.20), energy=3.4, color=(0.80, 0.86, 0.94), size=0.70),
+    dict(name="LIGHT_P2_HUB", loc=(-3.40, 6.20, 2.48), energy=15.2, color=(1.00, 0.78, 0.40), size=1.10, rot=(0.0, 0.0, 0.0)),
+    dict(name="LIGHT_P2_HUB_AIM", loc=(-3.55, 6.35, 2.05), energy=9.8, color=(1.00, 0.74, 0.36), size=0.62, rot=(-1.22, 0.0, 0.0)),
+    dict(name="LIGHT_P2_HOT", loc=(-4.40, 10.70, 2.22), energy=16.8, color=(1.00, 0.70, 0.32), size=1.00, rot=(0.0, 0.0, 0.0)),
+    dict(name="LIGHT_P2_HOT_AIM", loc=(-4.38, 11.05, 1.82), energy=12.4, color=(1.00, 0.66, 0.28), size=0.72, rot=(-1.28, 0.0, 0.0)),
+    dict(name="LIGHT_P2_HOT_FAR", loc=(-4.40, 12.20, 2.18), energy=14.2, color=(1.00, 0.68, 0.30), size=0.85, rot=(0.0, 0.0, 0.0)),
+    dict(name="LIGHT_P2_VENT", loc=(-4.40, 2.35, 2.42), energy=13.6, color=(0.84, 0.90, 0.98), size=1.00, rot=(0.0, 0.0, 0.0)),
+    dict(name="LIGHT_P2_VENT_AIM", loc=(-4.55, 2.50, 1.88), energy=8.8, color=(0.80, 0.86, 0.96), size=0.58, rot=(0.0, 1.22, 0.0)),
+    dict(name="LIGHT_P2_MAINT", loc=(-7.00, 6.48, 2.28), energy=12.6, color=(1.00, 0.80, 0.46), size=0.82, rot=(0.0, 0.0, 0.0)),
+    dict(name="LIGHT_P2_SHAFT", loc=(-5.00, 7.26, 4.15), energy=7.2, color=(1.00, 0.76, 0.38), size=0.42, rot=(3.1416, 0.0, 0.0)),
+    dict(name="LIGHT_P2_DEAD", loc=(-7.05, 1.16, 2.12), energy=8.4, color=(0.82, 0.88, 0.96), size=0.62, rot=(0.0, 0.0, 0.0)),
 )
 
 
@@ -232,7 +238,7 @@ def cut_opening(wall_name: str, x0, y0, z0, x1, y1, z1) -> None:
     if wall is None:
         raise RuntimeError(f"Missing wall {wall_name}")
     flag = f"P2_OPENING_{wall_name}"
-    if wall.get(flag) == 1 and len(wall.data.vertices) > 16:
+    if wall.get(flag) == 1:
         return
     tmp_col = ensure_col(COL_GEO)
     cutter = add_box(f"{wall_name}_CUT", x0, y0, z0, x1, y1, z1, tmp_col, mat("MAT_Wall_PaintedConcrete"))
@@ -412,13 +418,14 @@ def build_geometry() -> dict:
     for x in (-1.70, -2.55, -3.40, -4.25, -5.05):
         add_bracket(f"P2_BRK_PRI_{x:.2f}", (x, 7.18, 2.58), pipe_col, "X")
         add_bracket(f"P2_BRK_SEC_{x:.2f}", (x, 5.12, 2.44), pipe_col, "X")
-    add_pipe("P2_PIPE_WALL_N", (-5.28, 6.90, 1.55), (-1.35, 6.90, 1.55), 0.09, pipe_col, pipe_b)
-    add_pipe("P2_PIPE_WALL_S", (-5.28, 5.05, 1.42), (-1.35, 5.05, 1.42), 0.08, pipe_col, pipe_b)
+    add_pipe("P2_PIPE_WALL_N", (-5.28, 6.90, 1.92), (-1.35, 6.90, 1.92), 0.09, pipe_col, pipe_b)
+    add_pipe("P2_PIPE_WALL_S", (-5.28, 5.05, 1.88), (-1.35, 5.05, 1.88), 0.08, pipe_col, pipe_b)
 
     # Hot sector pipes + condensation.
     add_pipe("P2_PIPE_HOT_A", (-3.52, 7.70, 2.18), (-3.52, 13.15, 2.18), 0.17, pipe_col, pipe_a)
     add_pipe("P2_PIPE_HOT_B", (-5.22, 7.70, 2.05), (-5.22, 13.15, 2.05), 0.13, pipe_col, pipe_a)
     add_pipe("P2_PIPE_HOT_C", (-3.70, 11.40, 1.55), (-5.10, 11.40, 1.55), 0.10, pipe_col, pipe_b)
+    add_pipe("P2_PIPE_HOT_D", (-3.48, 8.20, 1.72), (-3.48, 12.90, 1.72), 0.08, pipe_col, pipe_b)
     add_cyl("P2_HOT_VALVE", (-3.52, 10.85, 2.18), 0.12, 0.18, (0, math.pi * 0.5, 0), pipe_col, valve, 10)
     add_cyl("P2_HOT_FLANGE", (-5.22, 12.40, 2.05), 0.16, 0.05, (0, 0, 0), pipe_col, steel, 10)
     add_box("P2_WET_HOT_A", -5.10, 10.40, -HOT_DROP + 0.002, -3.70, 11.20, -HOT_DROP + 0.008, wet, rubber)
@@ -467,6 +474,13 @@ def build_geometry() -> dict:
     # Hub wet patch under leak.
     add_box("P2_WET_HUB", -3.55, 6.70, 0.002, -2.70, 7.20, 0.008, wet, rubber)
 
+    # Visible practical housings (not extra fill — they mark the new fixtures).
+    add_box("P2_FIX_HUB", -3.70, 5.95, 2.62, -3.10, 6.45, 2.72, geo, steel)
+    add_box("P2_FIX_HOT", -4.70, 10.45, 2.38, -4.10, 10.95, 2.48, geo, steel)
+    add_box("P2_FIX_HOT_FAR", -4.70, 11.95, 2.34, -4.10, 12.45, 2.44, geo, steel)
+    add_box("P2_FIX_VENT", -4.70, 2.10, 2.58, -4.10, 2.60, 2.68, geo, galv)
+    add_box("P2_FIX_MAINT", -7.25, 6.28, 2.42, -6.75, 6.68, 2.52, geo, steel)
+
     counts["pipes"] = len(pipe_col.objects)
     counts["props"] = len(prop.objects)
     counts["boxes"] = len(geo.objects)
@@ -485,6 +499,7 @@ def build_lights() -> list[str]:
         data.size_y = spec["size"] * 0.55
         obj = bpy.data.objects.new(spec["name"], data)
         obj.location = spec["loc"]
+        obj.rotation_euler = spec.get("rot", (0.0, 0.0, 0.0))
         col.objects.link(obj)
         names.append(spec["name"])
     return names
@@ -503,13 +518,14 @@ def add_steam_socket(spec, col) -> dict:
     col.objects.link(empty)
     obj.parent = empty
     start, peak, hold, end = spec["keys"]
+    mul = spec.get("scale", (1.0, 1.0, 1.0))
     scale_keys = (
-        (1, (0.07, 0.06, 0.14)),
-        (start, (0.12, 0.10, 0.28)),
-        (peak, (0.36, 0.48, 1.32)),
-        (hold, (0.48, 0.64, 1.62)),
-        (end, (0.58, 0.80, 1.90)),
-        (FRAME_END, (0.58, 0.80, 1.90)),
+        (1, (0.07 * mul[0], 0.06 * mul[1], 0.14 * mul[2])),
+        (start, (0.12 * mul[0], 0.10 * mul[1], 0.28 * mul[2])),
+        (peak, (0.36 * mul[0], 0.48 * mul[1], 1.32 * mul[2])),
+        (hold, (0.48 * mul[0], 0.64 * mul[1], 1.62 * mul[2])),
+        (end, (0.58 * mul[0], 0.80 * mul[1], 1.90 * mul[2])),
+        (FRAME_END, (0.58 * mul[0], 0.80 * mul[1], 1.90 * mul[2])),
     )
     obj.animation_data_clear()
     for frame, scale in scale_keys:

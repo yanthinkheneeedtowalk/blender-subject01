@@ -1,26 +1,30 @@
 {
   "checkpoint": "/workspace/renders/checkpoints/phase2_pre_spatial_expansion.blend",
   "before": {
-    "objects": 663,
-    "materials": 42,
-    "lights": 22,
-    "meshes": 154
+    "objects": 819,
+    "materials": 45,
+    "lights": 32,
+    "meshes": 275
   },
   "after": {
-    "objects": 809,
+    "objects": 819,
     "materials": 45,
-    "lights": 28,
-    "meshes": 272
+    "lights": 32,
+    "meshes": 278
   },
   "geometry": {
-    "boxes": 68,
-    "pipes": 28,
+    "boxes": 73,
+    "pipes": 29,
     "props": 27
   },
   "lights": [
     "LIGHT_P2_HUB",
+    "LIGHT_P2_HUB_AIM",
     "LIGHT_P2_HOT",
+    "LIGHT_P2_HOT_AIM",
+    "LIGHT_P2_HOT_FAR",
     "LIGHT_P2_VENT",
+    "LIGHT_P2_VENT_AIM",
     "LIGHT_P2_MAINT",
     "LIGHT_P2_SHAFT",
     "LIGHT_P2_DEAD"
