@@ -1,0 +1,3 @@
+All stems in this directory are original procedural synthesis created for this
+project. No third-party sample libraries or copyrighted recordings were used.
+License: original work for this repository.
