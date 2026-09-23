@@ -1,0 +1,411 @@
+{
+  "blend": "/workspace/hallway.blend",
+  "blender": "5.2.1 LTS",
+  "objects": 663,
+  "materials": 42,
+  "lights": 22,
+  "cameras": [
+    "CAM_HERO_A",
+    "CAM_HERO_B",
+    "CAM_HERO_C",
+    "CAM_HERO_LOOKBACK",
+    "CAM_INSPECT",
+    "CAM_P105_WALK",
+    "CAM_P106_CLOSE",
+    "CAM_P106B_FLOOR"
+  ],
+  "collections": [
+    "CORRIDOR_EXTENSION_CAMERAS",
+    "EQUIPMENT_CONTROL",
+    "EQUIPMENT_ELECTRICAL",
+    "EQUIPMENT_METERS",
+    "EQUIPMENT_SERVICE",
+    "EQUIPMENT_VENTILATION",
+    "FINAL_DOOR_SEQUENCE",
+    "FINAL_PUDDLES",
+    "HALLWAY_PHASE1",
+    "LEVEL2_IDENTITY",
+    "LIGHTING_ACTIVE",
+    "LIGHTING_FIXTURES",
+    "LIGHTING_GUIDES",
+    "LIGHTING_OFF",
+    "LIGHTING_WEAK",
+    "PHASE1_AUDIO",
+    "PHASE1_ENVIRONMENT",
+    "PHASE1_STEAM",
+    "PHASE1_WETNESS",
+    "POLISH_CAMERAS",
+    "POLISH_EQUIPMENT",
+    "POLISH_FIXTURES",
+    "POLISH_FLOOR",
+    "POLISH_PIPES",
+    "POLISH_SUPPORTS",
+    "POLISH_WALLS",
+    "STORY_MARKINGS",
+    "STORY_SIGNAGE",
+    "STRUCTURE_BEAMS",
+    "STRUCTURE_GUIDES",
+    "STRUCTURE_MOUNTS",
+    "STRUCTURE_WALL",
+    "UTILITY_CABLES",
+    "UTILITY_CABLE_TRAY",
+    "UTILITY_PRIMARY_PIPES",
+    "UTILITY_SECONDARY_PIPES",
+    "UTILITY_SUPPORTS",
+    "UTILITY_VALVES"
+  ],
+  "frame_range": [
+    1,
+    360
+  ],
+  "fps": 24,
+  "resolution": [
+    768,
+    432
+  ],
+  "camera": "CAM_P105_WALK",
+  "engine": "BLENDER_EEVEE",
+  "world": "WORLD.Hallway.001",
+  "world_strength": 0.03999999910593033,
+  "stop_hits": [],
+  "key_objects": {
+    "WALL.End": {
+      "min": [
+        -1.3,
+        24.0,
+        0.0
+      ],
+      "max": [
+        1.3,
+        24.2,
+        3.05
+      ],
+      "loc": [
+        0.0,
+        24.1,
+        1.525
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "WALL.Start": {
+      "min": [
+        -1.3,
+        -0.2,
+        0.0
+      ],
+      "max": [
+        1.3,
+        0.0,
+        3.05
+      ],
+      "loc": [
+        0.0,
+        -0.1,
+        1.525
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "WALL.West.Shell": {
+      "min": [
+        -1.3,
+        0.0,
+        0.0
+      ],
+      "max": [
+        -1.1,
+        24.0,
+        3.05
+      ],
+      "loc": [
+        -1.2,
+        12.0,
+        1.525
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "WALL.East.Shell": {
+      "min": [
+        1.1,
+        0.0,
+        0.0
+      ],
+      "max": [
+        1.3,
+        24.0,
+        3.05
+      ],
+      "loc": [
+        1.2,
+        12.0,
+        1.525
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "FLOOR": {
+      "min": [
+        -1.3,
+        0.0,
+        -0.2
+      ],
+      "max": [
+        1.3,
+        24.0,
+        0.0
+      ],
+      "loc": [
+        0.0,
+        12.0,
+        -0.1
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "CEIL.Shell": {
+      "min": [
+        -1.3,
+        0.0,
+        3.0
+      ],
+      "max": [
+        1.3,
+        24.0,
+        3.2
+      ],
+      "loc": [
+        0.0,
+        12.0,
+        3.1
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "FINAL_DOOR_SLAB": {
+      "min": [
+        -0.45,
+        23.77,
+        0.01
+      ],
+      "max": [
+        0.45,
+        23.87,
+        2.05
+      ],
+      "loc": [
+        0.45,
+        0.075,
+        1.03
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "FINAL_DOOR_HINGE": {
+      "min": [
+        -0.45,
+        23.745,
+        0.0
+      ],
+      "max": [
+        -0.45,
+        23.745,
+        0.0
+      ],
+      "loc": [
+        -0.45,
+        23.745,
+        0.0
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "EMPTY"
+    },
+    "FINAL_DOOR_RECESS": {
+      "min": [
+        -0.47,
+        23.8625,
+        0.0
+      ],
+      "max": [
+        0.47,
+        23.8975,
+        2.06
+      ],
+      "loc": [
+        0.0,
+        23.88,
+        1.03
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "FINAL_DOOR_FRAME_L": {
+      "min": [
+        -0.57,
+        23.71,
+        -0.01
+      ],
+      "max": [
+        -0.45,
+        23.89,
+        2.17
+      ],
+      "loc": [
+        -0.51,
+        23.8,
+        1.08
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "FINAL_DOOR_FRAME_R": {
+      "min": [
+        0.45,
+        23.71,
+        -0.01
+      ],
+      "max": [
+        0.57,
+        23.89,
+        2.17
+      ],
+      "loc": [
+        0.51,
+        23.8,
+        1.08
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "MESH"
+    },
+    "CAM_P105_WALK": {
+      "min": [
+        0.0,
+        1.4,
+        1.68
+      ],
+      "max": [
+        0.0,
+        1.4,
+        1.68
+      ],
+      "loc": [
+        0.0,
+        1.4,
+        1.68
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "type": "CAMERA"
+    },
+    "CAM_P105_WALK.Target": {
+      "min": [
+        0.0,
+        13.4,
+        1.4286
+      ],
+      "max": [
+        0.0,
+        13.4,
+        1.4286
+      ],
+      "loc": [
+        0.0,
+        13.4,
+        1.4286
+      ],
+      "hide_render": true,
+      "hide_viewport": false,
+      "type": "EMPTY"
+    }
+  },
+  "cam_location_keys": [
+    {
+      "axis": "x",
+      "keys": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          216.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "axis": "y",
+      "keys": [
+        [
+          1.0,
+          1.4
+        ],
+        [
+          216.0,
+          14.0
+        ],
+        [
+          360.0,
+          18.0
+        ]
+      ]
+    },
+    {
+      "axis": "z",
+      "keys": [
+        [
+          1.0,
+          1.68
+        ],
+        [
+          216.0,
+          1.68
+        ]
+      ]
+    }
+  ],
+  "actions": [
+    "CAM_INSPECT.TargetAction.003",
+    "CAM_INSPECTAction.004",
+    "CAM_P105_WALK.TargetAction",
+    "CAM_P105_WALKAction",
+    "FINAL_DOOR_HINGEAction",
+    "LIGHT_A_01_NORMALAction",
+    "LIGHT_A_02_NORMALAction",
+    "LIGHT_A_03_NORMALAction",
+    "LIGHT_A_04_AGED_TINTAction",
+    "LIGHT_A_WALL_01_NORMALAction",
+    "LIGHT_B_01_NORMALAction",
+    "LIGHT_B_02_WEAKAction",
+    "LIGHT_B_03_OFFAction",
+    "LIGHT_B_04_WEAKAction",
+    "LIGHT_B_WALL_01_WEAKAction",
+    "LIGHT_C_01_WEAKAction",
+    "LIGHT_C_02_OFFAction",
+    "LIGHT_C_03_NORMALAction",
+    "LIGHT_C_04_WEAKAction",
+    "LIGHT_C_WALL_01_OFFAction",
+    "LIGHT_FINAL_DOOR_FLUORESCENTAction",
+    "MAT_FINAL_DoorDiffuserAction",
+    "MAT_FINAL_LIGHT_A_01_NORMAL_FIX_LIGHT_A_01_NORMAL_DiffuserAction",
+    "MAT_FINAL_LIGHT_A_01_NORMAL_P8_TUBE_LIGHT_A_01_NORMALAction",
+    "MAT_FINAL_LIGHT_A_WALL_01_NORMAL_FIX_LIGHT_A_WALL_01_NORMAL_DiffuserAction",
+    "MAT_P1_STEAM_SOCKET_ELBOW_CAction",
+    "MAT_P1_STEAM_SOCKET_INGRESS_BAction",
+    "MAT_P1_STEAM_SOCKET_VALVE_BAction",
+    "STEAM_SOCKET_ELBOW_CAction",
+    "STEAM_SOCKET_INGRESS_BAction",
+    "STEAM_SOCKET_VALVE_BAction"
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "objects": 1020,
+  "p2_objects": 344,
+  "cables": [
+    "P2_CABLE_COIL_00",
+    "P2_CABLE_COIL_01",
+    "P2_CABLE_COIL_02",
+    "P2_CABLE_COIL_03",
+    "P2_CABLE_COIL_04",
+    "P2_CABLE_COIL_05",
+    "P2_CABLE_COIL_06",
+    "P2_CABLE_COIL_07",
+    "P2_CABLE_DETAIL_00",
+    "P2_CABLE_DETAIL_01",
+    "P2_CABLE_DETAIL_02",
+    "P2_CABLE_DETAIL_03",
+    "P2_CABLE_DETAIL_04",
+    "P2_CABLE_DETAIL_05",
+    "P2_CABLE_DETAIL_06",
+    "P2_CABLE_DETAIL_07",
+    "P2_CABLE_DETAIL_08",
+    "P2_CABLE_DETAIL_09",
+    "P2_CABLE_DETAIL_10",
+    "P2_CABLE_DETAIL_11",
+    "P2_CABLE_DETAIL_12",
+    "P2_CABLE_DETAIL_13",
+    "P2_CABLE_DETAIL_14",
+    "P2_CABLE_DETAIL_15",
+    "P2_CABLE_DETAIL_16",
+    "P2_CABLE_DETAIL_17",
+    "P2_CABLE_DETAIL_18",
+    "P2_CABLE_DETAIL_19",
+    "P2_CABLE_FILL_00",
+    "P2_CABLE_FILL_01",
+    "P2_CABLE_FILL_02",
+    "P2_CABLE_FILL_03",
+    "P2_CABLE_FILL_04",
+    "P2_CABLE_FILL_05",
+    "P2_CABLE_FILL_06",
+    "P2_CABLE_FILL_07",
+    "P2_CABLE_RIG_01",
+    "P2_CABLE_RIG_02",
+    "P2_CABLE_RIG_03",
+    "P2_CABLE_RIG_04",
+    "P2_CABLE_RIG_05",
+    "P2_CABLE_RIG_06",
+    "P2_CABLE_STUB_00",
+    "P2_CABLE_STUB_01",
+    "P2_CABLE_STUB_02",
+    "P2_CABLE_STUB_03"
+  ],
+  "cable_count": 46,
+  "rig_unchanged": true,
+  "missing_rig": [],
+  "missing_frame": [],
+  "floaters": [
+    {
+      "name": "P2_BOX_WALL_01",
+      "minz": 0.302
+    },
+    {
+      "name": "P2_BOX_WALL_02",
+      "minz": 0.564
+    },
+    {
+      "name": "P2_BOX_WALL_04",
+      "minz": 0.422
+    },
+    {
+      "name": "P2_BOX_WALL_06",
+      "minz": 0.282
+    },
+    {
+      "name": "P2_BOX_WALL_08",
+      "minz": 0.242
+    },
+    {
+      "name": "P2_BOX_WALL_10",
+      "minz": 0.342
+    },
+    {
+      "name": "P2_BOX_WALL_11",
+      "minz": 0.462
+    },
+    {
+      "name": "P2_BOX_WALL_13",
+      "minz": 0.302
+    },
+    {
+      "name": "P2_BOX_WALL_15",
+      "minz": 0.322
+    },
+    {
+      "name": "P2_BOX_WALL_17",
+      "minz": 0.382
+    },
+    {
+      "name": "P2_BOX_WALL_19",
+      "minz": 0.282
+    },
+    {
+      "name": "P2_BOX_WEST_01",
+      "minz": 0.322
+    },
+    {
+      "name": "P2_BOX_WEST_04",
+      "minz": 0.362
+    },
+    {
+      "name": "P2_BOX_WEST_07",
+      "minz": 0.342
+    },
+    {
+      "name": "P2_BROKEN_LEG",
+      "minz": 0.0882
+    },
+    {
+      "name": "P2_CRT_SCREEN",
+      "minz": 0.06
+    },
+    {
+      "name": "P2_FAN_HUB",
+      "minz": 1.565
+    }
+  ],
+  "issues": [
+    "cable_below_floor P2_CABLE_COIL_00 minz=-0.982",
+    "cable_below_floor P2_CABLE_COIL_01 minz=-0.982",
+    "cable_below_floor P2_CABLE_COIL_02 minz=-0.982",
+    "cable_below_floor P2_CABLE_COIL_03 minz=-0.982",
+    "cable_below_floor P2_CABLE_COIL_04 minz=-0.982",
+    "cable_below_floor P2_CABLE_COIL_05 minz=-0.982",
+    "cable_below_floor P2_CABLE_COIL_06 minz=-0.982",
+    "cable_below_floor P2_CABLE_COIL_07 minz=-0.982",
+    "cable_below_floor P2_CABLE_DETAIL_00 minz=-0.976",
+    "cable_below_floor P2_CABLE_DETAIL_01 minz=-0.976",
+    "cable_below_floor P2_CABLE_DETAIL_02 minz=-0.976",
+    "cable_below_floor P2_CABLE_DETAIL_03 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_04 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_05 minz=-0.976",
+    "cable_below_floor P2_CABLE_DETAIL_06 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_07 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_08 minz=-0.976",
+    "cable_below_floor P2_CABLE_DETAIL_09 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_10 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_11 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_12 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_13 minz=-0.976",
+    "cable_below_floor P2_CABLE_DETAIL_14 minz=-0.976",
+    "cable_below_floor P2_CABLE_DETAIL_15 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_16 minz=-0.978",
+    "cable_below_floor P2_CABLE_DETAIL_17 minz=-0.976",
+    "cable_below_floor P2_CABLE_DETAIL_18 minz=-0.976",
+    "cable_below_floor P2_CABLE_DETAIL_19 minz=-0.976",
+    "cable_below_floor P2_CABLE_FILL_00 minz=-0.978",
+    "cable_below_floor P2_CABLE_FILL_01 minz=-0.978",
+    "cable_below_floor P2_CABLE_FILL_02 minz=-0.978",
+    "cable_below_floor P2_CABLE_FILL_03 minz=-0.978",
+    "cable_below_floor P2_CABLE_FILL_04 minz=-0.978",
+    "cable_below_floor P2_CABLE_FILL_05 minz=-0.978",
+    "cable_below_floor P2_CABLE_FILL_06 minz=-0.978",
+    "cable_below_floor P2_CABLE_FILL_07 minz=-0.978",
+    "cable_below_floor P2_CABLE_RIG_01 minz=-0.980",
+    "cable_below_floor P2_CABLE_RIG_02 minz=-0.978",
+    "cable_below_floor P2_CABLE_RIG_03 minz=-0.978",
+    "cable_below_floor P2_CABLE_RIG_04 minz=-0.978",
+    "cable_below_floor P2_CABLE_RIG_05 minz=-0.978",
+    "cable_below_floor P2_CABLE_RIG_06 minz=-0.978",
+    "cable_below_floor P2_CABLE_STUB_00 minz=-0.976",
+    "cable_below_floor P2_CABLE_STUB_01 minz=-0.960",
+    "cable_below_floor P2_CABLE_STUB_02 minz=-0.972",
+    "cable_below_floor P2_CABLE_STUB_03 minz=-0.976",
+    "clip_floor P2_CRATE_BLUE_W0 minz=-0.062",
+    "clip_floor P2_CRATE_BLUE_W1 minz=-0.062",
+    "clip_floor P2_CRATE_BLUE_W2 minz=-0.062",
+    "clip_floor P2_CRATE_BLUE_W3 minz=-0.062",
+    "clip_floor P2_CRATE_GREY_W0 minz=-0.072",
+    "clip_floor P2_CRATE_GREY_W1 minz=-0.072",
+    "clip_floor P2_CRATE_GREY_W2 minz=-0.072",
+    "clip_floor P2_CRATE_GREY_W3 minz=-0.072",
+    "clip_floor P2_CRATE_PLASTIC_W0 minz=-0.112",
+    "clip_floor P2_CRATE_PLASTIC_W1 minz=-0.112",
+    "clip_floor P2_CRATE_PLASTIC_W2 minz=-0.112",
+    "clip_floor P2_CRATE_PLASTIC_W3 minz=-0.112"
+  ],
+  "desk": [
+    0.08,
+    27.22,
+    0.73
+  ],
+  "chair": [
+    0.04,
+    26.48,
+    0.455
+  ],
+  "hallway_untouched": true
+}

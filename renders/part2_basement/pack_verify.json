@@ -1,0 +1,218 @@
+{
+  "blend": "/workspace/part2_basement.blend",
+  "objects": 780,
+  "materials": 62,
+  "lights": 25,
+  "cameras": [
+    "CAM_HERO_A",
+    "CAM_HERO_B",
+    "CAM_HERO_C",
+    "CAM_HERO_LOOKBACK",
+    "CAM_INSPECT",
+    "CAM_P105_WALK",
+    "CAM_P106_CLOSE",
+    "CAM_P106B_FLOOR",
+    "CAM_P2_CONNECT",
+    "CAM_P2_DESK",
+    "CAM_P2_FLOOR",
+    "CAM_P2_SIT",
+    "CAM_P2_WIDE"
+  ],
+  "p2_collections": [
+    "P2_ARCH",
+    "P2_CABLES",
+    "P2_CAMERAS",
+    "P2_CLUTTER",
+    "P2_CONNECTION",
+    "P2_DESK_PROPS",
+    "P2_FRAME_CLOTH",
+    "P2_FURNITURE",
+    "P2_LIGHTS"
+  ],
+  "images_before": [
+    {
+      "name": "P2_PHOTO_BLUR",
+      "filepath": "/workspace/renders/part2_basement/p2_photo_blurred.png",
+      "packed": false,
+      "size": [
+        256,
+        320
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_hatch_c",
+      "filepath": "/workspace/assets/hallway_phase6/mark_hatch_c.png",
+      "packed": false,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_id_pn04",
+      "filepath": "/workspace/assets/hallway_phase6/mark_id_pn04.png",
+      "packed": false,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_insp_b",
+      "filepath": "/workspace/assets/hallway_phase6/mark_insp_b.png",
+      "packed": false,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_pipe_cw2",
+      "filepath": "/workspace/assets/hallway_phase6/mark_pipe_cw2.png",
+      "packed": false,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_util_c",
+      "filepath": "/workspace/assets/hallway_phase6/mark_util_c.png",
+      "packed": false,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P9_stencil_atlas",
+      "filepath": "/workspace/assets/hallway_phase9/p9_stencil_atlas.png",
+      "packed": false,
+      "size": [
+        1024,
+        1024
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "Render Result",
+      "filepath": "",
+      "packed": false,
+      "size": [
+        0,
+        0
+      ],
+      "source": "VIEWER"
+    },
+    {
+      "name": "Viewer Node",
+      "filepath": "",
+      "packed": false,
+      "size": [
+        256,
+        256
+      ],
+      "source": "VIEWER"
+    }
+  ],
+  "images_after": [
+    {
+      "name": "P2_PHOTO_BLUR",
+      "filepath": "/workspace/renders/part2_basement/p2_photo_blurred.png",
+      "packed": true,
+      "size": [
+        256,
+        320
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_hatch_c",
+      "filepath": "/workspace/assets/hallway_phase6/mark_hatch_c.png",
+      "packed": true,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_id_pn04",
+      "filepath": "/workspace/assets/hallway_phase6/mark_id_pn04.png",
+      "packed": true,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_insp_b",
+      "filepath": "/workspace/assets/hallway_phase6/mark_insp_b.png",
+      "packed": true,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_pipe_cw2",
+      "filepath": "/workspace/assets/hallway_phase6/mark_pipe_cw2.png",
+      "packed": true,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P6_mark_util_c",
+      "filepath": "/workspace/assets/hallway_phase6/mark_util_c.png",
+      "packed": true,
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "P9_stencil_atlas",
+      "filepath": "/workspace/assets/hallway_phase9/p9_stencil_atlas.png",
+      "packed": true,
+      "size": [
+        1024,
+        1024
+      ],
+      "source": "FILE"
+    },
+    {
+      "name": "Render Result",
+      "filepath": "",
+      "packed": false,
+      "size": [
+        0,
+        0
+      ],
+      "source": "VIEWER"
+    },
+    {
+      "name": "Viewer Node",
+      "filepath": "",
+      "packed": false,
+      "size": [
+        256,
+        256
+      ],
+      "source": "VIEWER"
+    }
+  ],
+  "unpacked_file_images": [],
+  "missing_required": []
+}
