@@ -1,0 +1,504 @@
+{
+  "filepath": "/workspace/hallway.blend",
+  "engine": "BLENDER_EEVEE",
+  "resolution": [
+    768,
+    432,
+    100
+  ],
+  "fps": 24,
+  "fps_base": 1.0,
+  "frame_start": 1,
+  "frame_end": 360,
+  "frame_current": 1,
+  "use_motion_blur": false,
+  "film_transparent": false,
+  "camera": "CAM_P105_WALK",
+  "objects": 663,
+  "materials": 42,
+  "meshes": 154,
+  "images": [
+    {
+      "name": "P6_mark_hatch_c",
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE",
+      "packed": false,
+      "filepath": "/workspace/assets/hallway_phase6/mark_hatch_c.png",
+      "colorspace": "sRGB"
+    },
+    {
+      "name": "P6_mark_id_pn04",
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE",
+      "packed": false,
+      "filepath": "/workspace/assets/hallway_phase6/mark_id_pn04.png",
+      "colorspace": "sRGB"
+    },
+    {
+      "name": "P6_mark_insp_b",
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE",
+      "packed": false,
+      "filepath": "/workspace/assets/hallway_phase6/mark_insp_b.png",
+      "colorspace": "sRGB"
+    },
+    {
+      "name": "P6_mark_pipe_cw2",
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE",
+      "packed": false,
+      "filepath": "/workspace/assets/hallway_phase6/mark_pipe_cw2.png",
+      "colorspace": "sRGB"
+    },
+    {
+      "name": "P6_mark_util_c",
+      "size": [
+        512,
+        192
+      ],
+      "source": "FILE",
+      "packed": false,
+      "filepath": "/workspace/assets/hallway_phase6/mark_util_c.png",
+      "colorspace": "sRGB"
+    },
+    {
+      "name": "P9_stencil_atlas",
+      "size": [
+        1024,
+        1024
+      ],
+      "source": "FILE",
+      "packed": false,
+      "filepath": "/workspace/assets/hallway_phase9/p9_stencil_atlas.png",
+      "colorspace": "sRGB"
+    }
+  ],
+  "stop_names": [],
+  "CAM_P105_WALK": {
+    "location": [
+      0.0,
+      1.399999976158142,
+      1.6799999475479126
+    ],
+    "rotation_euler": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "lens": 32.0,
+    "sensor_width": 36.0,
+    "clip_start": 0.07999999821186066,
+    "clip_end": 130.0,
+    "keys": [
+      [
+        1,
+        1.4
+      ],
+      [
+        216,
+        14.0
+      ],
+      [
+        360,
+        18.0
+      ]
+    ],
+    "action": "CAM_P105_WALKAction"
+  },
+  "FINAL_DOOR_SLAB": true,
+  "FINAL_DOOR_HINGE": true,
+  "WALL.End": true,
+  "world_strength": 0.03999999910593033,
+  "view_transform": "AgX",
+  "look": "None",
+  "exposure": 0.0,
+  "gamma": 1.0,
+  "lights": [
+    {
+      "name": "LIGHT.Utility.01",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.9700000286102295,
+        0.9200000166893005
+      ],
+      "loc": [
+        0.0,
+        2.0,
+        2.619999885559082
+      ]
+    },
+    {
+      "name": "LIGHT.Utility.02",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.9700000286102295,
+        0.9200000166893005
+      ],
+      "loc": [
+        0.0,
+        6.0,
+        2.619999885559082
+      ]
+    },
+    {
+      "name": "LIGHT.Utility.03",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.9700000286102295,
+        0.9200000166893005
+      ],
+      "loc": [
+        0.0,
+        10.0,
+        2.619999885559082
+      ]
+    },
+    {
+      "name": "LIGHT.Utility.04",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.9700000286102295,
+        0.9200000166893005
+      ],
+      "loc": [
+        0.0,
+        14.0,
+        2.619999885559082
+      ]
+    },
+    {
+      "name": "LIGHT.Utility.05",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.9700000286102295,
+        0.9200000166893005
+      ],
+      "loc": [
+        0.0,
+        18.0,
+        2.619999885559082
+      ]
+    },
+    {
+      "name": "LIGHT.Utility.06",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.9700000286102295,
+        0.9200000166893005
+      ],
+      "loc": [
+        0.0,
+        22.0,
+        2.619999885559082
+      ]
+    },
+    {
+      "name": "LIGHT_A_01_NORMAL",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.9700000286102295,
+        0.8999999761581421
+      ],
+      "loc": [
+        0.0,
+        0.949999988079071,
+        2.76200008392334
+      ]
+    },
+    {
+      "name": "LIGHT_A_02_NORMAL",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        0.9599999785423279,
+        0.9900000095367432,
+        0.9300000071525574
+      ],
+      "loc": [
+        0.05000000074505806,
+        2.1600000858306885,
+        2.76200008392334
+      ]
+    },
+    {
+      "name": "LIGHT_A_03_NORMAL",
+      "type": "AREA",
+      "energy": 16.600000381469727,
+      "color": [
+        1.0,
+        0.7799999713897705,
+        0.41999998688697815
+      ],
+      "loc": [
+        -0.03999999910593033,
+        3.5,
+        2.76200008392334
+      ]
+    },
+    {
+      "name": "LIGHT_A_04_AGED_TINT",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.7400000095367432,
+        0.3799999952316284
+      ],
+      "loc": [
+        0.029999999329447746,
+        6.179999828338623,
+        2.76200008392334
+      ]
+    },
+    {
+      "name": "LIGHT_A_WALL_01_NORMAL",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.9599999785423279,
+        0.8799999952316284
+      ],
+      "loc": [
+        0.9947999715805054,
+        3.2200000286102295,
+        2.200000047683716
+      ]
+    },
+    {
+      "name": "LIGHT_B_01_NORMAL",
+      "type": "AREA",
+      "energy": 15.399999618530273,
+      "color": [
+        1.0,
+        0.8199999928474426,
+        0.46000000834465027
+      ],
+      "loc": [
+        0.019999999552965164,
+        10.119999885559082,
+        2.556999921798706
+      ]
+    },
+    {
+      "name": "LIGHT_B_02_WEAK",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        0.9300000071525574,
+        0.9900000095367432,
+        0.8600000143051147
+      ],
+      "loc": [
+        -0.05999999865889549,
+        11.680000305175781,
+        2.556999921798706
+      ]
+    },
+    {
+      "name": "LIGHT_B_03_OFF",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        0.9200000166893005,
+        0.9300000071525574,
+        0.8999999761581421
+      ],
+      "loc": [
+        0.03999999910593033,
+        13.220000267028809,
+        2.556999921798706
+      ]
+    },
+    {
+      "name": "LIGHT_B_04_WEAK",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        0.9399999976158142,
+        0.9800000190734863,
+        0.8600000143051147
+      ],
+      "loc": [
+        -0.019999999552965164,
+        14.579999923706055,
+        2.556999921798706
+      ]
+    },
+    {
+      "name": "LIGHT_B_WALL_01_WEAK",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        0.9399999976158142,
+        0.9900000095367432,
+        0.8799999952316284
+      ],
+      "loc": [
+        -0.9197999835014343,
+        11.180000305175781,
+        1.9600000381469727
+      ]
+    },
+    {
+      "name": "LIGHT_C_01_WEAK",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        0.9300000071525574,
+        0.9900000095367432,
+        0.8700000047683716
+      ],
+      "loc": [
+        0.05000000074505806,
+        17.219999313354492,
+        2.7019999027252197
+      ]
+    },
+    {
+      "name": "LIGHT_C_02_OFF",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        0.9200000166893005,
+        0.9300000071525574,
+        0.8999999761581421
+      ],
+      "loc": [
+        -0.05000000074505806,
+        18.540000915527344,
+        2.7019999027252197
+      ]
+    },
+    {
+      "name": "LIGHT_C_03_NORMAL",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.9599999785423279,
+        0.8700000047683716
+      ],
+      "loc": [
+        0.029999999329447746,
+        19.899999618530273,
+        2.7019999027252197
+      ]
+    },
+    {
+      "name": "LIGHT_C_04_WEAK",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        0.9399999976158142,
+        0.9800000190734863,
+        0.8799999952316284
+      ],
+      "loc": [
+        -0.029999999329447746,
+        21.719999313354492,
+        2.7019999027252197
+      ]
+    },
+    {
+      "name": "LIGHT_C_WALL_01_OFF",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        0.9200000166893005,
+        0.9300000071525574,
+        0.8999999761581421
+      ],
+      "loc": [
+        0.9947999715805054,
+        21.479999542236328,
+        2.0999999046325684
+      ]
+    },
+    {
+      "name": "LIGHT_FINAL_DOOR_FLUORESCENT",
+      "type": "AREA",
+      "energy": 0.0,
+      "color": [
+        1.0,
+        0.800000011920929,
+        0.47999998927116394
+      ],
+      "loc": [
+        0.0,
+        23.65999984741211,
+        2.700000047683716
+      ]
+    }
+  ],
+  "cycles": {
+    "device": "CPU",
+    "samples": 64,
+    "use_denoising": true,
+    "denoiser": "OPENIMAGEDENOISE",
+    "max_bounces": 6
+  },
+  "eevee": {
+    "taa_render_samples": 12,
+    "use_raytracing": true,
+    "use_motion_blur": false
+  },
+  "cycles_devices": [
+    {
+      "type": "CPU",
+      "name": "Intel Xeon Processor",
+      "use": false,
+      "compute": "CUDA"
+    },
+    {
+      "type": "CPU",
+      "name": "Intel Xeon Processor",
+      "use": false,
+      "compute": "OPTIX"
+    },
+    {
+      "type": "CPU",
+      "name": "Intel Xeon Processor",
+      "use": false,
+      "compute": "HIP"
+    },
+    {
+      "type": "CPU",
+      "name": "Intel Xeon Processor",
+      "use": false,
+      "compute": "ONEAPI"
+    },
+    {
+      "type": "CPU",
+      "name": "Intel Xeon Processor",
+      "use": false,
+      "compute": "NONE"
+    }
+  ]
+}
