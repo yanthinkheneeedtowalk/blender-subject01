@@ -1,0 +1,32 @@
+{
+  "jobs": [
+    {
+      "engine": "CYCLES",
+      "res": [
+        960,
+        540
+      ],
+      "samples": 32,
+      "frame": 120,
+      "seconds": 46.64
+    },
+    {
+      "engine": "EEVEE",
+      "res": [
+        3840,
+        2160
+      ],
+      "samples": 24,
+      "frame": 120,
+      "seconds": 554.41
+    }
+  ],
+  "hardware": "4-core Xeon CPU, no GPU",
+  "estimates_hours": {
+    "cycles_cpu_4k_128spp_348f": 288.55,
+    "eevee_4k_64spp_348f": 142.91
+  },
+  "cycles_4k_s32_sec_per_frame_est": 746.2,
+  "cycles_4k_s128_sec_per_frame_est": 2985.0,
+  "eevee_4k_s24_sec_per_frame": 554.41
+}
