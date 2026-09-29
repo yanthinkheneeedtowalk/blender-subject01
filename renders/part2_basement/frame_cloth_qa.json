@@ -1,0 +1,13 @@
+{
+  "rig_unchanged": true,
+  "stills": [
+    "/workspace/renders/part2_basement/stills_frame_cloth/01_sit_fps.png",
+    "/workspace/renders/part2_basement/stills_frame_cloth/02_frame_front.png",
+    "/workspace/renders/part2_basement/stills_frame_cloth/03_frame_cloth_macro.png"
+  ],
+  "blend": "/workspace/part2_basement.blend",
+  "checkpoint": "/workspace/renders/checkpoints/part2_basement_frame_cloth.blend",
+  "hallway_untouched": true,
+  "hallway_md5_lock": "e2a4c51380aed23fbb95d631d02e9252",
+  "pass": "fix7_uv_cloth_direct_ramp"
+}
